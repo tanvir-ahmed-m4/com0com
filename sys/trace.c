@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.2  2005/02/01 16:39:35  vfrolov
+ * Added AnsiStrCopyCommStatus()
+ *
  * Revision 1.1  2005/01/26 12:18:54  vfrolov
  * Initial revision
  *
@@ -624,6 +627,17 @@ PCHAR AnsiStrCopyQueueSize(
       " InSize=%lu OutSize=%lu",
       (long)pQueueSize->InSize, (long)pQueueSize->OutSize);
 }
+
+PCHAR AnsiStrCopyCommStatus(
+    PCHAR pDestStr,
+    PSIZE_T pSize,
+    IN PSERIAL_STATUS pCommStatus)
+{
+  return AnsiStrFormat(pDestStr, pSize,
+      " AmountInInQueue=%lu",
+      (long)pCommStatus->AmountInInQueue);
+}
+
 /********************************************************************/
 
 VOID GetTimeFields(PTIME_FIELDS pTimeFields)
@@ -1136,6 +1150,10 @@ VOID TraceIrp(
         case IOCTL_SERIAL_SET_QUEUE_SIZE:
           if ((flags & TRACE_FLAG_PARAMS) && inLength >= sizeof(SERIAL_QUEUE_SIZE))
             pDestStr = AnsiStrCopyQueueSize(pDestStr, &size, (PSERIAL_QUEUE_SIZE)pSysBuf);
+          break;
+        case IOCTL_SERIAL_GET_COMMSTATUS:
+          if ((flags & TRACE_FLAG_RESULTS) && inform >= sizeof(SERIAL_STATUS))
+            pDestStr = AnsiStrCopyCommStatus(pDestStr, &size, (PSERIAL_STATUS)pSysBuf);
           break;
       }
       break;
