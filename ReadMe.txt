@@ -34,12 +34,12 @@ INSTALLING
   4. Select "No, I Want to Select the Hardware from a list".
   5. For the first time (if the driver is not installed yet):
        1. Select "Other Devices" and then click Next.
-       2. Click ‘Have Disk’.
+       2. Click "Have Disk".
        3. Enter path to the directory with com0com.inf and com0com.sys
           files and then click OK.
      For the next time (adding one more port pair) select
      "com0com - serial port emulators" and then click Next.
-  6. Select ‘com0com - bus for serial port pair emulator’ and then
+  6. Select "com0com - bus for serial port pair emulator" and then
      click Next.
 
 The system will create 3 new virtual devices. One of the devices has
