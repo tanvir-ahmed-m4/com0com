@@ -1,0 +1,30 @@
+TARGETNAME=com0com
+TARGETPATH=obj
+TARGETTYPE=DRIVER
+
+
+MSC_WARNING_LEVEL=/W4
+
+SOURCES= \
+        initunlo.c \
+        adddev.c \
+        openclos.c \
+        pnp.c \
+        power.c \
+        ioctl.c \
+        read.c \
+        write.c \
+        wait.c \
+        io.c \
+        startirp.c \
+        timeout.c \
+        strutils.c \
+        syslog.c \
+        trace.c \
+        tracetbl.c \
+        c0clog.mc \
+        com0com.rc \
+
+PRECOMPILED_INCLUDE=precomp.h
+PRECOMPILED_PCH=precomp.pch
+PRECOMPILED_OBJ=precomp.obj

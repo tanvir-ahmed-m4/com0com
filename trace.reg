@@ -1,0 +1,12 @@
+Windows Registry Editor Version 5.00
+
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\com0com\Trace]
+"TraceFile"="\\??\\F:\\com0com.log"
+
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\com0com\Trace\Enable]
+"Read"=dword:00000000
+"Write"=dword:00000000
+"GetTimeouts"=dword:00000000
+"SetTimeouts"=dword:00000000
+"GetCommStatus"=dword:00000000
+
