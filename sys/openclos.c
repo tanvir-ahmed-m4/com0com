@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.2  2005/02/01 08:37:55  vfrolov
+ * Changed SetModemStatus() to set multiple bits
+ *
  * Revision 1.1  2005/01/26 12:18:54  vfrolov
  * Initial revision
  *
@@ -92,8 +95,7 @@ NTSTATUS FdoPortClose(IN PC0C_FDOPORT_EXTENSION pDevExt)
 
   KeAcquireSpinLock(pDevExt->pIoLock, &oldIrql);
 
-  SetModemStatus(pDevExt->pIoPortRemote, C0C_MSB_CTS, FALSE);
-  SetModemStatus(pDevExt->pIoPortRemote, C0C_MSB_DSR, FALSE);
+  SetModemStatus(pDevExt->pIoPortRemote, C0C_MSB_CTS | C0C_MSB_DSR, FALSE);
 
   WaitComplete(pDevExt->pIoPortRemote, &queueToComplete);
 
