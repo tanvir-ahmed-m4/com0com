@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.2  2005/02/01 16:47:57  vfrolov
+ * Implemented SERIAL_PURGE_RXCLEAR and IOCTL_SERIAL_GET_COMMSTATUS
+ *
  * Revision 1.1  2005/01/26 12:18:54  vfrolov
  * Initial revision
  *
@@ -140,20 +143,35 @@ NTSTATUS FdoPortIoCtl(
       if (*pSysBuf & SERIAL_PURGE_TXABORT)
         FdoPortCancelQueue(pDevExt, &pDevExt->pIoPortLocal->irpQueues[C0C_QUEUE_WRITE]);
 
+      if (*pSysBuf & SERIAL_PURGE_RXCLEAR) {
+        KeAcquireSpinLock(pDevExt->pIoLock, &oldIrql);
+        C0C_BUFFER_PURGE(pDevExt->pIoPortLocal->readBuf);
+        KeReleaseSpinLock(pDevExt->pIoLock, oldIrql);
+      }
+
       pIrp->IoStatus.Information = sizeof(ULONG);
       break;
     }
-    case IOCTL_SERIAL_GET_COMMSTATUS:
+    case IOCTL_SERIAL_GET_COMMSTATUS: {
+      PSERIAL_STATUS pSysBuf;
+
       if (pIrpStack->Parameters.DeviceIoControl.OutputBufferLength < sizeof(SERIAL_STATUS)) {
         status = STATUS_BUFFER_TOO_SMALL;
         break;
       }
 
-      KeAcquireSpinLock(&pDevExt->controlLock, &oldIrql);
-      *(PSERIAL_STATUS)pIrp->AssociatedIrp.SystemBuffer = pDevExt->commStatus;
-      KeReleaseSpinLock(&pDevExt->controlLock, oldIrql);
+      pSysBuf = (PSERIAL_STATUS)pIrp->AssociatedIrp.SystemBuffer;
+
+      KeAcquireSpinLock(pDevExt->pIoLock, &oldIrql);
+      RtlZeroMemory(pSysBuf, sizeof(*pSysBuf));
+      pSysBuf->AmountInInQueue = pDevExt->pIoPortLocal->readBuf.busy;
+      KeReleaseSpinLock(pDevExt->pIoLock, oldIrql);
       pIrp->IoStatus.Information = sizeof(SERIAL_STATUS);
+
+      TraceIrp("FdoPortIoCtl", pIrp, &status, TRACE_FLAG_RESULTS);
+
       break;
+    }
     case IOCTL_SERIAL_SET_HANDFLOW: {
       LIST_ENTRY queueToComplete;
       PSERIAL_HANDFLOW pSysBuf;
