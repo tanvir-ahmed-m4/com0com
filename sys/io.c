@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.2  2005/02/01 08:36:27  vfrolov
+ * Changed SetModemStatus() to set multiple bits and set CD to DSR
+ *
  * Revision 1.1  2005/01/26 12:18:54  vfrolov
  * Initial revision
  *
@@ -278,17 +281,21 @@ NTSTATUS FdoPortIo(
 
 VOID SetModemStatus(
     IN PC0C_IO_PORT pIoPort,
-    IN ULONG bit,
+    IN ULONG bits,
     IN BOOLEAN set)
 {
   ULONG modemStatusOld;
+  ULONG modemStatusChanged;
 
   modemStatusOld = pIoPort->modemStatus;
 
+  if (bits & C0C_MSB_DSR)
+    bits |= C0C_MSB_RLSD;    /* CD = DSR */
+
   if (set)
-    pIoPort->modemStatus |= bit;
+    pIoPort->modemStatus |= bits;
   else
-    pIoPort->modemStatus &= ~bit;
+    pIoPort->modemStatus &= ~bits;
 
   TraceMask(
     (PC0C_COMMON_EXTENSION)pIoPort->pDevExt,
@@ -296,46 +303,42 @@ VOID SetModemStatus(
     codeNameTableModemStatus,
     pIoPort->modemStatus);
 
-  if (modemStatusOld != pIoPort->modemStatus) {
-    switch (bit) {
-    case C0C_MSB_CTS:
-      pIoPort->eventMask = pIoPort->waitMask & SERIAL_EV_CTS;
-      break;
-    case C0C_MSB_DSR:
-      pIoPort->eventMask = pIoPort->waitMask & SERIAL_EV_DSR;
-      break;
-    case C0C_MSB_RING:
-      pIoPort->eventMask = pIoPort->waitMask & SERIAL_EV_RING;
-      break;
-    case C0C_MSB_RLSD:
-      pIoPort->eventMask = pIoPort->waitMask & SERIAL_EV_RLSD;
-      break;
-    }
-  }
+  modemStatusChanged = modemStatusOld ^ pIoPort->modemStatus;
+
+  if (modemStatusChanged & C0C_MSB_CTS)
+    pIoPort->eventMask |= pIoPort->waitMask & SERIAL_EV_CTS;
+
+  if (modemStatusChanged & C0C_MSB_DSR)
+    pIoPort->eventMask |= pIoPort->waitMask & SERIAL_EV_DSR;
+
+  if (modemStatusChanged & C0C_MSB_RING)
+    pIoPort->eventMask |= pIoPort->waitMask & SERIAL_EV_RING;
+
+  if (modemStatusChanged & C0C_MSB_RLSD)
+    pIoPort->eventMask |= pIoPort->waitMask & SERIAL_EV_RLSD;
 }
 
 VOID UpdateHandFlow(
     IN PC0C_FDOPORT_EXTENSION pDevExt,
     IN PLIST_ENTRY pQueueToComplete)
 {
-      switch (pDevExt->handFlow.FlowReplace & SERIAL_RTS_MASK) {
-        case SERIAL_RTS_CONTROL:
-        case SERIAL_RTS_HANDSHAKE:
-        case SERIAL_TRANSMIT_TOGGLE:
-          SetModemStatus(
-            pDevExt->pIoPortRemote,
-            C0C_MSB_CTS,
-            TRUE);
-      }
+  ULONG bits = 0;
 
-      switch (pDevExt->handFlow.ControlHandShake & SERIAL_DTR_MASK) {
-        case SERIAL_DTR_CONTROL:
-        case SERIAL_DTR_HANDSHAKE:
-          SetModemStatus(
-            pDevExt->pIoPortRemote,
-            C0C_MSB_DSR,
-            TRUE);
-      }
+  switch (pDevExt->handFlow.FlowReplace & SERIAL_RTS_MASK) {
+  case SERIAL_RTS_CONTROL:
+  case SERIAL_RTS_HANDSHAKE:
+  case SERIAL_TRANSMIT_TOGGLE:
+    bits |= C0C_MSB_CTS;
+  }
 
-      WaitComplete(pDevExt->pIoPortRemote, pQueueToComplete);
+  switch (pDevExt->handFlow.ControlHandShake & SERIAL_DTR_MASK) {
+  case SERIAL_DTR_CONTROL:
+  case SERIAL_DTR_HANDSHAKE:
+    bits |= C0C_MSB_DSR;
+  }
+
+  if (bits)
+    SetModemStatus(pDevExt->pIoPortRemote, bits, TRUE);
+
+  WaitComplete(pDevExt->pIoPortRemote, pQueueToComplete);
 }
