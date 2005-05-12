@@ -54,3 +54,12 @@ TESTING
   3. The output to CNCA0 port should be the input from CNCB0 port and
      vice versa.
 
+FAQ
+
+Q. Is it possible to change the names CNCA0 and CNCB0 to COM2 and COM3?
+A. Yes, it's possible. Add the following to the registry:
+
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\com0com\Parameters\CNCA0]
+"PortName"="COM2"
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\com0com\Parameters\CNCB0]
+"PortName"="COM3"

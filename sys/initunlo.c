@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.2  2005/05/12 07:41:27  vfrolov
+ * Added ability to change the port names
+ *
  * Revision 1.1  2005/01/26 12:18:54  vfrolov
  * Initial revision
  *
@@ -26,12 +29,25 @@
  */
 
 #include "precomp.h"
+#include "strutils.h"
+
+UNICODE_STRING c0cRegistryPath;
 
 NTSTATUS DriverEntry(IN PDRIVER_OBJECT pDrvObj, IN PUNICODE_STRING pRegistryPath)
 {
-  UNREFERENCED_PARAMETER(pRegistryPath);
+  NTSTATUS status;
 
   TraceOpen(pDrvObj, pRegistryPath);
+
+  status = STATUS_SUCCESS;
+
+  RtlInitUnicodeString(&c0cRegistryPath, NULL);
+  StrAppendStr(&status, &c0cRegistryPath, pRegistryPath->Buffer, pRegistryPath->Length);
+
+  if (!NT_SUCCESS(status)) {
+    SysLog(pDrvObj, status, L"DriverEntry FAIL");
+    return status;
+  }
 
   pDrvObj->DriverUnload                                  = c0cUnload;
   pDrvObj->DriverExtension->AddDevice                    = c0cAddDevice;
@@ -57,9 +73,10 @@ VOID c0cUnload(IN PDRIVER_OBJECT pDrvObj)
 {
   UNREFERENCED_PARAMETER(pDrvObj);
 
+  StrFree(&c0cRegistryPath);
+
   TraceClose();
 }
-
 
 NTSTATUS c0cFlush(IN PDEVICE_OBJECT pDevObj, IN PIRP pIrp)
 {

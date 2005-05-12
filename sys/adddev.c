@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.2  2005/05/12 07:41:27  vfrolov
+ * Added ability to change the port names
+ *
  * Revision 1.1  2005/01/26 12:18:54  vfrolov
  * Initial revision
  *
@@ -74,7 +77,7 @@ VOID RemoveFdoPort(IN PC0C_FDOPORT_EXTENSION pDevExt)
 
 NTSTATUS AddFdoPort(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
 {
-  NTSTATUS status = STATUS_SUCCESS;
+  NTSTATUS status;
   UNICODE_STRING portName;
   PDEVICE_OBJECT pNewDevObj;
   PC0C_FDOPORT_EXTENSION pDevExt = NULL;
@@ -107,8 +110,51 @@ NTSTATUS AddFdoPort(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
     goto clean;
   }
 
-  RtlInitUnicodeString(&portName, NULL);
-  StrAppendStr0(&status, &portName, pPortName);
+  {
+    WCHAR portNameBuf[C0C_PORT_NAME_LEN];
+    UNICODE_STRING portNameTmp;
+    UNICODE_STRING portRegistryPath;
+    RTL_QUERY_REGISTRY_TABLE queryTable[2];
+
+    RtlInitUnicodeString(&portRegistryPath, NULL);
+    StrAppendStr(&status, &portRegistryPath, c0cRegistryPath.Buffer, c0cRegistryPath.Length);
+    StrAppendStr0(&status, &portRegistryPath, L"\\Parameters\\");
+    StrAppendStr0(&status, &portRegistryPath, pPortName);
+
+    if (!NT_SUCCESS(status)) {
+      SysLog(pPhDevObj, status, L"AddFdoPort FAIL");
+      goto clean;
+    }
+
+    RtlZeroMemory(queryTable, sizeof(queryTable));
+
+    portNameTmp.Length = 0;
+    portNameTmp.MaximumLength = sizeof(portNameBuf);
+    portNameTmp.Buffer = portNameBuf;
+
+    queryTable[0].Flags        = RTL_QUERY_REGISTRY_DIRECT | RTL_QUERY_REGISTRY_REQUIRED;
+    queryTable[0].Name         = L"PortName";
+    queryTable[0].EntryContext = &portNameTmp;
+
+    status = RtlQueryRegistryValues(
+        RTL_REGISTRY_ABSOLUTE,
+        portRegistryPath.Buffer,
+        queryTable,
+        NULL,
+        NULL);
+
+    StrFree(&portRegistryPath);
+
+    RtlInitUnicodeString(&portName, NULL);
+
+    if (!NT_SUCCESS(status) || !portNameTmp.Length) {
+      status = STATUS_SUCCESS;
+      StrAppendStr0(&status, &portName, pPortName);
+    } else {
+      StrAppendStr(&status, &portName, portNameTmp.Buffer, portNameTmp.Length);
+      Trace00(NULL, L"PortName set to ", portName.Buffer);
+    }
+  }
 
   if (!NT_SUCCESS(status)) {
     SysLog(pPhDevObj, status, L"AddFdoPort FAIL");
@@ -138,7 +184,7 @@ NTSTATUS AddFdoPort(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
 
   RtlInitUnicodeString(&pDevExt->win32DeviceName, NULL);
   StrAppendStr0(&status, &pDevExt->win32DeviceName, C0C_PREF_WIN32_DEVICE_NAME);
-  StrAppendStr0(&status, &pDevExt->win32DeviceName, pPortName);
+  StrAppendStr0(&status, &pDevExt->win32DeviceName, portName.Buffer);
 
   if (!NT_SUCCESS(status)) {
     SysLog(pPhDevObj, status, L"AddFdoPort FAIL");
