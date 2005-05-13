@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.4  2005/05/13 16:58:03  vfrolov
+ * Implemented IOCTL_SERIAL_LSRMST_INSERT
+ *
  * Revision 1.3  2005/02/01 16:51:51  vfrolov
  * Used C0C_BUFFER_PURGE()
  *
@@ -78,6 +81,7 @@ NTSTATUS FdoPortOpen(IN PC0C_FDOPORT_EXTENSION pDevExt)
 
   pDevExt->pIoPortLocal->waitMask = 0;
   pDevExt->pIoPortLocal->eventMask = 0;
+  pDevExt->pIoPortLocal->escapeChar = 0;
 
   UpdateHandFlow(pDevExt, &queueToComplete);
 

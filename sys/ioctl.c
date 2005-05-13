@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.3  2005/05/13 16:58:03  vfrolov
+ * Implemented IOCTL_SERIAL_LSRMST_INSERT
+ *
  * Revision 1.2  2005/02/01 16:47:57  vfrolov
  * Implemented SERIAL_PURGE_RXCLEAR and IOCTL_SERIAL_GET_COMMSTATUS
  *
@@ -195,8 +198,15 @@ NTSTATUS FdoPortIoCtl(
 
       KeAcquireSpinLock(pDevExt->pIoLock, &oldIrql);
 
-      pDevExt->handFlow = *pSysBuf;
-      UpdateHandFlow(pDevExt, &queueToComplete);
+      if (pDevExt->pIoPortLocal->escapeChar &&
+            (pSysBuf->FlowReplace & SERIAL_ERROR_CHAR)) {
+        status = STATUS_INVALID_PARAMETER;
+      }
+
+      if (status == STATUS_SUCCESS) {
+        pDevExt->handFlow = *pSysBuf;
+        UpdateHandFlow(pDevExt, &queueToComplete);
+      }
 
       KeReleaseSpinLock(pDevExt->pIoLock, oldIrql);
       FdoPortCompleteQueue(&queueToComplete);
@@ -222,30 +232,72 @@ NTSTATUS FdoPortIoCtl(
       status = FdoPortGetTimeouts(pDevExt, pIrp, pIrpStack);
       TraceIrp("FdoPortIoCtl", pIrp, &status, TRACE_FLAG_RESULTS);
       break;
-    case IOCTL_SERIAL_SET_CHARS:
+    case IOCTL_SERIAL_SET_CHARS: {
+      PSERIAL_CHARS pSysBuf;
+
       if (pIrpStack->Parameters.DeviceIoControl.InputBufferLength < sizeof(SERIAL_CHARS)) {
         status = STATUS_BUFFER_TOO_SMALL;
         break;
       }
 
-      KeAcquireSpinLock(&pDevExt->controlLock, &oldIrql);
-      pDevExt->specialChars = *(PSERIAL_CHARS)pIrp->AssociatedIrp.SystemBuffer;
-      KeReleaseSpinLock(&pDevExt->controlLock, oldIrql);
+      pSysBuf = (PSERIAL_CHARS)pIrp->AssociatedIrp.SystemBuffer;
+
+      KeAcquireSpinLock(pDevExt->pIoLock, &oldIrql);
+
+      if (pDevExt->pIoPortLocal->escapeChar &&
+            ((pDevExt->pIoPortLocal->escapeChar == pSysBuf->XoffChar) ||
+                (pDevExt->pIoPortLocal->escapeChar == pSysBuf->XonChar)))
+      {
+        status = STATUS_INVALID_PARAMETER;
+      }
+
+      if (status == STATUS_SUCCESS)
+        pDevExt->specialChars = *pSysBuf;
+
+      KeReleaseSpinLock(pDevExt->pIoLock, oldIrql);
       break;
+    }
     case IOCTL_SERIAL_GET_CHARS:
       if (pIrpStack->Parameters.DeviceIoControl.OutputBufferLength < sizeof(SERIAL_CHARS)) {
         status = STATUS_BUFFER_TOO_SMALL;
         break;
       }
 
-      KeAcquireSpinLock(&pDevExt->controlLock, &oldIrql);
+      KeAcquireSpinLock(pDevExt->pIoLock, &oldIrql);
       *(PSERIAL_CHARS)pIrp->AssociatedIrp.SystemBuffer = pDevExt->specialChars;
-      KeReleaseSpinLock(&pDevExt->controlLock, oldIrql);
+      KeReleaseSpinLock(pDevExt->pIoLock, oldIrql);
 
       pIrp->IoStatus.Information = sizeof(SERIAL_CHARS);
 
       TraceIrp("FdoPortIoCtl", pIrp, &status, TRACE_FLAG_RESULTS);
       break;
+    case IOCTL_SERIAL_LSRMST_INSERT: {
+      UCHAR escapeChar;
+
+      if (pIrpStack->Parameters.DeviceIoControl.InputBufferLength < sizeof(UCHAR)) {
+        status = STATUS_BUFFER_TOO_SMALL;
+        break;
+      }
+
+      escapeChar = *(PUCHAR)pIrp->AssociatedIrp.SystemBuffer;
+
+      KeAcquireSpinLock(pDevExt->pIoLock, &oldIrql);
+
+      if (escapeChar && ((escapeChar == pDevExt->specialChars.XoffChar) ||
+                         (escapeChar == pDevExt->specialChars.XonChar) ||
+                         (pDevExt->handFlow.FlowReplace & SERIAL_ERROR_CHAR)))
+      {
+        status = STATUS_INVALID_PARAMETER;
+      }
+
+      if (status == STATUS_SUCCESS) {
+        pDevExt->pIoPortLocal->escapeChar = escapeChar;
+        pIrp->IoStatus.Information = sizeof(UCHAR);
+      }
+
+      KeReleaseSpinLock(pDevExt->pIoLock, oldIrql);
+      break;
+    }
     case IOCTL_SERIAL_SET_LINE_CONTROL:
       if (pIrpStack->Parameters.DeviceIoControl.InputBufferLength < sizeof(SERIAL_LINE_CONTROL)) {
         status = STATUS_BUFFER_TOO_SMALL;

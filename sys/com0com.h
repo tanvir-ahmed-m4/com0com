@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.5  2005/05/13 16:58:03  vfrolov
+ * Implemented IOCTL_SERIAL_LSRMST_INSERT
+ *
  * Revision 1.4  2005/05/12 07:41:27  vfrolov
  * Added ability to change the port names
  *
@@ -84,11 +87,13 @@ typedef struct _C0C_BUFFER {
   PUCHAR                  pFree;
   PUCHAR                  pEnd;
   ULONG                   busy;
+  BOOLEAN                 escape;
 } C0C_BUFFER, *PC0C_BUFFER;
 
 #define C0C_BUFFER_PURGE(buf) \
   (buf).pFree = (buf).pBusy = (buf).pBase; \
-  (buf).busy = 0
+  (buf).busy = 0; \
+  (buf).escape = FALSE
 
 struct _C0C_FDOPORT_EXTENSION;
 
@@ -116,6 +121,7 @@ typedef struct _C0C_IO_PORT {
 
   ULONG                   waitMask;
   ULONG                   eventMask;
+  UCHAR                   escapeChar;
 
   #define C0C_MSB_CTS     0x10
   #define C0C_MSB_DSR     0x20

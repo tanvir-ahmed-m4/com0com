@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.4  2005/05/13 16:58:03  vfrolov
+ * Implemented IOCTL_SERIAL_LSRMST_INSERT
+ *
  * Revision 1.3  2005/05/13 06:32:16  vfrolov
  * Implemented SERIAL_EV_RXCHAR
  *
@@ -42,15 +45,12 @@ NTSTATUS ReadBuffer(PIRP pIrp, PC0C_BUFFER pBuf)
   NTSTATUS status;
   PIO_STACK_LOCATION pIrpStack;
 
-  if (!pBuf->pBase)
-    return STATUS_PENDING;
-
   status = STATUS_PENDING;
   pIrpStack = IoGetCurrentIrpStackLocation(pIrp);
 
   for (;;) {
     ULONG length, writeLength, readLength;
-    PVOID pWriteBuf, pReadBuf;
+    PUCHAR pWriteBuf, pReadBuf;
 
     readLength = pIrpStack->Parameters.Read.Length - pIrp->IoStatus.Information;
 
@@ -59,13 +59,25 @@ NTSTATUS ReadBuffer(PIRP pIrp, PC0C_BUFFER pBuf)
       break;
     }
 
-    if (!pBuf->busy)
+    pReadBuf = GET_REST_BUFFER(pIrp);
+
+    if (!pBuf->busy) {
+      if (pBuf->escape) {
+        pBuf->escape = FALSE;
+        *pReadBuf++ = SERIAL_LSRMST_ESCAPE;
+        pIrp->IoStatus.Information++;
+        readLength--;
+        if (!readLength)
+          status = STATUS_SUCCESS;
+      }
       break;
+    }
+
+    ASSERT(pBuf->pBase);
 
     writeLength = pBuf->pFree <= pBuf->pBusy ?
         pBuf->pEnd - pBuf->pBusy : pBuf->busy;
 
-    pReadBuf = GET_REST_BUFFER(pIrp);
     pWriteBuf = pBuf->pBusy;
 
     length = writeLength < readLength ? writeLength : readLength;
@@ -91,6 +103,64 @@ VOID WaitCompleteRxChar(PC0C_IO_PORT pReadIoPort, PLIST_ENTRY pQueueToComplete)
   }
 }
 
+VOID CopyCharsWithEscape(
+    PC0C_IO_PORT pReadIoPort,
+    PUCHAR pReadBuf, ULONG readLength,
+    PUCHAR pWriteBuf, ULONG writeLength,
+    PULONG pReadDone,
+    PULONG pWriteDone)
+{
+  ULONG readDone;
+  ULONG writeDone;
+  UCHAR escapeChar;
+
+  readDone = 0;
+
+  if (pReadIoPort->readBuf.escape && readLength) {
+    pReadIoPort->readBuf.escape = FALSE;
+    *pReadBuf++ = SERIAL_LSRMST_ESCAPE;
+    readDone++;
+    readLength--;
+  }
+
+  escapeChar = pReadIoPort->escapeChar;
+
+  if (!escapeChar) {
+    writeDone = writeLength < readLength ? writeLength : readLength;
+
+    if (writeDone)
+      RtlCopyMemory(pReadBuf, pWriteBuf, writeDone);
+
+    readDone += writeDone;
+  } else {
+    writeDone = 0;
+
+    while (writeLength--) {
+      UCHAR curChar;
+
+      if (!readLength--)
+        break;
+
+      curChar = *pWriteBuf++;
+      writeDone++;
+      *pReadBuf++ = curChar;
+      readDone++;
+
+      if (curChar == escapeChar) {
+        if (!readLength--) {
+          pReadIoPort->readBuf.escape = TRUE;
+          break;
+        }
+        *pReadBuf++ = SERIAL_LSRMST_ESCAPE;
+        readDone++;
+      }
+    }
+  }
+
+  *pReadDone = readDone;
+  *pWriteDone = writeDone;
+}
+
 NTSTATUS WriteBuffer(PIRP pIrp, PC0C_IO_PORT pReadIoPort, PLIST_ENTRY pQueueToComplete)
 {
   NTSTATUS status;
@@ -104,8 +174,9 @@ NTSTATUS WriteBuffer(PIRP pIrp, PC0C_IO_PORT pReadIoPort, PLIST_ENTRY pQueueToCo
   pIrpStack = IoGetCurrentIrpStackLocation(pIrp);
 
   for (;;) {
-    ULONG length, writeLength, readLength;
+    ULONG writeLength, readLength;
     PVOID pWriteBuf, pReadBuf;
+    ULONG readDone, writeDone;
 
     writeLength = pIrpStack->Parameters.Write.Length - pIrp->IoStatus.Information;
 
@@ -123,18 +194,21 @@ NTSTATUS WriteBuffer(PIRP pIrp, PC0C_IO_PORT pReadIoPort, PLIST_ENTRY pQueueToCo
     pWriteBuf = GET_REST_BUFFER(pIrp);
     pReadBuf = pBuf->pFree;
 
-    length = writeLength < readLength ? writeLength : readLength;
+    CopyCharsWithEscape(
+        pReadIoPort,
+        pReadBuf, readLength,
+        pWriteBuf, writeLength,
+        &readDone, &writeDone);
 
-    RtlCopyMemory(pReadBuf, pWriteBuf, length);
-
-    pBuf->busy += length;
-    pBuf->pFree += length;
+    pBuf->busy += readDone;
+    pBuf->pFree += readDone;
     if (pBuf->pFree == pBuf->pEnd)
       pBuf->pFree = pBuf->pBase;
 
-    pIrp->IoStatus.Information += length;
+    pIrp->IoStatus.Information += writeDone;
 
-    WaitCompleteRxChar(pReadIoPort, pQueueToComplete);
+    if (writeDone)
+      WaitCompleteRxChar(pReadIoPort, pQueueToComplete);
   }
 
   return status;
@@ -145,50 +219,53 @@ VOID ReadWriteDirect(
     PIRP pIrpRemote,
     PNTSTATUS pStatusLocal,
     PNTSTATUS pStatusRemote,
-    PC0C_IO_PORT pIoPortLocal,
+    PC0C_IO_PORT pIoPortRemote,
     PLIST_ENTRY pQueueToComplete)
 {
-  PIO_STACK_LOCATION pIrpStackLocal;
-  PIO_STACK_LOCATION pIrpStackRemote;
-  ULONG length, writeLength, readLength;
-  PVOID pWriteBuf, pReadBuf;
   PC0C_IO_PORT pReadIoPort;
+  ULONG readDone, writeDone;
+  PIRP pIrpRead, pIrpWrite;
+  PNTSTATUS pStatusRead, pStatusWrite;
+  ULONG writeLength, readLength;
+  PVOID pWriteBuf, pReadBuf;
 
-  pIrpStackLocal = IoGetCurrentIrpStackLocation(pIrpLocal);
-  pIrpStackRemote = IoGetCurrentIrpStackLocation(pIrpRemote);
-
-  if (pIrpStackLocal->MajorFunction == IRP_MJ_WRITE) {
-    pWriteBuf = GET_REST_BUFFER(pIrpLocal);
-    writeLength = pIrpStackLocal->Parameters.Write.Length - pIrpLocal->IoStatus.Information;
-    pReadBuf = GET_REST_BUFFER(pIrpRemote);
-    readLength = pIrpStackRemote->Parameters.Read.Length - pIrpRemote->IoStatus.Information;
-    pReadIoPort = pIoPortLocal->pDevExt->pIoPortRemote;
-
-    if (writeLength <= readLength)
-      *pStatusLocal = STATUS_SUCCESS;
-    if (writeLength >= readLength)
-      *pStatusRemote = STATUS_SUCCESS;
+  if (IoGetCurrentIrpStackLocation(pIrpLocal)->MajorFunction == IRP_MJ_WRITE) {
+    pIrpRead = pIrpRemote;
+    pIrpWrite = pIrpLocal;
+    pStatusRead = pStatusRemote;
+    pStatusWrite = pStatusLocal;
+    pReadIoPort = pIoPortRemote;
   } else {
-    pReadBuf = GET_REST_BUFFER(pIrpLocal);
-    readLength = pIrpStackLocal->Parameters.Read.Length - pIrpLocal->IoStatus.Information;
-    pWriteBuf = GET_REST_BUFFER(pIrpRemote);
-    writeLength = pIrpStackRemote->Parameters.Write.Length - pIrpRemote->IoStatus.Information;
-    pReadIoPort = pIoPortLocal;
-
-    if (readLength <= writeLength)
-      *pStatusLocal = STATUS_SUCCESS;
-    if (readLength >= writeLength)
-      *pStatusRemote = STATUS_SUCCESS;
+    pIrpRead = pIrpLocal;
+    pIrpWrite = pIrpRemote;
+    pStatusRead = pStatusLocal;
+    pStatusWrite = pStatusRemote;
+    pReadIoPort = pIoPortRemote->pDevExt->pIoPortRemote;
   }
 
-  length = writeLength < readLength ? writeLength : readLength;
+  pReadBuf = GET_REST_BUFFER(pIrpRead);
+  readLength = IoGetCurrentIrpStackLocation(pIrpRead)->Parameters.Read.Length
+                                                - pIrpRemote->IoStatus.Information;
+  pWriteBuf = GET_REST_BUFFER(pIrpWrite);
+  writeLength = IoGetCurrentIrpStackLocation(pIrpWrite)->Parameters.Write.Length
+                                                - pIrpWrite->IoStatus.Information;
 
-  if (length) {
-    RtlCopyMemory(pReadBuf, pWriteBuf, length);
-    pIrpRemote->IoStatus.Information += length;
-    pIrpLocal->IoStatus.Information += length;
+  CopyCharsWithEscape(
+      pReadIoPort,
+      pReadBuf, readLength,
+      pWriteBuf, writeLength,
+      &readDone, &writeDone);
+
+  pIrpRead->IoStatus.Information += readDone;
+  pIrpWrite->IoStatus.Information += writeDone;
+
+  if (readDone == readLength)
+    *pStatusRead = STATUS_SUCCESS;
+  if (writeDone == writeLength)
+    *pStatusWrite = STATUS_SUCCESS;
+
+  if (writeDone)
     WaitCompleteRxChar(pReadIoPort, pQueueToComplete);
-  }
 }
 
 NTSTATUS FdoPortIo(
