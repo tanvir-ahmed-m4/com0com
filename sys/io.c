@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.5  2005/05/14 17:07:02  vfrolov
+ * Implemented SERIAL_LSRMST_MST insertion
+ *
  * Revision 1.4  2005/05/13 16:58:03  vfrolov
  * Implemented IOCTL_SERIAL_LSRMST_INSERT
  *
@@ -39,6 +42,45 @@
 
 #define GET_REST_BUFFER(pIrp) \
     (((PUCHAR)(pIrp)->AssociatedIrp.SystemBuffer) + (pIrp)->IoStatus.Information)
+
+VOID CompactRawData(PC0C_RAW_DATA pRawData, ULONG writeDone)
+{
+  if (writeDone) {
+    pRawData->size = (UCHAR)(pRawData->size - writeDone);
+
+    if (pRawData->size) {
+      ASSERT((pRawData->size + writeDone) <= sizeof(pRawData->data));
+
+      RtlMoveMemory(pRawData->data, pRawData->data + writeDone, pRawData->size);
+    }
+  }
+}
+
+NTSTATUS MoveRawData(PC0C_RAW_DATA pDstRawData, PC0C_RAW_DATA pSrcRawData)
+{
+  int free;
+
+  if (!pSrcRawData->size)
+    return STATUS_SUCCESS;
+
+  free = sizeof(pDstRawData->data) - pDstRawData->size;
+
+  if (free > 0) {
+    ULONG length;
+
+    if (free > pSrcRawData->size)
+      length = pSrcRawData->size;
+    else
+      length = free;
+
+    ASSERT((pDstRawData->size + length) <= sizeof(pDstRawData->data));
+
+    RtlCopyMemory(pDstRawData->data + pDstRawData->size, pSrcRawData->data, length);
+    pDstRawData->size = (UCHAR)(pDstRawData->size + length);
+    CompactRawData(pSrcRawData, length);
+  }
+  return pSrcRawData->size ? STATUS_PENDING : STATUS_SUCCESS;
+}
 
 NTSTATUS ReadBuffer(PIRP pIrp, PC0C_BUFFER pBuf)
 {
@@ -67,8 +109,26 @@ NTSTATUS ReadBuffer(PIRP pIrp, PC0C_BUFFER pBuf)
         *pReadBuf++ = SERIAL_LSRMST_ESCAPE;
         pIrp->IoStatus.Information++;
         readLength--;
-        if (!readLength)
+        if (!readLength) {
           status = STATUS_SUCCESS;
+          break;
+        }
+      }
+      if (pBuf->insertData.size) {
+        length = pBuf->insertData.size;
+
+        if (length > readLength)
+          length = readLength;
+
+        RtlCopyMemory(pReadBuf, pBuf->insertData.data, length);
+        pReadBuf += length;
+        pIrp->IoStatus.Information += length;
+        readLength -= length;
+        CompactRawData(&pBuf->insertData, length);
+        if (!readLength) {
+          status = STATUS_SUCCESS;
+          break;
+        }
       }
       break;
     }
@@ -104,7 +164,7 @@ VOID WaitCompleteRxChar(PC0C_IO_PORT pReadIoPort, PLIST_ENTRY pQueueToComplete)
 }
 
 VOID CopyCharsWithEscape(
-    PC0C_IO_PORT pReadIoPort,
+    PC0C_BUFFER pBuf, UCHAR escapeChar,
     PUCHAR pReadBuf, ULONG readLength,
     PUCHAR pWriteBuf, ULONG writeLength,
     PULONG pReadDone,
@@ -112,18 +172,28 @@ VOID CopyCharsWithEscape(
 {
   ULONG readDone;
   ULONG writeDone;
-  UCHAR escapeChar;
 
   readDone = 0;
 
-  if (pReadIoPort->readBuf.escape && readLength) {
-    pReadIoPort->readBuf.escape = FALSE;
+  if (pBuf->escape && readLength) {
+    pBuf->escape = FALSE;
     *pReadBuf++ = SERIAL_LSRMST_ESCAPE;
     readDone++;
     readLength--;
   }
 
-  escapeChar = pReadIoPort->escapeChar;
+  if (pBuf->insertData.size && readLength) {
+    ULONG length = pBuf->insertData.size;
+
+    if (length > readLength)
+      length = readLength;
+
+    RtlCopyMemory(pReadBuf, pBuf->insertData.data, length);
+    pReadBuf += length;
+    readDone += length;
+    readLength -= length;
+    CompactRawData(&pBuf->insertData, length);
+  }
 
   if (!escapeChar) {
     writeDone = writeLength < readLength ? writeLength : readLength;
@@ -148,7 +218,7 @@ VOID CopyCharsWithEscape(
 
       if (curChar == escapeChar) {
         if (!readLength--) {
-          pReadIoPort->readBuf.escape = TRUE;
+          pBuf->escape = TRUE;
           break;
         }
         *pReadBuf++ = SERIAL_LSRMST_ESCAPE;
@@ -185,17 +255,18 @@ NTSTATUS WriteBuffer(PIRP pIrp, PC0C_IO_PORT pReadIoPort, PLIST_ENTRY pQueueToCo
       break;
     }
 
+    pWriteBuf = GET_REST_BUFFER(pIrp);
+
     if ((ULONG)(pBuf->pEnd - pBuf->pBase) <= pBuf->busy)
       break;
 
     readLength = pBuf->pBusy <= pBuf->pFree  ?
         pBuf->pEnd - pBuf->pFree : pBuf->pBusy - pBuf->pFree;
 
-    pWriteBuf = GET_REST_BUFFER(pIrp);
     pReadBuf = pBuf->pFree;
 
     CopyCharsWithEscape(
-        pReadIoPort,
+        pBuf, pReadIoPort->escapeChar,
         pReadBuf, readLength,
         pWriteBuf, writeLength,
         &readDone, &writeDone);
@@ -210,6 +281,57 @@ NTSTATUS WriteBuffer(PIRP pIrp, PC0C_IO_PORT pReadIoPort, PLIST_ENTRY pQueueToCo
     if (writeDone)
       WaitCompleteRxChar(pReadIoPort, pQueueToComplete);
   }
+
+  return status;
+}
+
+NTSTATUS InsertBuffer(PC0C_RAW_DATA pRawData, PC0C_BUFFER pBuf)
+{
+  NTSTATUS status;
+
+  if (!pBuf->pBase)
+    return STATUS_PENDING;
+
+  status = STATUS_PENDING;
+
+  for (;;) {
+    ULONG writeLength, readLength;
+    PVOID pWriteBuf, pReadBuf;
+    ULONG readDone, writeDone;
+
+    writeLength = pRawData->size;
+
+    if (!writeLength) {
+      status = STATUS_SUCCESS;
+      break;
+    }
+
+    pWriteBuf = pRawData->data;
+
+    if ((ULONG)(pBuf->pEnd - pBuf->pBase) <= pBuf->busy)
+      break;
+
+    readLength = pBuf->pBusy <= pBuf->pFree  ?
+        pBuf->pEnd - pBuf->pFree : pBuf->pBusy - pBuf->pFree;
+
+    pReadBuf = pBuf->pFree;
+
+    CopyCharsWithEscape(
+        pBuf, 0,
+        pReadBuf, readLength,
+        pWriteBuf, writeLength,
+        &readDone, &writeDone);
+
+    pBuf->busy += readDone;
+    pBuf->pFree += readDone;
+    if (pBuf->pFree == pBuf->pEnd)
+      pBuf->pFree = pBuf->pBase;
+
+    CompactRawData(pRawData, writeDone);
+  }
+
+  if (status == STATUS_PENDING)
+    status = MoveRawData(&pBuf->insertData, pRawData);
 
   return status;
 }
@@ -245,13 +367,13 @@ VOID ReadWriteDirect(
 
   pReadBuf = GET_REST_BUFFER(pIrpRead);
   readLength = IoGetCurrentIrpStackLocation(pIrpRead)->Parameters.Read.Length
-                                                - pIrpRemote->IoStatus.Information;
+                                                - pIrpRead->IoStatus.Information;
   pWriteBuf = GET_REST_BUFFER(pIrpWrite);
   writeLength = IoGetCurrentIrpStackLocation(pIrpWrite)->Parameters.Write.Length
                                                 - pIrpWrite->IoStatus.Information;
 
   CopyCharsWithEscape(
-      pReadIoPort,
+      &pReadIoPort->readBuf, pReadIoPort->escapeChar,
       pReadBuf, readLength,
       pWriteBuf, writeLength,
       &readDone, &writeDone);
@@ -266,6 +388,38 @@ VOID ReadWriteDirect(
 
   if (writeDone)
     WaitCompleteRxChar(pReadIoPort, pQueueToComplete);
+}
+
+VOID InsertDirect(
+    PC0C_RAW_DATA pRawData,
+    PIRP pIrpRead,
+    PNTSTATUS pStatusWrite,
+    PNTSTATUS pStatusRead,
+    PC0C_BUFFER pBuf)
+{
+  ULONG readDone, writeDone;
+  ULONG writeLength, readLength;
+  PVOID pWriteBuf, pReadBuf;
+
+  pReadBuf = GET_REST_BUFFER(pIrpRead);
+  readLength = IoGetCurrentIrpStackLocation(pIrpRead)->Parameters.Read.Length
+                                                - pIrpRead->IoStatus.Information;
+  pWriteBuf = pRawData->data;
+  writeLength = pRawData->size;
+
+  CopyCharsWithEscape(
+      pBuf, 0,
+      pReadBuf, readLength,
+      pWriteBuf, writeLength,
+      &readDone, &writeDone);
+
+  pIrpRead->IoStatus.Information += readDone;
+  CompactRawData(pRawData, writeDone);
+
+  if (readDone == readLength)
+    *pStatusRead = STATUS_SUCCESS;
+  if (writeDone == writeLength)
+    *pStatusWrite = STATUS_SUCCESS;
 }
 
 NTSTATUS FdoPortIo(
@@ -321,6 +475,10 @@ NTSTATUS FdoPortIo(
       pIrpCurrent->IoStatus.Information = sizeof(ULONG);
       statusCurrent = STATUS_SUCCESS;
       break;
+    case C0C_IO_TYPE_INSERT:
+      ASSERT(pParam);
+      InsertDirect((PC0C_RAW_DATA)pParam, pIrpCurrent, &status, &statusCurrent, &pIoPort->readBuf);
+      break;
     }
 
     if (IoGetCurrentIrpStackLocation(pIrpCurrent)->MajorFunction == IRP_MJ_WRITE &&
@@ -368,18 +526,26 @@ NTSTATUS FdoPortIo(
     InsertTailList(pQueueToComplete, &pIrpCurrent->Tail.Overlay.ListEntry);
   }
 
-  if (ioType == C0C_IO_TYPE_WRITE && status == STATUS_PENDING) {
-    ASSERT(pParam);
-    status = WriteBuffer((PIRP)pParam, pIoPort, pQueueToComplete);
+  if (status == STATUS_PENDING) {
+    switch (ioType) {
+    case C0C_IO_TYPE_WRITE:
+      ASSERT(pParam);
+      status = WriteBuffer((PIRP)pParam, pIoPort, pQueueToComplete);
+      break;
+    case C0C_IO_TYPE_INSERT:
+      ASSERT(pParam);
+      status = InsertBuffer((PC0C_RAW_DATA)pParam, &pIoPort->readBuf);
+      break;
+    }
   }
-
   return status;
 }
 
 VOID SetModemStatus(
     IN PC0C_IO_PORT pIoPort,
     IN ULONG bits,
-    IN BOOLEAN set)
+    IN BOOLEAN set,
+    PLIST_ENTRY pQueueToComplete)
 {
   ULONG modemStatusOld;
   ULONG modemStatusChanged;
@@ -402,17 +568,41 @@ VOID SetModemStatus(
 
   modemStatusChanged = modemStatusOld ^ pIoPort->modemStatus;
 
-  if (modemStatusChanged & C0C_MSB_CTS)
-    pIoPort->eventMask |= pIoPort->waitMask & SERIAL_EV_CTS;
+  if (modemStatusChanged) {
+    if (pIoPort->escapeChar) {
+      C0C_RAW_DATA insertData;
 
-  if (modemStatusChanged & C0C_MSB_DSR)
-    pIoPort->eventMask |= pIoPort->waitMask & SERIAL_EV_DSR;
+      insertData.size = 3;
+      insertData.data[0] = pIoPort->escapeChar;
+      insertData.data[1] = SERIAL_LSRMST_MST;
+      insertData.data[2] = (UCHAR)(pIoPort->modemStatus | (modemStatusChanged >> 4));
 
-  if (modemStatusChanged & C0C_MSB_RING)
-    pIoPort->eventMask |= pIoPort->waitMask & SERIAL_EV_RING;
+      FdoPortIo(
+          C0C_IO_TYPE_INSERT,
+          &insertData,
+          pIoPort,
+          &pIoPort->irpQueues[C0C_QUEUE_READ],
+          pQueueToComplete);
+#if DBG
+      if (insertData.size)
+        Trace0((PC0C_COMMON_EXTENSION)pIoPort->pDevExt, L"WARNING: Lost SERIAL_LSRMST_MST");
+#endif /* DBG */
+    }
 
-  if (modemStatusChanged & C0C_MSB_RLSD)
-    pIoPort->eventMask |= pIoPort->waitMask & SERIAL_EV_RLSD;
+    if (modemStatusChanged & C0C_MSB_CTS)
+      pIoPort->eventMask |= pIoPort->waitMask & SERIAL_EV_CTS;
+
+    if (modemStatusChanged & C0C_MSB_DSR)
+      pIoPort->eventMask |= pIoPort->waitMask & SERIAL_EV_DSR;
+
+    if (modemStatusChanged & C0C_MSB_RING)
+      pIoPort->eventMask |= pIoPort->waitMask & SERIAL_EV_RING;
+
+    if (modemStatusChanged & C0C_MSB_RLSD)
+      pIoPort->eventMask |= pIoPort->waitMask & SERIAL_EV_RLSD;
+
+    WaitComplete(pIoPort, pQueueToComplete);
+  }
 }
 
 VOID UpdateHandFlow(
@@ -435,7 +625,5 @@ VOID UpdateHandFlow(
   }
 
   if (bits)
-    SetModemStatus(pDevExt->pIoPortRemote, bits, TRUE);
-
-  WaitComplete(pDevExt->pIoPortRemote, pQueueToComplete);
+    SetModemStatus(pDevExt->pIoPortRemote, bits, TRUE, pQueueToComplete);
 }

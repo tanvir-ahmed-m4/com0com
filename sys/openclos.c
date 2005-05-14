@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.5  2005/05/14 17:07:02  vfrolov
+ * Implemented SERIAL_LSRMST_MST insertion
+ *
  * Revision 1.4  2005/05/13 16:58:03  vfrolov
  * Implemented IOCTL_SERIAL_LSRMST_INSERT
  *
@@ -102,9 +105,7 @@ NTSTATUS FdoPortClose(IN PC0C_FDOPORT_EXTENSION pDevExt)
 
   KeAcquireSpinLock(pDevExt->pIoLock, &oldIrql);
 
-  SetModemStatus(pDevExt->pIoPortRemote, C0C_MSB_CTS | C0C_MSB_DSR, FALSE);
-
-  WaitComplete(pDevExt->pIoPortRemote, &queueToComplete);
+  SetModemStatus(pDevExt->pIoPortRemote, C0C_MSB_CTS | C0C_MSB_DSR, FALSE, &queueToComplete);
 
   readBuf = pDevExt->pIoPortLocal->readBuf;
   RtlZeroMemory(&pDevExt->pIoPortLocal->readBuf, sizeof(pDevExt->pIoPortLocal->readBuf));
