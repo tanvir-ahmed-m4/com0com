@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.2  2005/05/17 15:06:18  vfrolov
+ * Fixed type cast
+ *
  * Revision 1.1  2005/01/26 12:18:54  vfrolov
  * Initial revision
  *
@@ -132,7 +135,7 @@ NTSTATUS PdoPortQueryId(
     status = pIrp->IoStatus.Status;
   }
 
-  pIrp->IoStatus.Information = (ULONG)pIDs;
+  pIrp->IoStatus.Information = (ULONG_PTR)pIDs;
 
   return status;
 }
@@ -172,7 +175,7 @@ NTSTATUS PdoPortQueryDevText(
       StrAppendStr0(&status, &portText, pDevExt->portName);
 
       if (NT_SUCCESS(status))
-        pIrp->IoStatus.Information = (UINT_PTR)portText.Buffer;
+        pIrp->IoStatus.Information = (ULONG_PTR)portText.Buffer;
     }
     break;
   case DeviceTextLocationInformation:
@@ -183,7 +186,7 @@ NTSTATUS PdoPortQueryDevText(
       StrAppendStr0(&status, &portText, pDevExt->portName);
 
       if (NT_SUCCESS(status))
-        pIrp->IoStatus.Information = (UINT_PTR)portText.Buffer;
+        pIrp->IoStatus.Information = (ULONG_PTR)portText.Buffer;
     }
     break;
   default:
