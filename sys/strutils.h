@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.2  2005/05/17 15:07:36  vfrolov
+ * Fixed parameter type typo
+ *
  * Revision 1.1  2005/01/26 12:18:54  vfrolov
  * Initial revision
  *
@@ -28,7 +31,7 @@
 #ifndef _C0C_STRUTILS_H_
 #define _C0C_STRUTILS_H_
 
-NTSTATUS CopyStrW(OUT PWCHAR pDestStr, IN ULONG size, IN PWCHAR pStr);
+NTSTATUS CopyStrW(OUT PWCHAR pDestStr, IN SIZE_T size, IN PWCHAR pStr);
 
 NTSTATUS DupStrW(OUT PWCHAR *ppDestStr, IN PWCHAR pStr, IN BOOLEAN multiStr);
 VOID StrFree(IN OUT PUNICODE_STRING  pDest);
