@@ -4,7 +4,7 @@
 
 INTRODUCTION
 
-The null-modem emulator is a kernel-mode serial driver for
+The null-modem emulator is a kernel-mode virtual serial port driver for
 Windows. You can create an unlimited number of virtual COM port
 pairs and use any pair to connect one application to another.
 Each COM port pair provides two COM ports with names starting
