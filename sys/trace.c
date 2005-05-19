@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.5  2005/05/19 08:23:41  vfrolov
+ * Fixed data types
+ *
  * Revision 1.4  2005/05/13 16:58:03  vfrolov
  * Implemented IOCTL_SERIAL_LSRMST_INSERT
  *
@@ -520,13 +523,13 @@ PCHAR AnsiStrCopyDump(
     PCHAR pDestStr,
     PSIZE_T pSize,
     IN PVOID pData,
-    IN ULONG length)
+    IN SIZE_T length)
 {
 #define DUMP_MAX 16
   CHAR bufA[DUMP_MAX + 1];
-  ULONG i;
+  SIZE_T i;
 
-  pDestStr = AnsiStrFormat(pDestStr, pSize, "%lu:", length);
+  pDestStr = AnsiStrFormat(pDestStr, pSize, "%lu:", (ULONG)length);
 
   for (i = 0 ; i < length && i < DUMP_MAX ; i++) {
     UCHAR c = *(((PUCHAR)pData) + i);
@@ -749,7 +752,7 @@ VOID TraceOutput(
       pDestStr = AnsiStrCopyStr(pDestStr, &size, " ...\r\n");
     }
 
-    InterlockedExchange(&strOldFreeInd, sizeof(strOld) - size);
+    InterlockedExchange(&strOldFreeInd, (LONG)(sizeof(strOld) - size));
 
     KeReleaseSpinLock(&strOldLock, oldIrql);
 
@@ -801,7 +804,7 @@ VOID TraceOutput(
             lenBuf = size - 1;
           RtlCopyMemory(pDestStr, &strOld[strOldBusyInd], lenBuf);
           pDestStr[lenBuf] = 0;
-          strOldBusyInd += lenBuf;
+          strOldBusyInd += (LONG)lenBuf;
           ASSERT(strOldBusyInd <= strOldFreeInd);
           if (strOldBusyInd == strOldFreeInd)
             InterlockedExchange(&strOldFreeInd, strOldBusyInd = 0);
@@ -1004,7 +1007,8 @@ VOID TraceIrp(
   PIO_STACK_LOCATION pIrpStack;
   PC0C_COMMON_EXTENSION pDevExt;
   PVOID pSysBuf;
-  ULONG inform, major;
+  ULONG_PTR inform;
+  ULONG major;
 
   if (!TRACE_FILE_OK)
     return;

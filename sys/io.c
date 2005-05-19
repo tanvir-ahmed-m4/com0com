@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.6  2005/05/19 08:23:41  vfrolov
+ * Fixed data types
+ *
  * Revision 1.5  2005/05/14 17:07:02  vfrolov
  * Implemented SERIAL_LSRMST_MST insertion
  *
@@ -43,7 +46,7 @@
 #define GET_REST_BUFFER(pIrp) \
     (((PUCHAR)(pIrp)->AssociatedIrp.SystemBuffer) + (pIrp)->IoStatus.Information)
 
-VOID CompactRawData(PC0C_RAW_DATA pRawData, ULONG writeDone)
+VOID CompactRawData(PC0C_RAW_DATA pRawData, SIZE_T writeDone)
 {
   if (writeDone) {
     pRawData->size = (UCHAR)(pRawData->size - writeDone);
@@ -66,7 +69,7 @@ NTSTATUS MoveRawData(PC0C_RAW_DATA pDstRawData, PC0C_RAW_DATA pSrcRawData)
   free = sizeof(pDstRawData->data) - pDstRawData->size;
 
   if (free > 0) {
-    ULONG length;
+    SIZE_T length;
 
     if (free > pSrcRawData->size)
       length = pSrcRawData->size;
@@ -91,7 +94,7 @@ NTSTATUS ReadBuffer(PIRP pIrp, PC0C_BUFFER pBuf)
   pIrpStack = IoGetCurrentIrpStackLocation(pIrp);
 
   for (;;) {
-    ULONG length, writeLength, readLength;
+    SIZE_T length, writeLength, readLength;
     PUCHAR pWriteBuf, pReadBuf;
 
     readLength = pIrpStack->Parameters.Read.Length - pIrp->IoStatus.Information;
@@ -165,13 +168,13 @@ VOID WaitCompleteRxChar(PC0C_IO_PORT pReadIoPort, PLIST_ENTRY pQueueToComplete)
 
 VOID CopyCharsWithEscape(
     PC0C_BUFFER pBuf, UCHAR escapeChar,
-    PUCHAR pReadBuf, ULONG readLength,
-    PUCHAR pWriteBuf, ULONG writeLength,
-    PULONG pReadDone,
-    PULONG pWriteDone)
+    PUCHAR pReadBuf, SIZE_T readLength,
+    PUCHAR pWriteBuf, SIZE_T writeLength,
+    PSIZE_T pReadDone,
+    PSIZE_T pWriteDone)
 {
-  ULONG readDone;
-  ULONG writeDone;
+  SIZE_T readDone;
+  SIZE_T writeDone;
 
   readDone = 0;
 
@@ -183,7 +186,7 @@ VOID CopyCharsWithEscape(
   }
 
   if (pBuf->insertData.size && readLength) {
-    ULONG length = pBuf->insertData.size;
+    SIZE_T length = pBuf->insertData.size;
 
     if (length > readLength)
       length = readLength;
@@ -244,9 +247,9 @@ NTSTATUS WriteBuffer(PIRP pIrp, PC0C_IO_PORT pReadIoPort, PLIST_ENTRY pQueueToCo
   pIrpStack = IoGetCurrentIrpStackLocation(pIrp);
 
   for (;;) {
-    ULONG writeLength, readLength;
+    SIZE_T readDone, writeDone;
+    SIZE_T writeLength, readLength;
     PVOID pWriteBuf, pReadBuf;
-    ULONG readDone, writeDone;
 
     writeLength = pIrpStack->Parameters.Write.Length - pIrp->IoStatus.Information;
 
@@ -257,7 +260,7 @@ NTSTATUS WriteBuffer(PIRP pIrp, PC0C_IO_PORT pReadIoPort, PLIST_ENTRY pQueueToCo
 
     pWriteBuf = GET_REST_BUFFER(pIrp);
 
-    if ((ULONG)(pBuf->pEnd - pBuf->pBase) <= pBuf->busy)
+    if ((SIZE_T)(pBuf->pEnd - pBuf->pBase) <= pBuf->busy)
       break;
 
     readLength = pBuf->pBusy <= pBuf->pFree  ?
@@ -295,9 +298,9 @@ NTSTATUS InsertBuffer(PC0C_RAW_DATA pRawData, PC0C_BUFFER pBuf)
   status = STATUS_PENDING;
 
   for (;;) {
-    ULONG writeLength, readLength;
+    SIZE_T readDone, writeDone;
+    SIZE_T writeLength, readLength;
     PVOID pWriteBuf, pReadBuf;
-    ULONG readDone, writeDone;
 
     writeLength = pRawData->size;
 
@@ -308,7 +311,7 @@ NTSTATUS InsertBuffer(PC0C_RAW_DATA pRawData, PC0C_BUFFER pBuf)
 
     pWriteBuf = pRawData->data;
 
-    if ((ULONG)(pBuf->pEnd - pBuf->pBase) <= pBuf->busy)
+    if ((SIZE_T)(pBuf->pEnd - pBuf->pBase) <= pBuf->busy)
       break;
 
     readLength = pBuf->pBusy <= pBuf->pFree  ?
@@ -345,10 +348,10 @@ VOID ReadWriteDirect(
     PLIST_ENTRY pQueueToComplete)
 {
   PC0C_IO_PORT pReadIoPort;
-  ULONG readDone, writeDone;
+  SIZE_T readDone, writeDone;
   PIRP pIrpRead, pIrpWrite;
   PNTSTATUS pStatusRead, pStatusWrite;
-  ULONG writeLength, readLength;
+  SIZE_T writeLength, readLength;
   PVOID pWriteBuf, pReadBuf;
 
   if (IoGetCurrentIrpStackLocation(pIrpLocal)->MajorFunction == IRP_MJ_WRITE) {
@@ -397,8 +400,8 @@ VOID InsertDirect(
     PNTSTATUS pStatusRead,
     PC0C_BUFFER pBuf)
 {
-  ULONG readDone, writeDone;
-  ULONG writeLength, readLength;
+  SIZE_T readDone, writeDone;
+  SIZE_T writeLength, readLength;
   PVOID pWriteBuf, pReadBuf;
 
   pReadBuf = GET_REST_BUFFER(pIrpRead);
