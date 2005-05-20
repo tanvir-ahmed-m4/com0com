@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.3  2005/05/20 12:06:05  vfrolov
+ * Improved port numbering
+ *
  * Revision 1.2  2005/05/12 07:41:27  vfrolov
  * Added ability to change the port names
  *
@@ -362,10 +365,50 @@ VOID RemoveFdoBus(IN PC0C_FDOBUS_EXTENSION pDevExt)
   IoDeleteDevice(pDevExt->pDevObj);
 }
 
+ULONG AllocPortNum(IN PDRIVER_OBJECT pDrvObj)
+{
+  static ULONG numNext = 0;
+
+  PDEVICE_OBJECT pDevObj;
+  ULONG num;
+  PCHAR pBusyMask;
+  SIZE_T busyMaskLen;
+
+  if (!numNext)
+    return numNext++;
+
+  busyMaskLen = numNext;
+  pBusyMask = ExAllocatePool(PagedPool, busyMaskLen);
+
+  if (!pBusyMask)
+    return numNext++;
+
+  RtlZeroMemory(pBusyMask, busyMaskLen);
+
+  for (pDevObj = pDrvObj->DeviceObject ; pDevObj ; pDevObj = pDevObj->NextDevice) {
+    if (((PC0C_COMMON_EXTENSION)pDevObj->DeviceExtension)->doType == C0C_DOTYPE_FB) {
+      ULONG num = ((PC0C_FDOBUS_EXTENSION)pDevObj->DeviceExtension)->portNum;
+
+      ASSERT(num < busyMaskLen);
+      pBusyMask[num] = 1;
+    }
+  }
+
+  for (num = 0 ; num < busyMaskLen ; num++) {
+    if (!pBusyMask[num])
+      break;
+  }
+
+  ExFreePool(pBusyMask);
+
+  if (num >= busyMaskLen)
+    return numNext++;
+
+  return num;
+}
+
 NTSTATUS AddFdoBus(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
 {
-  static LONG numNext = 0;
-
   NTSTATUS status = STATUS_SUCCESS;
   UNICODE_STRING portName;
   UNICODE_STRING ntDeviceName;
@@ -374,7 +417,7 @@ NTSTATUS AddFdoBus(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
   ULONG num;
   int i;
 
-  num = InterlockedIncrement(&numNext) - 1;
+  num = AllocPortNum(pDrvObj);
 
   RtlInitUnicodeString(&portName, NULL);
   StrAppendStr0(&status, &portName, C0C_PREF_BUS_NAME);
@@ -412,6 +455,7 @@ NTSTATUS AddFdoBus(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
     goto clean;
   }
 
+  pDevExt->portNum = num;
   pDevExt->pLowDevObj = IoAttachDeviceToDeviceStack(pNewDevObj, pPhDevObj);
 
   if (!pDevExt->pLowDevObj) {
