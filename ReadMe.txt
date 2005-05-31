@@ -17,7 +17,9 @@ used by device emulation program.
 
 For example, to send/receive faxes over IP you can connect Windows Fax
 application to CNCA0 port and t38modem (part of the OpenH323 project)
-to CNCB0 port.
+to CNCB0 port. In this case the t38modem is a fax modem emulation program.
+
+The homepage for com0com project is http://com0com.sourceforge.net/.
 
 BUILDING
 
