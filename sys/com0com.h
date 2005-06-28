@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.9  2005/06/28 12:17:12  vfrolov
+ * Added pBusExt to C0C_PDOPORT_EXTENSION
+ *
  * Revision 1.8  2005/05/20 12:06:05  vfrolov
  * Improved port numbering
  *
@@ -151,6 +154,8 @@ typedef struct _C0C_IO_PORT {
 
 typedef struct _C0C_PDOPORT_EXTENSION {
   COMMON_EXTENSION
+
+  struct _C0C_FDOBUS_EXTENSION *pBusExt;
 
   PKSPIN_LOCK             pIoLock;
   PC0C_IO_PORT            pIoPortLocal;

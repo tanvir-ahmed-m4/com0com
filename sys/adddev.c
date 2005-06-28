@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.4  2005/06/28 12:17:12  vfrolov
+ * Added pBusExt to C0C_PDOPORT_EXTENSION
+ *
  * Revision 1.3  2005/05/20 12:06:05  vfrolov
  * Improved port numbering
  *
@@ -319,6 +322,7 @@ NTSTATUS AddPdoPort(
     goto clean;
   }
 
+  pDevExt->pBusExt = pBusExt;
   pDevExt->pIoLock = &pBusExt->ioLock;
   pDevExt->pIoPortLocal = pIoPortLocal;
   pDevExt->pIoPortRemote = pIoPortRemote;
