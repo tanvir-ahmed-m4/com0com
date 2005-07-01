@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.6  2005/07/01 11:03:50  vfrolov
+ * Included <stdarg.h>
+ *
  * Revision 1.5  2005/05/19 08:23:41  vfrolov
  * Fixed data types
  *
@@ -43,6 +46,8 @@
 #if DBG
 
 /********************************************************************/
+#include <stdarg.h>
+
 #include "trace.h"
 #include "strutils.h"
 /********************************************************************/
