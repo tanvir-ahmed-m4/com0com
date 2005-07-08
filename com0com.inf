@@ -11,7 +11,7 @@
 [Version]
 Signature = "$Windows NT$"
 Provider = %VF%
-Class = Ports
+Class = CNCPorts
 ClassGUID = {df799e12-3c56-421b-b298-b6d3642bc878}
 CatalogFile = com0com.cat
 DriverVer = 02/18/2004,1.0.0.0
@@ -42,7 +42,10 @@ HKR,,Icon,,-23
 com0com.sys = 1,,
 
 [DestinationDirs]
-DefaultDestDir = 12
+com0com_CopyDrivers = 12
+
+[com0com_CopyDrivers]
+com0com.sys
 
 ;******************************************************************************
 ;
@@ -58,27 +61,41 @@ ExcludeFromSelect = com0com\port
 
 [VF.Mfg]
 %com0com.BusDesc% = com0com_inst, root\com0com
-%com0com.PortDesc% = com0com_inst, com0com\port
-
+%com0com.PortDesc% = com0com_inst_port, com0com\port
 
 ;******************************************************************************
 ;
-; Install section
+; Bus install section
 ;
 ;******************************************************************************
 
 [com0com_inst]
-AddReg = com0com.AddReg
-CopyFiles = com0com.CopyFiles
-
-[com0com.CopyFiles]
-com0com.sys
-
-[com0com.AddReg]
-HKR,,PortDriver,,com0com.sys
+AddReg = com0com_AddReg
+CopyFiles = com0com_CopyDrivers
 
 [com0com_inst.Services]
 AddService = com0com, %SPSVCINST_ASSOCSERVICE%, com0com_Service_Inst, com0com_EventLog_Inst
+
+;******************************************************************************
+;
+; Port install section
+;
+;******************************************************************************
+
+[com0com_inst_port]
+AddReg = com0com_AddReg
+
+[com0com_inst_port.Services]
+AddService = com0com, %SPSVCINST_ASSOCSERVICE%, com0com_Service_Inst, com0com_EventLog_Inst
+
+;******************************************************************************
+;
+; Common section
+;
+;******************************************************************************
+
+[com0com_AddReg]
+HKR,,PortDriver,,com0com.sys
 
 [com0com_Service_Inst]
 DisplayName    = %com0com.SrvDesc%
@@ -87,14 +104,12 @@ StartType      = %SERVICE_DEMAND_START%
 ErrorControl   = %SERVICE_ERROR_NORMAL%
 ServiceBinary  = %12%\com0com.sys
 
-
 [com0com_EventLog_Inst]
 AddReg = com0com_EventLog_AddReg
 
 [com0com_EventLog_AddReg]
 HKR,,EventMessageFile,%REG_EXPAND_SZ%,"%%SystemRoot%%\System32\IoLogMsg.dll;%%SystemRoot%%\System32\drivers\com0com.sys"
 HKR,,TypesSupported,%REG_DWORD%,7
-
 
 ;******************************************************************************
 ;
@@ -105,6 +120,7 @@ HKR,,TypesSupported,%REG_DWORD%,7
 [Strings]
 
 SPSVCINST_ASSOCSERVICE = 0x00000002
+
 REG_EXPAND_SZ          = 0x00020000
 REG_DWORD              = 0x00010001
 
