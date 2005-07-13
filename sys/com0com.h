@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.10  2005/07/13 16:12:36  vfrolov
+ * Added c0cGlobal struct for global driver's data
+ *
  * Revision 1.9  2005/06/28 12:17:12  vfrolov
  * Added pBusExt to C0C_PDOPORT_EXTENSION
  *
@@ -199,7 +202,12 @@ typedef struct _C0C_FDOBUS_EXTENSION {
   ULONG                   portNum;
 } C0C_FDOBUS_EXTENSION, *PC0C_FDOBUS_EXTENSION;
 
-extern UNICODE_STRING c0cRegistryPath;
+typedef struct _C0C_GLOBAL {
+  PDRIVER_OBJECT pDrvObj;
+  UNICODE_STRING registryPath;
+} C0C_GLOBAL;
+
+extern C0C_GLOBAL c0cGlobal;
 
 VOID c0cUnload(IN PDRIVER_OBJECT pDrvObj);
 
