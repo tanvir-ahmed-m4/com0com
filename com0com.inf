@@ -14,7 +14,7 @@ Provider = %VF%
 Class = CNCPorts
 ClassGUID = {df799e12-3c56-421b-b298-b6d3642bc878}
 CatalogFile = com0com.cat
-DriverVer = 02/18/2004,1.0.0.0
+DriverVer = 02/18/2004,1.2.0.0
 
 ;******************************************************************************
 ;

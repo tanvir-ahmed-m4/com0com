@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.5  2005/07/14 16:06:23  vfrolov
+ * Changed version
+ *
  * Revision 1.4  2005/06/22 14:59:28  vfrolov
  * Changed version
  *
@@ -35,8 +38,8 @@
 #include <ntverp.h>
 #include "c0clog.rc"
 
-#define VER_VERSION             1,1,1,0
-#define VER_VERSION_STR         "1.1.1.0"
+#define VER_VERSION             1,2,0,0
+#define VER_VERSION_STR         "1.2.0.0"
 
 #define VER_PODUCT_NAME_STR     "Null-modem emulator"
 
