@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.6  2005/07/14 12:29:23  vfrolov
+ * Fixed BSOD on IRP_MJ_READ after IOCTL_SERIAL_SET_QUEUE_SIZE
+ *
  * Revision 1.5  2005/05/19 08:23:41  vfrolov
  * Fixed data types
  *
@@ -495,6 +498,9 @@ NTSTATUS FdoPortIoCtl(
 
         ExFreePool(pReadBuf->pBase);
       }
+
+      readBufNew.escape = pReadBuf->escape;
+      readBufNew.insertData = pReadBuf->insertData;
 
       *pReadBuf = readBufNew;
 
