@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.4  2005/07/14 13:51:07  vfrolov
+ * Replaced ASSERT by HALT_UNLESS
+ *
  * Revision 1.3  2005/06/28 12:25:34  vfrolov
  * Implemented IRP_MN_QUERY_CAPABILITIES and IRP_MN_QUERY_BUS_INFORMATION for PdoPortPnp()
  *
@@ -34,6 +37,11 @@
 #include "precomp.h"
 #include "strutils.h"
 #include <initguid.h>
+
+/*
+ * FILE_ID used by HALT_UNLESS to put it on BSOD
+ */
+#define FILE_ID 5
 
 /*
  * {E74D3627-7582-48a6-8B0B-ED60CE908A51}
@@ -310,7 +318,9 @@ NTSTATUS c0cPnpDispatch(IN PDEVICE_OBJECT pDevObj, IN PIRP pIrp)
   NTSTATUS status;
   PC0C_COMMON_EXTENSION pDevExt = pDevObj->DeviceExtension;
 
-  ASSERT(IoGetCurrentIrpStackLocation(pIrp)->MajorFunction == IRP_MJ_PNP);
+  HALT_UNLESS2(IoGetCurrentIrpStackLocation(pIrp)->MajorFunction == IRP_MJ_PNP,
+      IoGetCurrentIrpStackLocation(pIrp)->MajorFunction,
+      IoGetCurrentIrpStackLocation(pIrp)->MinorFunction);
 
   TraceIrp("PNP", pIrp, NULL, TRACE_FLAG_PARAMS);
 

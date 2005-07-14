@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.2  2005/07/14 13:51:09  vfrolov
+ * Replaced ASSERT by HALT_UNLESS
+ *
  * Revision 1.1  2005/01/26 12:18:54  vfrolov
  * Initial revision
  *
@@ -26,6 +29,11 @@
  */
 
 #include "precomp.h"
+
+/*
+ * FILE_ID used by HALT_UNLESS to put it on BSOD
+ */
+#define FILE_ID 2
 
 PC0C_IRP_STATE GetIrpState(IN PIRP pIrp)
 {
@@ -54,7 +62,7 @@ VOID ShiftQueue(PC0C_IRP_QUEUE pQueue)
 
     pState = GetIrpState(pQueue->pCurrent);
 
-    ASSERT(pState);
+    HALT_UNLESS(pState);
 
     pQueue->pCurrent = NULL;
     pState->flags &= ~C0C_IRP_FLAG_IS_CURRENT;
@@ -70,7 +78,7 @@ VOID ShiftQueue(PC0C_IRP_QUEUE pQueue)
 
     pState = GetIrpState(pIrp);
 
-    ASSERT(pState);
+    HALT_UNLESS(pState);
 
     pQueue->pCurrent = pIrp;
     pState->flags &= ~C0C_IRP_FLAG_IN_QUEUE;
@@ -85,7 +93,7 @@ VOID FdoPortCancelRoutine(IN PC0C_FDOPORT_EXTENSION pDevExt, IN PIRP pIrp)
   PC0C_IRP_QUEUE pQueue;
 
   pState = GetIrpState(pIrp);
-  ASSERT(pState);
+  HALT_UNLESS(pState);
 
   pQueue = &pDevExt->pIoPortLocal->irpQueues[pState->iQueue];
 
@@ -127,7 +135,7 @@ VOID DoCancelRoutine(
   #pragma warning(pop)
 
   if (pCancelRoutine) {
-    ASSERT(pCancelRoutine == CancelRoutine);
+    HALT_UNLESS(pCancelRoutine == CancelRoutine);
     pIrp->Cancel = TRUE;
     KeReleaseSpinLock(pDevExt->pIoLock, *pOldIrql);
     FdoPortCancelRoutine(pDevExt, pIrp);
@@ -151,7 +159,7 @@ VOID FdoPortCancelQueue(IN PC0C_FDOPORT_EXTENSION pDevExt, IN PC0C_IRP_QUEUE pQu
 
     pState = GetIrpState(pIrp);
 
-    ASSERT(pState);
+    HALT_UNLESS(pState);
 
     pState->flags &= ~C0C_IRP_FLAG_IN_QUEUE;
 
@@ -214,7 +222,7 @@ NTSTATUS FdoPortStartIrp(
 
   pState = GetIrpState(pIrp);
 
-  ASSERT(pState);
+  HALT_UNLESS(pState);
 
   pState->flags = 0;
   pState->iQueue = iQueue;

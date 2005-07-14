@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.2  2005/07/14 13:51:09  vfrolov
+ * Replaced ASSERT by HALT_UNLESS
+ *
  * Revision 1.1  2005/01/26 12:18:54  vfrolov
  * Initial revision
  *
@@ -27,6 +30,11 @@
 
 #include "precomp.h"
 #include "timeout.h"
+
+/*
+ * FILE_ID used by HALT_UNLESS to put it on BSOD
+ */
+#define FILE_ID 3
 
 VOID TimeoutRoutine(
     IN PC0C_FDOPORT_EXTENSION pDevExt,
@@ -78,7 +86,7 @@ NTSTATUS SetReadTimeout(IN PC0C_FDOPORT_EXTENSION pDevExt, PIRP pIrp)
   KeCancelTimer(&pDevExt->pIoPortLocal->timerReadInterval);
 
   pState = GetIrpState(pIrp);
-  ASSERT(pState);
+  HALT_UNLESS(pState);
 
   KeAcquireSpinLock(&pDevExt->controlLock, &oldIrql);
   timeouts = pDevExt->timeouts;

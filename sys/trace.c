@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.7  2005/07/14 13:51:09  vfrolov
+ * Replaced ASSERT by HALT_UNLESS
+ *
  * Revision 1.6  2005/07/01 11:03:50  vfrolov
  * Included <stdarg.h>
  *
@@ -44,6 +47,11 @@
 #include "precomp.h"
 
 #if DBG
+
+/*
+ * FILE_ID used by HALT_UNLESS to put it on BSOD
+ */
+#define FILE_ID 4
 
 /********************************************************************/
 #include <stdarg.h>
@@ -212,7 +220,7 @@ PTRACE_BUFFER AllocTraceBuf()
 
 VOID FreeTraceBuf(PTRACE_BUFFER pBuf)
 {
-  ASSERT(pBuf);
+  HALT_UNLESS(pBuf);
   pBuf->busy = FALSE;
 }
 /********************************************************************/
@@ -749,7 +757,7 @@ VOID TraceOutput(
 
     pDestStr = AnsiStrCopyTimeFields(pDestStr, &size, &timeFields);
     pDestStr = AnsiStrFormat(pDestStr, &size, " *%u* %s\r\n", (unsigned)KeGetCurrentIrql(), pStr);
-    ASSERT(size > 0);
+    HALT_UNLESS3(size > 0, strOldFreeInd, strOldBusyInd, sizeof(strOld));
 
     if (size == 1) {
       pDestStr -= 6;
@@ -769,7 +777,7 @@ VOID TraceOutput(
   else
     pIoObject = pDrvObj;
 
-  ASSERT(TRACE_FILE_OK);
+  HALT_UNLESS(TRACE_FILE_OK);
   InitializeObjectAttributes(&objectAttributes, &traceFileName, 0, NULL, NULL);
 
   status = ZwCreateFile(
@@ -810,7 +818,7 @@ VOID TraceOutput(
           RtlCopyMemory(pDestStr, &strOld[strOldBusyInd], lenBuf);
           pDestStr[lenBuf] = 0;
           strOldBusyInd += (LONG)lenBuf;
-          ASSERT(strOldBusyInd <= strOldFreeInd);
+          HALT_UNLESS3(strOldBusyInd <= strOldFreeInd, strOldFreeInd, strOldBusyInd, lenBuf);
           if (strOldBusyInd == strOldFreeInd)
             InterlockedExchange(&strOldFreeInd, strOldBusyInd = 0);
         }

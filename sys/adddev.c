@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.6  2005/07/14 13:51:08  vfrolov
+ * Replaced ASSERT by HALT_UNLESS
+ *
  * Revision 1.5  2005/07/13 16:12:36  vfrolov
  * Added c0cGlobal struct for global driver's data
  *
@@ -40,6 +43,11 @@
 #include "precomp.h"
 #include "timeout.h"
 #include "strutils.h"
+
+/*
+ * FILE_ID used by HALT_UNLESS to put it on BSOD
+ */
+#define FILE_ID 6
 
 NTSTATUS InitCommonExt(
     PC0C_COMMON_EXTENSION pDevExt,
@@ -183,7 +191,7 @@ NTSTATUS AddFdoPort(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
     goto clean;
   }
 
-  ASSERT(pNewDevObj);
+  HALT_UNLESS(pNewDevObj);
   pDevExt = pNewDevObj->DeviceExtension;
   RtlZeroMemory(pDevExt, sizeof(*pDevExt));
   status = InitCommonExt((PC0C_COMMON_EXTENSION)pDevExt, pNewDevObj, C0C_DOTYPE_FP, portName.Buffer);
@@ -315,7 +323,7 @@ NTSTATUS AddPdoPort(
     goto clean;
   }
 
-  ASSERT(pNewDevObj);
+  HALT_UNLESS(pNewDevObj);
   pDevExt = (pNewDevObj)->DeviceExtension;
   RtlZeroMemory(pDevExt, sizeof(*pDevExt));
   status = InitCommonExt((PC0C_COMMON_EXTENSION)pDevExt, pNewDevObj, C0C_DOTYPE_PP, portName.Buffer);
@@ -396,7 +404,7 @@ ULONG AllocPortNum(IN PDRIVER_OBJECT pDrvObj)
     if (((PC0C_COMMON_EXTENSION)pDevObj->DeviceExtension)->doType == C0C_DOTYPE_FB) {
       ULONG num = ((PC0C_FDOBUS_EXTENSION)pDevObj->DeviceExtension)->portNum;
 
-      ASSERT(num < busyMaskLen);
+      HALT_UNLESS3(num < busyMaskLen, num, busyMaskLen, numNext);
       pBusyMask[num] = 1;
     }
   }
@@ -452,7 +460,7 @@ NTSTATUS AddFdoBus(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
     goto clean;
   }
 
-  ASSERT(pNewDevObj != NULL);
+  HALT_UNLESS(pNewDevObj);
   pDevExt = pNewDevObj->DeviceExtension;
   RtlZeroMemory(pDevExt, sizeof(*pDevExt));
   status = InitCommonExt((PC0C_COMMON_EXTENSION)pDevExt, pNewDevObj, C0C_DOTYPE_FB, portName.Buffer);
