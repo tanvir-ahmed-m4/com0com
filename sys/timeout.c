@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.3  2005/08/16 16:36:33  vfrolov
+ * Hidden timeout functions
+ *
  * Revision 1.2  2005/07/14 13:51:09  vfrolov
  * Replaced ASSERT by HALT_UNLESS
  *
@@ -238,6 +241,13 @@ VOID TimeoutWriteTotal(
   UNREFERENCED_PARAMETER(systemArgument2);
 
   TimeoutRoutine(pDevExt, &pDevExt->pIoPortLocal->irpQueues[C0C_QUEUE_WRITE]);
+}
+
+VOID InitializeTimeoutDpc(IN PC0C_FDOPORT_EXTENSION pDevExt)
+{
+  KeInitializeDpc(&pDevExt->pIoPortLocal->timerReadTotalDpc, TimeoutReadTotal, pDevExt);
+  KeInitializeDpc(&pDevExt->pIoPortLocal->timerReadIntervalDpc, TimeoutReadInterval, pDevExt);
+  KeInitializeDpc(&pDevExt->pIoPortLocal->timerWriteTotalDpc, TimeoutWriteTotal, pDevExt);
 }
 
 NTSTATUS FdoPortSetIrpTimeout(

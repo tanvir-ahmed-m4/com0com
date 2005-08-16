@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.7  2005/08/16 16:36:33  vfrolov
+ * Hidden timeout functions
+ *
  * Revision 1.6  2005/07/14 13:51:08  vfrolov
  * Replaced ASSERT by HALT_UNLESS
  *
@@ -212,9 +215,7 @@ NTSTATUS AddFdoPort(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
   pDevExt->pIoPortLocal = ((PC0C_PDOPORT_EXTENSION)pPhDevObj->DeviceExtension)->pIoPortLocal;
   pDevExt->pIoPortRemote = ((PC0C_PDOPORT_EXTENSION)pPhDevObj->DeviceExtension)->pIoPortRemote;
 
-  KeInitializeDpc(&pDevExt->pIoPortLocal->timerReadTotalDpc, TimeoutReadTotal, pDevExt);
-  KeInitializeDpc(&pDevExt->pIoPortLocal->timerReadIntervalDpc, TimeoutReadInterval, pDevExt);
-  KeInitializeDpc(&pDevExt->pIoPortLocal->timerWriteTotalDpc, TimeoutWriteTotal, pDevExt);
+  InitializeTimeoutDpc(pDevExt);
 
   KeInitializeSpinLock(&pDevExt->controlLock);
   pDevExt->specialChars.XonChar      = 0x11;
