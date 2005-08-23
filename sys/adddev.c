@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.8  2005/08/23 15:49:21  vfrolov
+ * Implemented baudrate emulation
+ *
  * Revision 1.7  2005/08/16 16:36:33  vfrolov
  * Hidden timeout functions
  *
@@ -45,6 +48,7 @@
 
 #include "precomp.h"
 #include "timeout.h"
+#include "delay.h"
 #include "strutils.h"
 
 /*
@@ -67,15 +71,10 @@ VOID RemoveFdoPort(IN PC0C_FDOPORT_EXTENSION pDevExt)
 {
   if (pDevExt->pIoPortLocal && pDevExt->pIoPortLocal->pDevExt) {
     pDevExt->pIoPortLocal->pDevExt = NULL;
-
-    KeCancelTimer(&pDevExt->pIoPortLocal->timerReadTotal);
-    KeCancelTimer(&pDevExt->pIoPortLocal->timerReadInterval);
-    KeCancelTimer(&pDevExt->pIoPortLocal->timerWriteTotal);
-
-    KeRemoveQueueDpc(&pDevExt->pIoPortLocal->timerReadTotalDpc);
-    KeRemoveQueueDpc(&pDevExt->pIoPortLocal->timerReadIntervalDpc);
-    KeRemoveQueueDpc(&pDevExt->pIoPortLocal->timerWriteTotalDpc);
+    FreeTimeouts(pDevExt);
   }
+
+  FreeWriteDelay(pDevExt);
 
   if (pDevExt->mappedSerialDevice)
     RtlDeleteRegistryValue(RTL_REGISTRY_DEVICEMAP, C0C_SERIAL_DEVICEMAP,
@@ -101,6 +100,7 @@ NTSTATUS AddFdoPort(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
   UNICODE_STRING portName;
   PDEVICE_OBJECT pNewDevObj;
   PC0C_FDOPORT_EXTENSION pDevExt = NULL;
+  ULONG emuBR = 0;
   WCHAR propertyBuffer[255];
   PWCHAR pPortName;
   ULONG len;
@@ -118,7 +118,7 @@ NTSTATUS AddFdoPort(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
     goto clean;
   }
 
-  Trace00(NULL, L"AddFdoPort for ", propertyBuffer);
+  Trace00((PC0C_COMMON_EXTENSION)pPhDevObj->DeviceExtension, L"AddFdoPort for ", propertyBuffer);
 
   for (pPortName = NULL, i = 0 ; propertyBuffer[i] ; i++)
     if (propertyBuffer[i] == L'\\')
@@ -130,50 +130,69 @@ NTSTATUS AddFdoPort(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
     goto clean;
   }
 
+  RtlInitUnicodeString(&portName, NULL);
+
   {
-    WCHAR portNameBuf[C0C_PORT_NAME_LEN];
-    UNICODE_STRING portNameTmp;
     UNICODE_STRING portRegistryPath;
-    RTL_QUERY_REGISTRY_TABLE queryTable[2];
 
     RtlInitUnicodeString(&portRegistryPath, NULL);
     StrAppendStr(&status, &portRegistryPath, c0cGlobal.registryPath.Buffer, c0cGlobal.registryPath.Length);
     StrAppendStr0(&status, &portRegistryPath, L"\\Parameters\\");
     StrAppendStr0(&status, &portRegistryPath, pPortName);
 
-    if (!NT_SUCCESS(status)) {
-      SysLog(pPhDevObj, status, L"AddFdoPort FAIL");
-      goto clean;
+    if (NT_SUCCESS(status)) {
+      WCHAR portNameBuf[C0C_PORT_NAME_LEN];
+      UNICODE_STRING portNameTmp;
+      RTL_QUERY_REGISTRY_TABLE queryTable[2];
+
+      RtlZeroMemory(queryTable, sizeof(queryTable));
+
+      portNameTmp.Length = 0;
+      portNameTmp.MaximumLength = sizeof(portNameBuf);
+      portNameTmp.Buffer = portNameBuf;
+
+      queryTable[0].Flags        = RTL_QUERY_REGISTRY_DIRECT | RTL_QUERY_REGISTRY_REQUIRED;
+      queryTable[0].Name         = L"PortName";
+      queryTable[0].EntryContext = &portNameTmp;
+
+      status = RtlQueryRegistryValues(
+          RTL_REGISTRY_ABSOLUTE,
+          portRegistryPath.Buffer,
+          queryTable,
+          NULL,
+          NULL);
+
+      if (!NT_SUCCESS(status) || !portNameTmp.Length) {
+        status = STATUS_SUCCESS;
+        StrAppendStr0(&status, &portName, pPortName);
+      } else {
+        StrAppendStr(&status, &portName, portNameTmp.Buffer, portNameTmp.Length);
+        Trace00((PC0C_COMMON_EXTENSION)pPhDevObj->DeviceExtension, L"PortName set to ", portName.Buffer);
+      }
     }
 
-    RtlZeroMemory(queryTable, sizeof(queryTable));
+    if (NT_SUCCESS(status)) {
+      RTL_QUERY_REGISTRY_TABLE queryTable[2];
+      ULONG zero = 0;
 
-    portNameTmp.Length = 0;
-    portNameTmp.MaximumLength = sizeof(portNameBuf);
-    portNameTmp.Buffer = portNameBuf;
+      RtlZeroMemory(queryTable, sizeof(queryTable));
 
-    queryTable[0].Flags        = RTL_QUERY_REGISTRY_DIRECT | RTL_QUERY_REGISTRY_REQUIRED;
-    queryTable[0].Name         = L"PortName";
-    queryTable[0].EntryContext = &portNameTmp;
+      queryTable[0].Flags         = RTL_QUERY_REGISTRY_DIRECT;
+      queryTable[0].Name          = L"EmuBR";
+      queryTable[0].EntryContext  = &emuBR;
+      queryTable[0].DefaultType   = REG_DWORD;
+      queryTable[0].DefaultData   = &zero;
+      queryTable[0].DefaultLength = sizeof(ULONG);
 
-    status = RtlQueryRegistryValues(
-        RTL_REGISTRY_ABSOLUTE,
-        portRegistryPath.Buffer,
-        queryTable,
-        NULL,
-        NULL);
+      RtlQueryRegistryValues(
+          RTL_REGISTRY_ABSOLUTE,
+          portRegistryPath.Buffer,
+          queryTable,
+          NULL,
+          NULL);
+    }
 
     StrFree(&portRegistryPath);
-
-    RtlInitUnicodeString(&portName, NULL);
-
-    if (!NT_SUCCESS(status) || !portNameTmp.Length) {
-      status = STATUS_SUCCESS;
-      StrAppendStr0(&status, &portName, pPortName);
-    } else {
-      StrAppendStr(&status, &portName, portNameTmp.Buffer, portNameTmp.Length);
-      Trace00(NULL, L"PortName set to ", portName.Buffer);
-    }
   }
 
   if (!NT_SUCCESS(status)) {
@@ -215,7 +234,11 @@ NTSTATUS AddFdoPort(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
   pDevExt->pIoPortLocal = ((PC0C_PDOPORT_EXTENSION)pPhDevObj->DeviceExtension)->pIoPortLocal;
   pDevExt->pIoPortRemote = ((PC0C_PDOPORT_EXTENSION)pPhDevObj->DeviceExtension)->pIoPortRemote;
 
-  InitializeTimeoutDpc(pDevExt);
+  if (emuBR) {
+    if (NT_SUCCESS(AllocWriteDelay(pDevExt)))
+      Trace0((PC0C_COMMON_EXTENSION)pDevExt, L"Enabled baudrate emulation");
+  }
+  AllocTimeouts(pDevExt);
 
   KeInitializeSpinLock(&pDevExt->controlLock);
   pDevExt->specialChars.XonChar      = 0x11;
@@ -226,6 +249,8 @@ NTSTATUS AddFdoPort(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
   pDevExt->lineControl.Parity        = EVEN_PARITY;
   pDevExt->lineControl.StopBits      = STOP_BIT_1;
   pDevExt->baudRate.BaudRate         = 1200;
+
+  SetWriteDelay(pDevExt);
 
   status = IoCreateSymbolicLink(&pDevExt->win32DeviceName, &pDevExt->ntDeviceName);
 
@@ -342,9 +367,6 @@ NTSTATUS AddPdoPort(
   for (i = 0 ; i < C0C_QUEUE_SIZE ; i++) {
     InitializeListHead(&pIoPortLocal->irpQueues[i].queue);
     pIoPortLocal->irpQueues[i].pCurrent = NULL;
-    KeInitializeTimer(&pIoPortLocal->timerReadTotal);
-    KeInitializeTimer(&pIoPortLocal->timerReadInterval);
-    KeInitializeTimer(&pIoPortLocal->timerWriteTotal);
   }
 
   Trace0((PC0C_COMMON_EXTENSION)pDevExt, L"AddPdoPort OK");

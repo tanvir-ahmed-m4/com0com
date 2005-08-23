@@ -18,6 +18,7 @@ SOURCES= \
         io.c \
         startirp.c \
         timeout.c \
+        delay.c \
         strutils.c \
         syslog.c \
         trace.c \

@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.7  2005/08/23 15:49:21  vfrolov
+ * Implemented baudrate emulation
+ *
  * Revision 1.6  2005/07/14 12:29:23  vfrolov
  * Fixed BSOD on IRP_MJ_READ after IOCTL_SERIAL_SET_QUEUE_SIZE
  *
@@ -42,6 +45,7 @@
 
 #include "precomp.h"
 #include "timeout.h"
+#include "delay.h"
 
 NTSTATUS FdoPortIoCtl(
     IN PC0C_FDOPORT_EXTENSION pDevExt,
@@ -314,6 +318,8 @@ NTSTATUS FdoPortIoCtl(
       KeAcquireSpinLock(&pDevExt->controlLock, &oldIrql);
       pDevExt->lineControl = *(PSERIAL_LINE_CONTROL)pIrp->AssociatedIrp.SystemBuffer;
       KeReleaseSpinLock(&pDevExt->controlLock, oldIrql);
+
+      SetWriteDelay(pDevExt);
       break;
     case IOCTL_SERIAL_GET_LINE_CONTROL:
       if (pIrpStack->Parameters.DeviceIoControl.OutputBufferLength < sizeof(SERIAL_LINE_CONTROL)) {
@@ -337,6 +343,8 @@ NTSTATUS FdoPortIoCtl(
       KeAcquireSpinLock(&pDevExt->controlLock, &oldIrql);
       pDevExt->baudRate = *(PSERIAL_BAUD_RATE)pIrp->AssociatedIrp.SystemBuffer;
       KeReleaseSpinLock(&pDevExt->controlLock, oldIrql);
+
+      SetWriteDelay(pDevExt);
       break;
     case IOCTL_SERIAL_GET_BAUD_RATE:
       if (pIrpStack->Parameters.DeviceIoControl.OutputBufferLength < sizeof(SERIAL_BAUD_RATE)) {

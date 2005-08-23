@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.2  2005/08/23 15:49:21  vfrolov
+ * Implemented baudrate emulation
+ *
  * Revision 1.1  2005/01/26 12:18:54  vfrolov
  * Initial revision
  *
@@ -26,27 +29,19 @@
  */
 
 #include "precomp.h"
-#include "timeout.h"
 
 NTSTATUS StartIrpRead(
     IN PC0C_FDOPORT_EXTENSION pDevExt,
     IN PLIST_ENTRY pQueueToComplete)
 {
-  NTSTATUS status;
-  PIRP pIrp;
-
-  pIrp = pDevExt->pIoPortLocal->irpQueues[C0C_QUEUE_READ].pCurrent;
-
-  status = FdoPortIo(C0C_IO_TYPE_READ,
-                     pIrp,
-                     pDevExt->pIoPortRemote,
-                     &pDevExt->pIoPortRemote->irpQueues[C0C_QUEUE_WRITE],
-                     pQueueToComplete);
-
-  if (status == STATUS_PENDING)
-    status = FdoPortSetIrpTimeout(pDevExt, pIrp);
-
-  return status;
+  return ReadWrite(
+      pDevExt->pIoPortLocal,
+      &pDevExt->pIoPortLocal->irpQueues[C0C_QUEUE_READ],
+      TRUE,
+      pDevExt->pIoPortRemote,
+      &pDevExt->pIoPortRemote->irpQueues[C0C_QUEUE_WRITE],
+      FALSE,
+      pQueueToComplete);
 }
 
 NTSTATUS FdoPortRead(IN PC0C_FDOPORT_EXTENSION pDevExt, IN PIRP pIrp)

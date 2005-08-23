@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.11  2005/08/23 15:49:21  vfrolov
+ * Implemented baudrate emulation
+ *
  * Revision 1.10  2005/07/13 16:12:36  vfrolov
  * Added c0cGlobal struct for global driver's data
  *
@@ -118,10 +121,11 @@ typedef struct _C0C_BUFFER {
   (buf).insertData.size = 0
 
 struct _C0C_FDOPORT_EXTENSION;
+struct _C0C_ADAPTIVE_DELAY;
 
 typedef struct _C0C_IO_PORT {
 
-  struct _C0C_FDOPORT_EXTENSION  *pDevExt;
+  struct _C0C_FDOPORT_EXTENSION *pDevExt;
 
   #define C0C_QUEUE_READ  0
   #define C0C_QUEUE_WRITE 1
@@ -140,6 +144,8 @@ typedef struct _C0C_IO_PORT {
 
   KTIMER                  timerWriteTotal;
   KDPC                    timerWriteTotalDpc;
+
+  struct _C0C_ADAPTIVE_DELAY *pWriteDelay;
 
   ULONG                   waitMask;
   ULONG                   eventMask;
@@ -284,8 +290,6 @@ typedef struct _C0C_IRP_STATE {
 
 PC0C_IRP_STATE GetIrpState(IN PIRP pIrp);
 
-#define C0C_IO_TYPE_READ               1
-#define C0C_IO_TYPE_WRITE              2
 #define C0C_IO_TYPE_WAIT_COMPLETE      3
 #define C0C_IO_TYPE_INSERT             4
 
@@ -294,6 +298,15 @@ NTSTATUS FdoPortIo(
     PVOID pParam,
     PC0C_IO_PORT pIoPort,
     PC0C_IRP_QUEUE pQueue,
+    PLIST_ENTRY pQueueToComplete);
+
+NTSTATUS ReadWrite(
+    PC0C_IO_PORT pIoPortRead,
+    PC0C_IRP_QUEUE pQueueRead,
+    BOOLEAN startRead,
+    PC0C_IO_PORT pIoPortWrite,
+    PC0C_IRP_QUEUE pQueueWrite,
+    BOOLEAN startWrite,
     PLIST_ENTRY pQueueToComplete);
 
 VOID SetModemStatus(

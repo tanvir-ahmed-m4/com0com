@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.3  2005/08/23 15:49:21  vfrolov
+ * Implemented baudrate emulation
+ *
  * Revision 1.2  2005/08/16 16:36:33  vfrolov
  * Hidden timeout functions
  *
@@ -31,7 +34,10 @@
 #ifndef _C0C_TIMEOUT_H_
 #define _C0C_TIMEOUT_H_
 
-VOID InitializeTimeoutDpc(IN PC0C_FDOPORT_EXTENSION pDevExt);
+VOID AllocTimeouts(IN PC0C_FDOPORT_EXTENSION pDevExt);
+VOID FreeTimeouts(IN PC0C_FDOPORT_EXTENSION pDevExt);
+
+VOID SetIntervalTimeout(PC0C_IO_PORT pIoPort);
 
 NTSTATUS FdoPortSetIrpTimeout(
     IN PC0C_FDOPORT_EXTENSION pDevExt,
