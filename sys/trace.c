@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.8  2005/08/23 15:28:26  vfrolov
+ * Added build timestamp
+ *
  * Revision 1.7  2005/07/14 13:51:09  vfrolov
  * Replaced ASSERT by HALT_UNLESS
  *
@@ -916,6 +919,7 @@ VOID TraceOpen(
     StrFree(&msg);
 
     TraceF(NULL, "===== BEGIN =====");
+    TraceF(NULL, "(" __DATE__ " " __TIME__ ")");
   }
 }
 
