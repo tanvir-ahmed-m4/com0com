@@ -19,6 +19,10 @@
  *
  *
  * $Log$
+ * Revision 1.3  2005/08/25 07:48:39  vfrolov
+ * Changed type of code names from wchar to char
+ * Fixed HandFlow tracing
+ *
  * Revision 1.2  2005/07/14 12:18:59  vfrolov
  * Defined HALT_UNLESS
  *
@@ -46,8 +50,14 @@
 
 typedef struct _CODE2NAME {
   ULONG code;
-  PWCHAR name;
+  PCHAR name;
 } CODE2NAME, *PCODE2NAME;
+
+typedef struct _FIELD2NAME {
+  ULONG code;
+  ULONG mask;
+  PCHAR name;
+} FIELD2NAME, *PFIELD2NAME;
 
 VOID TraceOpen(
     IN PDRIVER_OBJECT _pDrvObj,
@@ -90,13 +100,14 @@ CODE2NAME codeNameTablePnp[];
 CODE2NAME codeNameTablePower[];
 CODE2NAME codeNameTableDoType[];
 CODE2NAME codeNameTableModemStatus[];
-CODE2NAME codeNameTableControlHandShake[];
-CODE2NAME codeNameTableFlowReplace[];
 CODE2NAME codeNameTableStatus[];
 CODE2NAME codeNameTableIrpMj[];
 CODE2NAME codeNameTableRelations[];
 CODE2NAME codeNameTableBusQuery[];
 CODE2NAME codeNameTableDeviceText[];
+
+FIELD2NAME codeNameTableControlHandShake[];
+FIELD2NAME codeNameTableFlowReplace[];
 
 #else /* DBG */
 
