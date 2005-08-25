@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.9  2005/08/25 08:25:40  vfrolov
+ * Fixed data types
+ *
  * Revision 1.8  2005/08/23 15:49:21  vfrolov
  * Implemented baudrate emulation
  *
@@ -105,7 +108,7 @@ NTSTATUS MoveRawData(PC0C_RAW_DATA pDstRawData, PC0C_RAW_DATA pSrcRawData)
 NTSTATUS ReadBuffer(PIRP pIrp, PC0C_BUFFER pBuf, PSIZE_T pReadDone)
 {
   NTSTATUS status;
-  ULONG information;
+  SIZE_T information;
   PIO_STACK_LOCATION pIrpStack;
 
   status = STATUS_PENDING;
@@ -271,7 +274,7 @@ NTSTATUS WriteBuffer(
     PSIZE_T pWriteDone)
 {
   NTSTATUS status;
-  ULONG information;
+  SIZE_T information;
   PIO_STACK_LOCATION pIrpStack;
   PC0C_BUFFER pBuf = &pReadIoPort->readBuf;
 
