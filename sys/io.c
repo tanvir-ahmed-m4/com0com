@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.11  2005/08/26 08:35:05  vfrolov
+ * Fixed unwanted interference to baudrate emulation by read operations
+ *
  * Revision 1.10  2005/08/25 15:38:17  vfrolov
  * Some code moved from io.c to bufutils.c
  *
@@ -378,7 +381,6 @@ NTSTATUS ReadWrite(
       writeLimit = GetWriteLimit(pWriteDelay);
       status = STATUS_PENDING;
     } else {
-      StopWriteDelayTimer(pWriteDelay);
       writeLimit = 0;
       status = STATUS_SUCCESS;
     }
