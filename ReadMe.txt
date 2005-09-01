@@ -82,9 +82,9 @@ Remove the following subtrees from the registry:
 
 Delete file %SystemRoot%\system32\drivers\com0com.sys
 
-Find in the %SystemRoot%\inf\ directory the oem{N}.inf file that corresponds to
-the com0com.inf file (the system renames com0com.inf to oem{N}.inf, where {N}
-is a number). Delete oem{N}.inf and oem{N}.PNF files.
+Find in the %SystemRoot%\inf\ directory the oem{N}.inf file(s) that corresponds
+to the com0com.inf file (the system renames com0com.inf to oem{N}.inf, where {N}
+is a number). Delete all found oem{N}.inf and corresponding oem{N}.PNF files.
 
 
 FAQ
@@ -97,3 +97,11 @@ A. Yes, it's possible. Add the following to the registry:
 "PortName"="COM2"
 [HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\com0com\Parameters\CNCB0]
 "PortName"="COM3"
+
+Q. The baud rate setting does not seem to make a difference: data is always
+   transferred at the same speed. How to enable the baud rate emulation?
+A. To enable baud rate emulation for transferring data from CNCA0 to CNCB0 add
+   the following to the registry:
+
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\com0com\Parameters\CNCA0]
+"EmuBR"=dword:FFFFFFFF
