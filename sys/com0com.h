@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.12  2005/09/06 07:23:44  vfrolov
+ * Implemented overrun emulation
+ *
  * Revision 1.11  2005/08/23 15:49:21  vfrolov
  * Implemented baudrate emulation
  *
@@ -51,7 +54,6 @@
  *
  * Revision 1.1  2005/01/26 12:18:54  vfrolov
  * Initial revision
- *
  *
  */
 
@@ -147,6 +149,7 @@ typedef struct _C0C_IO_PORT {
 
   struct _C0C_ADAPTIVE_DELAY *pWriteDelay;
 
+  ULONG                   errors;
   ULONG                   waitMask;
   ULONG                   eventMask;
   UCHAR                   escapeChar;
@@ -159,6 +162,8 @@ typedef struct _C0C_IO_PORT {
   ULONG                   modemStatus;
 
   C0C_BUFFER              readBuf;
+
+  BOOLEAN                 emuOverrun;
 } C0C_IO_PORT, *PC0C_IO_PORT;
 
 typedef struct _C0C_PDOPORT_EXTENSION {
@@ -254,6 +259,7 @@ NTSTATUS FdoPortStartIrp(
     IN UCHAR iQueue,
     IN PC0C_FDOPORT_START_ROUTINE pStartRoutine);
 
+VOID CancelQueue(PC0C_IRP_QUEUE pQueue, PLIST_ENTRY pQueueToComplete);
 VOID FdoPortCancelQueue(IN PC0C_FDOPORT_EXTENSION pDevExt, IN PC0C_IRP_QUEUE pQueue);
 VOID FdoPortCancelQueues(IN PC0C_FDOPORT_EXTENSION pDevExt);
 VOID FdoPortCompleteQueue(IN PLIST_ENTRY pQueueToComplete);

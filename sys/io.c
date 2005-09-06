@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.12  2005/09/06 07:23:44  vfrolov
+ * Implemented overrun emulation
+ *
  * Revision 1.11  2005/08/26 08:35:05  vfrolov
  * Fixed unwanted interference to baudrate emulation by read operations
  *
@@ -51,7 +54,6 @@
  *
  * Revision 1.1  2005/01/26 12:18:54  vfrolov
  * Initial revision
- *
  *
  */
 
@@ -134,6 +136,56 @@ NTSTATUS WriteBuffer(
       *pWriteLimit -= writeDone;
 
     WaitCompleteRxChar(pReadIoPort, pQueueToComplete);
+  }
+
+  if (information == writeLength)
+    status = STATUS_SUCCESS;
+  else
+    status = STATUS_PENDING;
+
+  return status;
+}
+
+VOID AlertOverrun(PC0C_IO_PORT pReadIoPort, PLIST_ENTRY pQueueToComplete)
+{
+  pReadIoPort->errors |= SERIAL_ERROR_QUEUEOVERRUN;
+
+  if (pReadIoPort->pDevExt->handFlow.FlowReplace & SERIAL_ERROR_CHAR)
+    WriteMandatoryToBuffer(&pReadIoPort->readBuf, pReadIoPort->pDevExt->specialChars.ErrorChar);
+
+  if (pReadIoPort->pDevExt->handFlow.ControlHandShake & SERIAL_ERROR_ABORT) {
+    CancelQueue(&pReadIoPort->irpQueues[C0C_QUEUE_READ], pQueueToComplete);
+    CancelQueue(&pReadIoPort->irpQueues[C0C_QUEUE_WRITE], pQueueToComplete);
+  }
+}
+
+NTSTATUS WriteOverrun(
+    PIRP pIrp,
+    PC0C_IO_PORT pReadIoPort,
+    PLIST_ENTRY pQueueToComplete,
+    PSIZE_T pWriteLimit,
+    PSIZE_T pWriteDone)
+{
+  NTSTATUS status;
+  SIZE_T writeLength, information;
+  SIZE_T writeDone;
+
+  writeLength = IoGetCurrentIrpStackLocation(pIrp)->Parameters.Write.Length;
+  information = pIrp->IoStatus.Information;
+  writeDone = writeLength - information;
+
+  if (pWriteLimit && writeDone > *pWriteLimit)
+    writeDone = *pWriteLimit;
+
+  if (writeDone) {
+    *pWriteDone += writeDone;
+    information += writeDone;
+    pIrp->IoStatus.Information = information;
+
+    if (pWriteLimit)
+      *pWriteLimit -= writeDone;
+
+    AlertOverrun(pReadIoPort, pQueueToComplete);
   }
 
   if (information == writeLength)
@@ -352,6 +404,8 @@ NTSTATUS FdoPortIo(
     case C0C_IO_TYPE_INSERT:
       HALT_UNLESS(pParam);
       status = WriteRawDataToBuffer((PC0C_RAW_DATA)pParam, &pIoPort->readBuf);
+      if (status == STATUS_PENDING && !pIoPort->emuOverrun)
+        status = MoveRawData(&pIoPort->readBuf.insertData, (PC0C_RAW_DATA)pParam);
       break;
     }
   }
@@ -441,8 +495,12 @@ NTSTATUS ReadWrite(
             pWriteLimit,
             &doneRead, &doneWrite);
 
-      if (statusWrite == STATUS_PENDING)
+      if (statusWrite == STATUS_PENDING) {
         statusWrite = WriteBuffer(pIrpWrite, pIoPortRead, pQueueToComplete, pWriteLimit, &doneWrite);
+
+        if (pIoPortRead->emuOverrun && !pIrpRead && statusWrite == STATUS_PENDING)
+          statusWrite = WriteOverrun(pIrpWrite, pIoPortRead, pQueueToComplete, pWriteLimit, &doneWrite);
+      }
 
       if (pWriteDelay)
         pWriteDelay->sentFrames += doneWrite;
@@ -520,6 +578,7 @@ VOID SetModemStatus(
 
   if (modemStatusChanged) {
     if (pIoPort->escapeChar) {
+      NTSTATUS status;
       C0C_RAW_DATA insertData;
 
       insertData.size = 3;
@@ -527,16 +586,17 @@ VOID SetModemStatus(
       insertData.data[1] = SERIAL_LSRMST_MST;
       insertData.data[2] = (UCHAR)(pIoPort->modemStatus | (modemStatusChanged >> 4));
 
-      FdoPortIo(
+      status = FdoPortIo(
           C0C_IO_TYPE_INSERT,
           &insertData,
           pIoPort,
           &pIoPort->irpQueues[C0C_QUEUE_READ],
           pQueueToComplete);
-#if DBG
-      if (insertData.size)
+
+      if (status == STATUS_PENDING) {
+        AlertOverrun(pIoPort, pQueueToComplete);
         Trace0((PC0C_COMMON_EXTENSION)pIoPort->pDevExt, L"WARNING: Lost SERIAL_LSRMST_MST");
-#endif /* DBG */
+      }
     }
 
     if (modemStatusChanged & C0C_MSB_CTS)

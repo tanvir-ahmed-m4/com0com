@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.6  2005/09/06 07:23:44  vfrolov
+ * Implemented overrun emulation
+ *
  * Revision 1.5  2005/05/14 17:07:02  vfrolov
  * Implemented SERIAL_LSRMST_MST insertion
  *
@@ -33,7 +36,6 @@
  *
  * Revision 1.1  2005/01/26 12:18:54  vfrolov
  * Initial revision
- *
  *
  */
 
@@ -82,6 +84,7 @@ NTSTATUS FdoPortOpen(IN PC0C_FDOPORT_EXTENSION pDevExt)
 
   pDevExt->pIoPortLocal->readBuf = readBufNew;
 
+  pDevExt->pIoPortLocal->errors = 0;
   pDevExt->pIoPortLocal->waitMask = 0;
   pDevExt->pIoPortLocal->eventMask = 0;
   pDevExt->pIoPortLocal->escapeChar = 0;

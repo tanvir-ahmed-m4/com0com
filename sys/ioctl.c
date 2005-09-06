@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.8  2005/09/06 07:23:44  vfrolov
+ * Implemented overrun emulation
+ *
  * Revision 1.7  2005/08/23 15:49:21  vfrolov
  * Implemented baudrate emulation
  *
@@ -40,7 +43,6 @@
  * Revision 1.1  2005/01/26 12:18:54  vfrolov
  * Initial revision
  *
- *
  */
 
 #include "precomp.h"
@@ -56,10 +58,16 @@ NTSTATUS FdoPortIoCtl(
   ULONG code = pIrpStack->Parameters.DeviceIoControl.IoControlCode;
   KIRQL oldIrql;
 
-  status = STATUS_SUCCESS;
   pIrp->IoStatus.Information = 0;
 
-  switch (code) {
+  if ((pDevExt->handFlow.ControlHandShake & SERIAL_ERROR_ABORT) &&
+      pDevExt->pIoPortLocal->errors && code != IOCTL_SERIAL_GET_COMMSTATUS)
+  {
+    status = STATUS_CANCELLED;
+  } else {
+    status = STATUS_SUCCESS;
+
+    switch (code) {
     case IOCTL_SERIAL_SET_RTS:
     case IOCTL_SERIAL_CLR_RTS:
       KeAcquireSpinLock(pDevExt->pIoLock, &oldIrql);
@@ -178,7 +186,11 @@ NTSTATUS FdoPortIoCtl(
 
       KeAcquireSpinLock(pDevExt->pIoLock, &oldIrql);
       RtlZeroMemory(pSysBuf, sizeof(*pSysBuf));
-      pSysBuf->AmountInInQueue = (ULONG)pDevExt->pIoPortLocal->readBuf.busy;
+      pSysBuf->AmountInInQueue =
+          (ULONG)pDevExt->pIoPortLocal->readBuf.busy +
+          (ULONG)pDevExt->pIoPortLocal->readBuf.insertData.size;
+      pSysBuf->Errors = pDevExt->pIoPortLocal->errors;
+      pDevExt->pIoPortLocal->errors = 0;
       KeReleaseSpinLock(pDevExt->pIoLock, oldIrql);
       pIrp->IoStatus.Information = sizeof(SERIAL_STATUS);
 
@@ -519,6 +531,7 @@ NTSTATUS FdoPortIoCtl(
     }
     default:
       status = STATUS_INVALID_PARAMETER;
+    }
   }
 
   if (status != STATUS_PENDING) {

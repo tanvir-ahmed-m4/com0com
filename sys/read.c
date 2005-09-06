@@ -19,12 +19,14 @@
  *
  *
  * $Log$
+ * Revision 1.3  2005/09/06 07:23:44  vfrolov
+ * Implemented overrun emulation
+ *
  * Revision 1.2  2005/08/23 15:49:21  vfrolov
  * Implemented baudrate emulation
  *
  * Revision 1.1  2005/01/26 12:18:54  vfrolov
  * Initial revision
- *
  *
  */
 
@@ -47,14 +49,17 @@ NTSTATUS StartIrpRead(
 NTSTATUS FdoPortRead(IN PC0C_FDOPORT_EXTENSION pDevExt, IN PIRP pIrp)
 {
   NTSTATUS status;
-  PIO_STACK_LOCATION pIrpStack = IoGetCurrentIrpStackLocation(pIrp);
 
   pIrp->IoStatus.Information = 0;
 
-  if (pIrpStack->Parameters.Read.Length)
-    status = FdoPortStartIrp(pDevExt, pIrp, C0C_QUEUE_READ, StartIrpRead);
-  else
-    status = STATUS_SUCCESS;
+  if ((pDevExt->handFlow.ControlHandShake & SERIAL_ERROR_ABORT) && pDevExt->pIoPortLocal->errors) {
+    status = STATUS_CANCELLED;
+  } else {
+    if (IoGetCurrentIrpStackLocation(pIrp)->Parameters.Read.Length)
+      status = FdoPortStartIrp(pDevExt, pIrp, C0C_QUEUE_READ, StartIrpRead);
+    else
+      status = STATUS_SUCCESS;
+  }
 
   if (status != STATUS_PENDING) {
     TraceIrp("FdoPortRead", pIrp, &status, TRACE_FLAG_RESULTS);

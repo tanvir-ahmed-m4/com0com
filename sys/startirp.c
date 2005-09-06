@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.4  2005/09/06 07:23:44  vfrolov
+ * Implemented overrun emulation
+ *
  * Revision 1.3  2005/08/24 12:50:40  vfrolov
  * Fixed IRP processing order
  *
@@ -27,7 +30,6 @@
  *
  * Revision 1.1  2005/01/26 12:18:54  vfrolov
  * Initial revision
- *
  *
  */
 
@@ -89,12 +91,16 @@ VOID ShiftQueue(PC0C_IRP_QUEUE pQueue)
   }
 }
 
-VOID FdoPortCancelRoutine(IN PC0C_FDOPORT_EXTENSION pDevExt, IN PIRP pIrp)
+VOID CancelRoutine(IN PDEVICE_OBJECT pDevObj, IN PIRP pIrp)
 {
+  PC0C_FDOPORT_EXTENSION pDevExt;
   PC0C_IRP_STATE pState;
   KIRQL oldIrql;
   PC0C_IRP_QUEUE pQueue;
 
+  IoReleaseCancelSpinLock(pIrp->CancelIrql);
+
+  pDevExt = pDevObj->DeviceExtension;
   pState = GetIrpState(pIrp);
   HALT_UNLESS(pState);
 
@@ -119,60 +125,42 @@ VOID FdoPortCancelRoutine(IN PC0C_FDOPORT_EXTENSION pDevExt, IN PIRP pIrp)
   IoCompleteRequest(pIrp, IO_SERIAL_INCREMENT);
 }
 
-VOID CancelRoutine(IN PDEVICE_OBJECT pDevObj, IN PIRP pIrp)
+VOID CancelQueue(PC0C_IRP_QUEUE pQueue, PLIST_ENTRY pQueueToComplete)
 {
-  IoReleaseCancelSpinLock(pIrp->CancelIrql);
+  while (pQueue->pCurrent) {
+    PDRIVER_CANCEL pCancelRoutine;
+    PIRP pIrp;
 
-  FdoPortCancelRoutine(pDevObj->DeviceExtension, pIrp);
-}
+    pIrp = pQueue->pCurrent;
 
-VOID DoCancelRoutine(
-    IN PC0C_FDOPORT_EXTENSION pDevExt,
-    IN PIRP pIrp,
-    IN PKIRQL pOldIrql)
-{
-  PDRIVER_CANCEL pCancelRoutine;
+    #pragma warning(push, 3)
+    pCancelRoutine = IoSetCancelRoutine(pIrp, NULL);
+    #pragma warning(pop)
 
-  #pragma warning(push, 3)
-  pCancelRoutine = IoSetCancelRoutine(pIrp, NULL);
-  #pragma warning(pop)
+    ShiftQueue(pQueue);
 
-  if (pCancelRoutine) {
-    HALT_UNLESS(pCancelRoutine == CancelRoutine);
-    pIrp->Cancel = TRUE;
-    KeReleaseSpinLock(pDevExt->pIoLock, *pOldIrql);
-    FdoPortCancelRoutine(pDevExt, pIrp);
-    KeAcquireSpinLock(pDevExt->pIoLock, pOldIrql);
+    if (pCancelRoutine) {
+      pIrp->IoStatus.Status = STATUS_CANCELLED;
+      pIrp->IoStatus.Information = 0;
+      InsertTailList(pQueueToComplete, &pIrp->Tail.Overlay.ListEntry);
+    }
   }
 }
 
 VOID FdoPortCancelQueue(IN PC0C_FDOPORT_EXTENSION pDevExt, IN PC0C_IRP_QUEUE pQueue)
 {
+  LIST_ENTRY queueToComplete;
   KIRQL oldIrql;
+
+  InitializeListHead(&queueToComplete);
 
   KeAcquireSpinLock(pDevExt->pIoLock, &oldIrql);
 
-  while (!IsListEmpty(&pQueue->queue)) {
-    PC0C_IRP_STATE pState;
-    PIRP pIrp;
-    PLIST_ENTRY pListEntry;
-
-    pListEntry = RemoveHeadList(&pQueue->queue);
-    pIrp = CONTAINING_RECORD(pListEntry, IRP, Tail.Overlay.ListEntry);
-
-    pState = GetIrpState(pIrp);
-
-    HALT_UNLESS(pState);
-
-    pState->flags &= ~C0C_IRP_FLAG_IN_QUEUE;
-
-    DoCancelRoutine(pDevExt, pIrp, &oldIrql);
-  }
-
-  if (pQueue->pCurrent)
-    DoCancelRoutine(pDevExt, pQueue->pCurrent, &oldIrql);
+  CancelQueue(pQueue, &queueToComplete);
 
   KeReleaseSpinLock(pDevExt->pIoLock, oldIrql);
+
+  FdoPortCompleteQueue(&queueToComplete);
 }
 
 VOID FdoPortCancelQueues(IN PC0C_FDOPORT_EXTENSION pDevExt)
