@@ -19,6 +19,10 @@
  *
  *
  * $Log$
+ * Revision 1.11  2005/09/06 06:58:20  vfrolov
+ * Added SERIAL_STATUS.Errors tracing
+ * Added version tracing
+ *
  * Revision 1.10  2005/08/30 13:12:04  vfrolov
  * Disabled IOCTL_SERIAL_GET_MODEMSTATUS tracing by default
  *
@@ -51,12 +55,13 @@
  * Revision 1.1  2005/01/26 12:18:54  vfrolov
  * Initial revision
  *
- *
  */
 
 #include "precomp.h"
 
 #if DBG
+
+#include "version.h"
 
 /*
  * FILE_ID used by HALT_UNLESS to put it on BSOD
@@ -707,6 +712,11 @@ PCHAR AnsiStrCopyCommStatus(
     PSIZE_T pSize,
     IN PSERIAL_STATUS pCommStatus)
 {
+  pDestStr = AnsiStrCopyStr(pDestStr, pSize, " Errors");
+  pDestStr = AnsiStrCopyMask(pDestStr, pSize,
+      codeNameTableErrors,
+      pCommStatus->Errors);
+
   return AnsiStrFormat(pDestStr, pSize,
       " AmountInInQueue=%lu",
       (long)pCommStatus->AmountInInQueue);
@@ -966,7 +976,7 @@ VOID TraceOpen(
     StrFree(&msg);
 
     TraceF(NULL, "===== BEGIN =====");
-    TraceF(NULL, "(" __DATE__ " " __TIME__ ")");
+    TraceF(NULL, "VERSION " C0C_VERSION_STR " (" __DATE__ " " __TIME__ ")");
   }
 }
 
