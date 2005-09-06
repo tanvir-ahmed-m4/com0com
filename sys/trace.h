@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.4  2005/09/06 06:49:39  vfrolov
+ * Added codeNameTableErrors[]
+ *
  * Revision 1.3  2005/08/25 07:48:39  vfrolov
  * Changed type of code names from wchar to char
  * Fixed HandFlow tracing
@@ -105,6 +108,7 @@ CODE2NAME codeNameTableIrpMj[];
 CODE2NAME codeNameTableRelations[];
 CODE2NAME codeNameTableBusQuery[];
 CODE2NAME codeNameTableDeviceText[];
+CODE2NAME codeNameTableErrors[];
 
 FIELD2NAME codeNameTableControlHandShake[];
 FIELD2NAME codeNameTableFlowReplace[];

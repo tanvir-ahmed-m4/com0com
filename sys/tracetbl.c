@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.3  2005/09/06 06:49:38  vfrolov
+ * Added codeNameTableErrors[]
+ *
  * Revision 1.2  2005/08/25 07:48:39  vfrolov
  * Changed type of code names from wchar to char
  * Fixed HandFlow tracing
@@ -262,6 +265,15 @@ CODE2NAME codeNameTableBusQuery[] = {
 CODE2NAME codeNameTableDeviceText[] = {
   TOCODE2NAME(DeviceText, Description),
   TOCODE2NAME(DeviceText, LocationInformation),
+  {0, NULL}
+};
+
+CODE2NAME codeNameTableErrors[] = {
+  TOCODE2NAME(SERIAL_ERROR_, BREAK),
+  TOCODE2NAME(SERIAL_ERROR_, FRAMING),
+  TOCODE2NAME(SERIAL_ERROR_, OVERRUN),
+  TOCODE2NAME(SERIAL_ERROR_, QUEUEOVERRUN),
+  TOCODE2NAME(SERIAL_ERROR_, PARITY),
   {0, NULL}
 };
 
