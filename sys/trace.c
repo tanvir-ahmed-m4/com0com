@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.12  2005/09/09 15:21:32  vfrolov
+ * Added additional flushing for saved strings
+ *
  * Revision 1.11  2005/09/06 06:58:20  vfrolov
  * Added SERIAL_STATUS.Errors tracing
  * Added version tracing
@@ -797,18 +800,21 @@ VOID TraceOutput(
   HANDLE handle;
   OBJECT_ATTRIBUTES objectAttributes;
   IO_STATUS_BLOCK ioStatusBlock;
-  TIME_FIELDS timeFields;
 
   static CHAR strOld[500];
   static LONG strOldBusyInd = 0;
   static LONG strOldFreeInd = 0;
 
-  GetTimeFields(&timeFields);
-
   if (KeGetCurrentIrql() != PASSIVE_LEVEL) {
     SIZE_T size;
     KIRQL oldIrql;
     PCHAR pDestStr;
+    TIME_FIELDS timeFields;
+
+    if (!pStr)
+      return;
+
+    GetTimeFields(&timeFields);
 
     KeAcquireSpinLock(&strOldLock, &oldIrql);
 
@@ -897,10 +903,16 @@ VOID TraceOutput(
         TraceWrite(pIoObject, handle, pBuf->buf);
       }
 
-      pDestStr = AnsiStrCopyTimeFields(pDestStr, &size, &timeFields);
-      pDestStr = AnsiStrFormat(pDestStr, &size, " %s\r\n", pStr);
+      if (pStr) {
+        TIME_FIELDS timeFields;
 
-      TraceWrite(pIoObject, handle, pBuf->buf);
+        GetTimeFields(&timeFields);
+
+        pDestStr = AnsiStrCopyTimeFields(pDestStr, &size, &timeFields);
+        pDestStr = AnsiStrFormat(pDestStr, &size, " %s\r\n", pStr);
+
+        TraceWrite(pIoObject, handle, pBuf->buf);
+      }
 
       FreeTraceBuf(pBuf);
     }
@@ -1083,42 +1095,45 @@ VOID TraceIrp(
   PVOID pSysBuf;
   ULONG_PTR inform;
   ULONG major;
+  ULONG disabled;
 
   if (!TRACE_FILE_OK)
     return;
 
   pIrpStack = IoGetCurrentIrpStackLocation(pIrp);
   major = pIrpStack->MajorFunction;
+  disabled = FALSE;
 
   switch (major) {
     case IRP_MJ_WRITE:
-      if (!traceEnable.write)
-        return;
+      disabled = !traceEnable.write;
       break;
     case IRP_MJ_READ:
-      if (!traceEnable.read)
-        return;
+      disabled = !traceEnable.read;
       break;
     case IRP_MJ_DEVICE_CONTROL:
       switch (pIrpStack->Parameters.DeviceIoControl.IoControlCode) {
         case IOCTL_SERIAL_GET_TIMEOUTS:
-          if (!traceEnable.getTimeouts)
-            return;
+          disabled = !traceEnable.getTimeouts;
           break;
         case IOCTL_SERIAL_SET_TIMEOUTS:
-          if (!traceEnable.setTimeouts)
-            return;
+          disabled = !traceEnable.setTimeouts;
           break;
         case IOCTL_SERIAL_GET_COMMSTATUS:
-          if (!traceEnable.getCommStatus)
-            return;
+          disabled = !traceEnable.getCommStatus;
           break;
         case IOCTL_SERIAL_GET_MODEMSTATUS:
-          if (!traceEnable.getModemStatus)
-            return;
+          disabled = !traceEnable.getModemStatus;
           break;
       }
       break;
+  }
+
+  pDevExt = pIrpStack->DeviceObject->DeviceExtension;
+
+  if (disabled) {
+    TraceOutput(pDevExt, NULL);
+    return;
   }
 
   pBuf = AllocTraceBuf();
@@ -1127,7 +1142,6 @@ VOID TraceIrp(
   size = TRACE_BUF_SIZE;
   pDestStr = pBuf->buf;
 
-  pDevExt = pIrpStack->DeviceObject->DeviceExtension;
   pDestStr = AnsiStrCopyHead(pDestStr, &size, pDevExt, pHead);
 
   switch (major) {
