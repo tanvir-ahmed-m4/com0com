@@ -10,3 +10,4 @@ Windows Registry Editor Version 5.00
 "SetTimeouts"=dword:00000000
 "GetCommStatus"=dword:00000000
 "GetModemStatus"=dword:00000000
+"ModemStatus"=dword:00000000

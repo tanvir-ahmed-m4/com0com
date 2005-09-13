@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.5  2005/09/13 08:55:41  vfrolov
+ * Disabled modem status tracing by default
+ *
  * Revision 1.4  2005/09/06 06:49:39  vfrolov
  * Added codeNameTableErrors[]
  *
@@ -90,6 +93,8 @@ VOID TraceMask(
     IN PCODE2NAME pTable,
     IN ULONG mask);
 
+VOID TraceModemStatus(IN PC0C_IO_PORT pIoPort);
+
 VOID TraceIrp(
     IN PCHAR pHead,
     IN PIRP pIrp,
@@ -125,6 +130,7 @@ FIELD2NAME codeNameTableFlowReplace[];
 #define Trace00(a1, a2, a3)
 #define TraceCode(a1, a2, a3, a4, a5)
 #define TraceMask(a1, a2, a3, a4)
+#define TraceModemStatus(a1)
 #define TraceIrp(a1, a2, a3, a4)
 
 #endif /* DBG */
