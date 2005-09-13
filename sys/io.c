@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.14  2005/09/13 14:56:16  vfrolov
+ * Implemented IRP_MJ_FLUSH_BUFFERS
+ *
  * Revision 1.13  2005/09/13 08:55:41  vfrolov
  * Disabled modem status tracing by default
  *
@@ -486,27 +489,31 @@ NTSTATUS ReadWrite(
         break;
 
       statusWrite = STATUS_PENDING;
-
       doneWrite = 0;
 
-      if (statusRead == STATUS_PENDING)
-        ReadWriteDirect(
-            pIrpRead, pIrpWrite,
-            &statusRead, &statusWrite,
-            pIoPortRead,
-            pQueueToComplete,
-            pWriteLimit,
-            &doneRead, &doneWrite);
+      if (IoGetCurrentIrpStackLocation(pIrpWrite)->MajorFunction == IRP_MJ_FLUSH_BUFFERS) {
+        pIrpWrite->IoStatus.Information = 0;
+        statusWrite = STATUS_SUCCESS;
+      } else {
+        if (statusRead == STATUS_PENDING)
+          ReadWriteDirect(
+              pIrpRead, pIrpWrite,
+              &statusRead, &statusWrite,
+              pIoPortRead,
+              pQueueToComplete,
+              pWriteLimit,
+              &doneRead, &doneWrite);
 
-      if (statusWrite == STATUS_PENDING) {
-        statusWrite = WriteBuffer(pIrpWrite, pIoPortRead, pQueueToComplete, pWriteLimit, &doneWrite);
+        if (statusWrite == STATUS_PENDING) {
+          statusWrite = WriteBuffer(pIrpWrite, pIoPortRead, pQueueToComplete, pWriteLimit, &doneWrite);
 
-        if (pIoPortRead->emuOverrun && !pIrpRead && statusWrite == STATUS_PENDING)
-          statusWrite = WriteOverrun(pIrpWrite, pIoPortRead, pQueueToComplete, pWriteLimit, &doneWrite);
+          if (pIoPortRead->emuOverrun && !pIrpRead && statusWrite == STATUS_PENDING)
+            statusWrite = WriteOverrun(pIrpWrite, pIoPortRead, pQueueToComplete, pWriteLimit, &doneWrite);
+        }
+
+        if (pWriteDelay)
+          pWriteDelay->sentFrames += doneWrite;
       }
-
-      if (pWriteDelay)
-        pWriteDelay->sentFrames += doneWrite;
 
       if (startWrite) {
         status = statusWrite;

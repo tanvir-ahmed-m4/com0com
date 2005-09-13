@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.13  2005/09/13 14:56:16  vfrolov
+ * Implemented IRP_MJ_FLUSH_BUFFERS
+ *
  * Revision 1.12  2005/09/06 07:23:44  vfrolov
  * Implemented overrun emulation
  *
@@ -227,7 +230,6 @@ VOID c0cUnload(IN PDRIVER_OBJECT pDrvObj);
 
 DeclareMajorFunction(c0cOpen);
 DeclareMajorFunction(c0cClose);
-DeclareMajorFunction(c0cFlush);
 DeclareMajorFunction(c0cWrite);
 DeclareMajorFunction(c0cRead);
 DeclareMajorFunction(c0cIoControl);

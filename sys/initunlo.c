@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.4  2005/09/13 14:56:16  vfrolov
+ * Implemented IRP_MJ_FLUSH_BUFFERS
+ *
  * Revision 1.3  2005/07/13 16:12:36  vfrolov
  * Added c0cGlobal struct for global driver's data
  *
@@ -60,7 +63,7 @@ NTSTATUS DriverEntry(IN PDRIVER_OBJECT pDrvObj, IN PUNICODE_STRING pRegistryPath
   pDrvObj->MajorFunction[IRP_MJ_CREATE]                  = c0cOpen;
   pDrvObj->MajorFunction[IRP_MJ_CLOSE]                   = c0cClose;
   pDrvObj->MajorFunction[IRP_MJ_CLEANUP]                 = c0cCleanup;
-  pDrvObj->MajorFunction[IRP_MJ_FLUSH_BUFFERS]           = c0cFlush;
+  pDrvObj->MajorFunction[IRP_MJ_FLUSH_BUFFERS]           = c0cWrite;
   pDrvObj->MajorFunction[IRP_MJ_WRITE]                   = c0cWrite;
   pDrvObj->MajorFunction[IRP_MJ_READ]                    = c0cRead;
   pDrvObj->MajorFunction[IRP_MJ_DEVICE_CONTROL]          = c0cIoControl;
@@ -81,23 +84,6 @@ VOID c0cUnload(IN PDRIVER_OBJECT pDrvObj)
   StrFree(&c0cGlobal.registryPath);
 
   TraceClose();
-}
-
-NTSTATUS c0cFlush(IN PDEVICE_OBJECT pDevObj, IN PIRP pIrp)
-{
-  NTSTATUS status;
-
-  UNREFERENCED_PARAMETER(pDevObj);
-
-  status = STATUS_INVALID_DEVICE_REQUEST;
-
-  TraceIrp("c0cFlush", pIrp, &status, TRACE_FLAG_PARAMS);
-
-  pIrp->IoStatus.Information = 0;
-  pIrp->IoStatus.Status = status;
-  IoCompleteRequest(pIrp, IO_NO_INCREMENT);
-
-  return status;
 }
 
 NTSTATUS c0cInternalIoControl(IN PDEVICE_OBJECT pDevObj, IN PIRP pIrp)

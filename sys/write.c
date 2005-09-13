@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.4  2005/09/13 14:56:16  vfrolov
+ * Implemented IRP_MJ_FLUSH_BUFFERS
+ *
  * Revision 1.3  2005/09/06 07:23:44  vfrolov
  * Implemented overrun emulation
  *
@@ -55,7 +58,8 @@ NTSTATUS FdoPortWrite(IN PC0C_FDOPORT_EXTENSION pDevExt, IN PIRP pIrp)
   if ((pDevExt->handFlow.ControlHandShake & SERIAL_ERROR_ABORT) && pDevExt->pIoPortLocal->errors) {
     status = STATUS_CANCELLED;
   } else {
-    if (IoGetCurrentIrpStackLocation(pIrp)->Parameters.Write.Length)
+    if (IoGetCurrentIrpStackLocation(pIrp)->MajorFunction == IRP_MJ_FLUSH_BUFFERS ||
+                         IoGetCurrentIrpStackLocation(pIrp)->Parameters.Write.Length)
       status = FdoPortStartIrp(pDevExt, pIrp, C0C_QUEUE_WRITE, StartIrpWrite);
     else
       status = STATUS_SUCCESS;
