@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.15  2005/09/14 10:42:38  vfrolov
+ * Implemented SERIAL_EV_TXEMPTY
+ *
  * Revision 1.14  2005/09/13 14:56:16  vfrolov
  * Implemented IRP_MJ_FLUSH_BUFFERS
  *
@@ -456,7 +459,7 @@ NTSTATUS ReadWrite(
     PDRIVER_CANCEL pCancelRoutineRead;
     PIRP pIrpRead;
     SIZE_T doneRead;
-    BOOLEAN firstWrite;
+    BOOLEAN firstWrite, wasWrite;
 
     if (startRead) {
       pIrpRead = pQueueRead->pCurrent;
@@ -472,6 +475,8 @@ NTSTATUS ReadWrite(
     else
       statusRead = STATUS_SUCCESS;
 
+    wasWrite = FALSE;
+
     for (firstWrite = TRUE ; !pWriteLimit || *pWriteLimit ; firstWrite = FALSE) {
       NTSTATUS statusWrite;
       PDRIVER_CANCEL pCancelRoutineWrite;
@@ -479,14 +484,19 @@ NTSTATUS ReadWrite(
       SIZE_T doneWrite;
 
       if(startWrite) {
-        pIrpWrite = pQueueWrite->pCurrent;
+        pIrpWrite = firstWrite ? pQueueWrite->pCurrent : NULL;
         pCancelRoutineWrite = NULL;
       } else {
         pIrpWrite = StartCurrentIrp(pQueueWrite, startWrite ? NULL : &pCancelRoutineWrite, &firstWrite);
       }
 
-      if (!pIrpWrite)
+      if (!pIrpWrite) {
+        if (wasWrite && pIoPortWrite->waitMask & SERIAL_EV_TXEMPTY) {
+          pIoPortWrite->eventMask |= SERIAL_EV_TXEMPTY;
+          WaitComplete(pIoPortWrite, pQueueToComplete);
+        }
         break;
+      }
 
       statusWrite = STATUS_PENDING;
       doneWrite = 0;
@@ -511,15 +521,19 @@ NTSTATUS ReadWrite(
             statusWrite = WriteOverrun(pIrpWrite, pIoPortRead, pQueueToComplete, pWriteLimit, &doneWrite);
         }
 
-        if (pWriteDelay)
-          pWriteDelay->sentFrames += doneWrite;
+        if (doneWrite) {
+          wasWrite = TRUE;
+
+          if (pWriteDelay)
+            pWriteDelay->sentFrames += doneWrite;
+        }
       }
 
       if (startWrite) {
         status = statusWrite;
         if (status == STATUS_PENDING)
           status = FdoPortSetIrpTimeout(pIoPortWrite->pDevExt, pIrpWrite);
-        break;
+        continue;
       }
 
       statusWrite = StopCurrentIrp(statusWrite,
