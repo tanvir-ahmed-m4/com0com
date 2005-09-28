@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.4  2005/09/28 10:06:42  vfrolov
+ * Implemented IRP_MJ_QUERY_INFORMATION and IRP_MJ_SET_INFORMATION
+ *
  * Revision 1.3  2005/09/06 06:49:38  vfrolov
  * Added codeNameTableErrors[]
  *
@@ -274,6 +277,55 @@ CODE2NAME codeNameTableErrors[] = {
   TOCODE2NAME(SERIAL_ERROR_, OVERRUN),
   TOCODE2NAME(SERIAL_ERROR_, QUEUEOVERRUN),
   TOCODE2NAME(SERIAL_ERROR_, PARITY),
+  {0, NULL}
+};
+
+CODE2NAME codeNameTableFileInformationClass[] = {
+#ifndef _WDMDDK_
+  TOCODE2NAME1(FileDirectoryInformation),
+  TOCODE2NAME1(FileFullDirectoryInformation),
+  TOCODE2NAME1(FileBothDirectoryInformation),
+#endif
+  TOCODE2NAME1(FileBasicInformation),
+  TOCODE2NAME1(FileStandardInformation),
+#ifndef _WDMDDK_
+  TOCODE2NAME1(FileInternalInformation),
+  TOCODE2NAME1(FileEaInformation),
+  TOCODE2NAME1(FileAccessInformation),
+  TOCODE2NAME1(FileNameInformation),
+  TOCODE2NAME1(FileRenameInformation),
+  TOCODE2NAME1(FileLinkInformation),
+  TOCODE2NAME1(FileNamesInformation),
+  TOCODE2NAME1(FileDispositionInformation),
+#endif
+  TOCODE2NAME1(FilePositionInformation),
+#ifndef _WDMDDK_
+  TOCODE2NAME1(FileFullEaInformation),
+  TOCODE2NAME1(FileModeInformation),
+  TOCODE2NAME1(FileAlignmentInformation),
+  TOCODE2NAME1(FileAllInformation),
+  TOCODE2NAME1(FileAllocationInformation),
+#endif
+  TOCODE2NAME1(FileEndOfFileInformation),
+#ifndef _WDMDDK_
+  TOCODE2NAME1(FileAlternateNameInformation),
+  TOCODE2NAME1(FileStreamInformation),
+  TOCODE2NAME1(FilePipeInformation),
+  TOCODE2NAME1(FilePipeLocalInformation),
+  TOCODE2NAME1(FilePipeRemoteInformation),
+  TOCODE2NAME1(FileMailslotQueryInformation),
+  TOCODE2NAME1(FileMailslotSetInformation),
+  TOCODE2NAME1(FileCompressionInformation),
+  TOCODE2NAME1(FileObjectIdInformation),
+  TOCODE2NAME1(FileCompletionInformation),
+  TOCODE2NAME1(FileMoveClusterInformation),
+  TOCODE2NAME1(FileQuotaInformation),
+  TOCODE2NAME1(FileReparsePointInformation),
+  TOCODE2NAME1(FileNetworkOpenInformation),
+  TOCODE2NAME1(FileAttributeTagInformation),
+  TOCODE2NAME1(FileTrackingInformation),
+  TOCODE2NAME1(FileMaximumInformation),
+#endif
   {0, NULL}
 };
 

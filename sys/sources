@@ -15,6 +15,7 @@ SOURCES= \
         read.c \
         write.c \
         wait.c \
+        fileinfo.c \
         io.c \
         startirp.c \
         timeout.c \

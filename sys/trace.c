@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.14  2005/09/28 10:06:42  vfrolov
+ * Implemented IRP_MJ_QUERY_INFORMATION and IRP_MJ_SET_INFORMATION
+ *
  * Revision 1.13  2005/09/13 08:55:41  vfrolov
  * Disabled modem status tracing by default
  *
@@ -1346,6 +1349,21 @@ VOID TraceIrp(
 
       pDestStr = AnsiStrCopyStr(pDestStr, &size, " ");
       pDestStr = AnsiStrCopyCode(pDestStr, &size, code, codeNameTablePower, "POWER_", 10);
+      break;
+    }
+    case IRP_MJ_QUERY_INFORMATION: {
+      ULONG code = pIrpStack->Parameters.QueryFile.FileInformationClass;
+
+      pDestStr = AnsiStrCopyStr(pDestStr, &size, " ");
+      pDestStr = AnsiStrCopyCode(pDestStr, &size, code, codeNameTableFileInformationClass, NULL, 10);
+      break;
+    }
+    case IRP_MJ_SET_INFORMATION: {
+      ULONG code = pIrpStack->Parameters.SetFile.FileInformationClass;
+
+      pDestStr = AnsiStrCopyStr(pDestStr, &size, " ");
+      pDestStr = AnsiStrCopyCode(pDestStr, &size, code, codeNameTableFileInformationClass, NULL, 10);
+      break;
     }
   }
 

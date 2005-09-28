@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.6  2005/09/28 10:06:42  vfrolov
+ * Implemented IRP_MJ_QUERY_INFORMATION and IRP_MJ_SET_INFORMATION
+ *
  * Revision 1.5  2005/09/13 08:55:41  vfrolov
  * Disabled modem status tracing by default
  *
@@ -114,6 +117,7 @@ CODE2NAME codeNameTableRelations[];
 CODE2NAME codeNameTableBusQuery[];
 CODE2NAME codeNameTableDeviceText[];
 CODE2NAME codeNameTableErrors[];
+CODE2NAME codeNameTableFileInformationClass[];
 
 FIELD2NAME codeNameTableControlHandShake[];
 FIELD2NAME codeNameTableFlowReplace[];

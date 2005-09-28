@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.14  2005/09/28 10:06:42  vfrolov
+ * Implemented IRP_MJ_QUERY_INFORMATION and IRP_MJ_SET_INFORMATION
+ *
  * Revision 1.13  2005/09/13 14:56:16  vfrolov
  * Implemented IRP_MJ_FLUSH_BUFFERS
  *
@@ -235,9 +238,7 @@ DeclareMajorFunction(c0cRead);
 DeclareMajorFunction(c0cIoControl);
 DeclareMajorFunction(c0cInternalIoControl);
 DeclareMajorFunction(c0cCleanup);
-
-DeclareMajorFunction(c0cQueryInformation);
-DeclareMajorFunction(c0cSetInformation);
+DeclareMajorFunction(c0cFileInformation);
 DeclareMajorFunction(c0cSystemControlDispatch);
 
 DeclareMajorFunction(c0cPnpDispatch);

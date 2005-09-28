@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.5  2005/09/28 10:06:42  vfrolov
+ * Implemented IRP_MJ_QUERY_INFORMATION and IRP_MJ_SET_INFORMATION
+ *
  * Revision 1.4  2005/09/13 14:56:16  vfrolov
  * Implemented IRP_MJ_FLUSH_BUFFERS
  *
@@ -68,8 +71,8 @@ NTSTATUS DriverEntry(IN PDRIVER_OBJECT pDrvObj, IN PUNICODE_STRING pRegistryPath
   pDrvObj->MajorFunction[IRP_MJ_READ]                    = c0cRead;
   pDrvObj->MajorFunction[IRP_MJ_DEVICE_CONTROL]          = c0cIoControl;
   pDrvObj->MajorFunction[IRP_MJ_INTERNAL_DEVICE_CONTROL] = c0cInternalIoControl;
-  pDrvObj->MajorFunction[IRP_MJ_QUERY_INFORMATION]       = c0cQueryInformation;
-  pDrvObj->MajorFunction[IRP_MJ_SET_INFORMATION]         = c0cSetInformation;
+  pDrvObj->MajorFunction[IRP_MJ_QUERY_INFORMATION]       = c0cFileInformation;
+  pDrvObj->MajorFunction[IRP_MJ_SET_INFORMATION]         = c0cFileInformation;
   pDrvObj->MajorFunction[IRP_MJ_SYSTEM_CONTROL]          = c0cSystemControlDispatch;
   pDrvObj->MajorFunction[IRP_MJ_PNP]                     = c0cPnpDispatch;
   pDrvObj->MajorFunction[IRP_MJ_POWER]                   = c0cPowerDispatch;
@@ -95,40 +98,6 @@ NTSTATUS c0cInternalIoControl(IN PDEVICE_OBJECT pDevObj, IN PIRP pIrp)
   status = STATUS_INVALID_DEVICE_REQUEST;
 
   TraceIrp("c0cInternalIoControl", pIrp, &status, TRACE_FLAG_PARAMS);
-
-  pIrp->IoStatus.Information = 0;
-  pIrp->IoStatus.Status = status;
-  IoCompleteRequest(pIrp, IO_NO_INCREMENT);
-
-  return status;
-}
-
-NTSTATUS c0cQueryInformation(IN PDEVICE_OBJECT pDevObj, IN PIRP pIrp)
-{
-  NTSTATUS status;
-
-  UNREFERENCED_PARAMETER(pDevObj);
-
-  status = STATUS_INVALID_DEVICE_REQUEST;
-
-  TraceIrp("c0cQueryInformation", pIrp, &status, TRACE_FLAG_PARAMS);
-
-  pIrp->IoStatus.Information = 0;
-  pIrp->IoStatus.Status = status;
-  IoCompleteRequest(pIrp, IO_NO_INCREMENT);
-
-  return status;
-}
-
-NTSTATUS c0cSetInformation(IN PDEVICE_OBJECT pDevObj, IN PIRP pIrp)
-{
-  NTSTATUS status;
-
-  UNREFERENCED_PARAMETER(pDevObj);
-
-  status = STATUS_INVALID_DEVICE_REQUEST;
-
-  TraceIrp("c0cQueryInformation", pIrp, &status, TRACE_FLAG_PARAMS);
 
   pIrp->IoStatus.Information = 0;
   pIrp->IoStatus.Status = status;
