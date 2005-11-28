@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.9  2005/11/28 12:57:16  vfrolov
+ * Moved some C0C_BUFFER code to bufutils.c
+ *
  * Revision 1.8  2005/09/06 07:23:44  vfrolov
  * Implemented overrun emulation
  *
@@ -48,6 +51,7 @@
 #include "precomp.h"
 #include "timeout.h"
 #include "delay.h"
+#include "bufutils.h"
 
 NTSTATUS FdoPortIoCtl(
     IN PC0C_FDOPORT_EXTENSION pDevExt,
@@ -167,7 +171,7 @@ NTSTATUS FdoPortIoCtl(
 
       if (*pSysBuf & SERIAL_PURGE_RXCLEAR) {
         KeAcquireSpinLock(pDevExt->pIoLock, &oldIrql);
-        C0C_BUFFER_PURGE(pDevExt->pIoPortLocal->readBuf);
+        PurgeBuffer(&pDevExt->pIoPortLocal->readBuf);
         KeReleaseSpinLock(pDevExt->pIoLock, oldIrql);
       }
 
@@ -186,9 +190,7 @@ NTSTATUS FdoPortIoCtl(
 
       KeAcquireSpinLock(pDevExt->pIoLock, &oldIrql);
       RtlZeroMemory(pSysBuf, sizeof(*pSysBuf));
-      pSysBuf->AmountInInQueue =
-          (ULONG)pDevExt->pIoPortLocal->readBuf.busy +
-          (ULONG)pDevExt->pIoPortLocal->readBuf.insertData.size;
+      pSysBuf->AmountInInQueue = (ULONG)C0C_BUFFER_BUSY(&pDevExt->pIoPortLocal->readBuf);
       pSysBuf->Errors = pDevExt->pIoPortLocal->errors;
       pDevExt->pIoPortLocal->errors = 0;
       KeReleaseSpinLock(pDevExt->pIoLock, oldIrql);
@@ -211,8 +213,10 @@ NTSTATUS FdoPortIoCtl(
 
       if (pSysBuf->ControlHandShake & SERIAL_CONTROL_INVALID ||
           pSysBuf->FlowReplace & SERIAL_FLOW_INVALID ||
-          (pSysBuf->ControlHandShake & SERIAL_DTR_MASK) == SERIAL_DTR_MASK
-          ) {
+          (pSysBuf->ControlHandShake & SERIAL_DTR_MASK) == SERIAL_DTR_MASK ||
+          pSysBuf->XonLimit < 0 ||
+          pSysBuf->XoffLimit < 0)
+      {
         status = STATUS_INVALID_PARAMETER;
         break;
       }
@@ -450,8 +454,7 @@ NTSTATUS FdoPortIoCtl(
         SERIAL_PARITY_SPACE;
 
       pSysBuf->CurrentTxQueue = 0;
-      pSysBuf->CurrentRxQueue =
-        (ULONG)(pDevExt->pIoPortLocal->readBuf.pEnd - pDevExt->pIoPortLocal->readBuf.pBase);
+      pSysBuf->CurrentRxQueue = (ULONG)C0C_BUFFER_SIZE(&pDevExt->pIoPortLocal->readBuf);
 
       pIrp->IoStatus.Information = sizeof(SERIAL_COMMPROP);
       break;
@@ -466,67 +469,41 @@ NTSTATUS FdoPortIoCtl(
       break;
     case IOCTL_SERIAL_SET_QUEUE_SIZE: {
       PSERIAL_QUEUE_SIZE pSysBuf = (PSERIAL_QUEUE_SIZE)pIrp->AssociatedIrp.SystemBuffer;
-      C0C_BUFFER readBufNew;
       PC0C_BUFFER pReadBuf;
+      PUCHAR pBase;
 
       if (pIrpStack->Parameters.DeviceIoControl.InputBufferLength < sizeof(SERIAL_QUEUE_SIZE)) {
         status = STATUS_BUFFER_TOO_SMALL;
         break;
       }
 
-      if (pSysBuf->InSize <=
-        (ULONG)(pDevExt->pIoPortLocal->readBuf.pEnd - pDevExt->pIoPortLocal->readBuf.pBase)) {
-        status = STATUS_SUCCESS;
-        break;
-      }
-
-      try {
-        readBufNew.pBase = ExAllocatePoolWithQuota(NonPagedPool, pSysBuf->InSize);
-      } except (EXCEPTION_EXECUTE_HANDLER) {
-        readBufNew.pBase = NULL;
-        status = GetExceptionCode();
-      }
-
-      if (!readBufNew.pBase)
-        break;
-
-      readBufNew.pFree = readBufNew.pBusy = readBufNew.pBase;
-      readBufNew.pEnd = readBufNew.pBase + pSysBuf->InSize;
-      readBufNew.busy = 0;
-
       pReadBuf = &pDevExt->pIoPortLocal->readBuf;
 
       KeAcquireSpinLock(pDevExt->pIoLock, &oldIrql);
-
-      if (pReadBuf->pBase) {
-        while (pReadBuf->busy) {
-          SIZE_T length;
-
-          length = pReadBuf->pFree <= pReadBuf->pBusy ?
-              pReadBuf->pEnd - pReadBuf->pBusy : pReadBuf->busy;
-
-          RtlCopyMemory(readBufNew.pFree, pReadBuf->pBusy, length);
-
-          pReadBuf->busy -= length;
-          pReadBuf->pBusy += length;
-          if (pReadBuf->pBusy == pReadBuf->pEnd)
-            pReadBuf->pBusy = pReadBuf->pBase;
-
-          readBufNew.busy += length;
-          readBufNew.pFree += length;
-        }
-
-        ExFreePool(pReadBuf->pBase);
+      if (pSysBuf->InSize <= C0C_BUFFER_SIZE(pReadBuf)) {
+        KeReleaseSpinLock(pDevExt->pIoLock, oldIrql);
+        break;
       }
-
-      readBufNew.escape = pReadBuf->escape;
-      readBufNew.insertData = pReadBuf->insertData;
-
-      *pReadBuf = readBufNew;
-
       KeReleaseSpinLock(pDevExt->pIoLock, oldIrql);
 
-      status = STATUS_SUCCESS;
+      try {
+        pBase = ExAllocatePoolWithQuota(NonPagedPool, pSysBuf->InSize);
+      } except (EXCEPTION_EXECUTE_HANDLER) {
+        pBase = NULL;
+        status = GetExceptionCode();
+      }
+
+      if (!pBase)
+        break;
+
+      KeAcquireSpinLock(pDevExt->pIoLock, &oldIrql);
+
+      if (SetNewBufferBase(pReadBuf, pBase, pSysBuf->InSize)) {
+        pDevExt->handFlow.XoffLimit = pSysBuf->InSize >> 3;
+        pDevExt->handFlow.XonLimit = pSysBuf->InSize >> 1;
+      }
+
+      KeReleaseSpinLock(pDevExt->pIoLock, oldIrql);
       break;
     }
     default:

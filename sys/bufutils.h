@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.3  2005/11/28 12:57:16  vfrolov
+ * Moved some C0C_BUFFER code to bufutils.c
+ *
  * Revision 1.2  2005/09/06 07:23:44  vfrolov
  * Implemented overrun emulation
  *
@@ -42,5 +45,9 @@ SIZE_T WriteToBuffer(PC0C_BUFFER pBuf, PVOID pWrite, SIZE_T writeLength, UCHAR e
 VOID WriteMandatoryToBuffer(PC0C_BUFFER pBuf, UCHAR mandatoryChar);
 NTSTATUS WriteRawDataToBuffer(PC0C_RAW_DATA pRawData, PC0C_BUFFER pBuf);
 SIZE_T WriteRawData(PC0C_RAW_DATA pRawData, PNTSTATUS pStatus, PVOID pReadBuf, SIZE_T readLength);
+BOOLEAN SetNewBufferBase(PC0C_BUFFER pBuf, PUCHAR pBase, SIZE_T size);
+VOID PurgeBuffer(PC0C_BUFFER pBuf);
+VOID InitBuffer(PC0C_BUFFER pBuf, PUCHAR pBase, SIZE_T size);
+VOID FreeBuffer(PC0C_BUFFER pBuf);
 
 #endif /* _C0C_BUFUTILS_H_ */
