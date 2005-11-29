@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.18  2005/11/29 16:16:46  vfrolov
+ * Removed FdoPortCancelQueue()
+ *
  * Revision 1.17  2005/11/29 12:33:21  vfrolov
  * Changed SetModemStatus() to ability set and clear bits simultaneously
  *
@@ -273,7 +276,6 @@ NTSTATUS FdoPortStartIrp(
     IN PC0C_FDOPORT_START_ROUTINE pStartRoutine);
 
 VOID CancelQueue(PC0C_IRP_QUEUE pQueue, PLIST_ENTRY pQueueToComplete);
-VOID FdoPortCancelQueue(IN PC0C_FDOPORT_EXTENSION pDevExt, IN PC0C_IRP_QUEUE pQueue);
 VOID FdoPortCancelQueues(IN PC0C_FDOPORT_EXTENSION pDevExt);
 VOID FdoPortCompleteQueue(IN PLIST_ENTRY pQueueToComplete);
 

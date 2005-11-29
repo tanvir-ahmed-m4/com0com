@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.11  2005/11/29 16:16:46  vfrolov
+ * Removed FdoPortCancelQueue()
+ *
  * Revision 1.10  2005/11/29 12:33:21  vfrolov
  * Changed SetModemStatus() to ability set and clear bits simultaneously
  *
@@ -147,6 +150,7 @@ NTSTATUS FdoPortIoCtl(
       status = FdoPortWaitOnMask(pDevExt, pIrp, pIrpStack);
       break;
     case IOCTL_SERIAL_PURGE: {
+      LIST_ENTRY queueToComplete;
       PULONG pSysBuf;
 
       if (pIrpStack->Parameters.DeviceIoControl.InputBufferLength < sizeof(ULONG)) {
@@ -166,17 +170,21 @@ NTSTATUS FdoPortIoCtl(
         break;
       }
 
+      InitializeListHead(&queueToComplete);
+      KeAcquireSpinLock(pDevExt->pIoLock, &oldIrql);
+
       if (*pSysBuf & SERIAL_PURGE_RXABORT)
-        FdoPortCancelQueue(pDevExt, &pDevExt->pIoPortLocal->irpQueues[C0C_QUEUE_READ]);
+        CancelQueue(&pDevExt->pIoPortLocal->irpQueues[C0C_QUEUE_READ], &queueToComplete);
 
       if (*pSysBuf & SERIAL_PURGE_TXABORT)
-        FdoPortCancelQueue(pDevExt, &pDevExt->pIoPortLocal->irpQueues[C0C_QUEUE_WRITE]);
+        CancelQueue(&pDevExt->pIoPortLocal->irpQueues[C0C_QUEUE_WRITE], &queueToComplete);
 
       if (*pSysBuf & SERIAL_PURGE_RXCLEAR) {
-        KeAcquireSpinLock(pDevExt->pIoLock, &oldIrql);
         PurgeBuffer(&pDevExt->pIoPortLocal->readBuf);
-        KeReleaseSpinLock(pDevExt->pIoLock, oldIrql);
       }
+
+      KeReleaseSpinLock(pDevExt->pIoLock, oldIrql);
+      FdoPortCompleteQueue(&queueToComplete);
 
       pIrp->IoStatus.Information = sizeof(ULONG);
       break;
@@ -225,7 +233,6 @@ NTSTATUS FdoPortIoCtl(
       }
 
       InitializeListHead(&queueToComplete);
-
       KeAcquireSpinLock(pDevExt->pIoLock, &oldIrql);
 
       if (pDevExt->pIoPortLocal->escapeChar &&
