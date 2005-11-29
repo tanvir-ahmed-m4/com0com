@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.8  2005/11/29 12:33:21  vfrolov
+ * Changed SetModemStatus() to ability set and clear bits simultaneously
+ *
  * Revision 1.7  2005/11/28 12:57:16  vfrolov
  * Moved some C0C_BUFFER code to bufutils.c
  *
@@ -114,7 +117,7 @@ NTSTATUS FdoPortClose(IN PC0C_FDOPORT_EXTENSION pDevExt)
 
   KeAcquireSpinLock(pDevExt->pIoLock, &oldIrql);
 
-  SetModemStatus(pDevExt->pIoPortRemote, C0C_MSB_CTS | C0C_MSB_DSR, FALSE, &queueToComplete);
+  SetModemStatus(pDevExt->pIoPortRemote, 0, C0C_MSB_CTS | C0C_MSB_DSR, &queueToComplete);
   FreeBuffer(&pDevExt->pIoPortLocal->readBuf);
 
   KeReleaseSpinLock(pDevExt->pIoLock, oldIrql);

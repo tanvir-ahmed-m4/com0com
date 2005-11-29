@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.19  2005/11/29 12:33:21  vfrolov
+ * Changed SetModemStatus() to ability set and clear bits simultaneously
+ *
  * Revision 1.18  2005/11/29 08:35:13  vfrolov
  * Implemented SERIAL_EV_RX80FULL
  *
@@ -627,7 +630,7 @@ NTSTATUS ReadWrite(
 VOID SetModemStatus(
     IN PC0C_IO_PORT pIoPort,
     IN ULONG bits,
-    IN BOOLEAN set,
+    IN ULONG mask,
     PLIST_ENTRY pQueueToComplete)
 {
   ULONG modemStatusOld;
@@ -635,13 +638,14 @@ VOID SetModemStatus(
 
   modemStatusOld = pIoPort->modemStatus;
 
-  if (bits & C0C_MSB_DSR)
-    bits |= C0C_MSB_RLSD;    /* CD = DSR */
+  pIoPort->modemStatus |= bits & mask;
+  pIoPort->modemStatus &= ~(~bits & mask);
 
-  if (set)
-    pIoPort->modemStatus |= bits;
+  /* CD = DSR */
+  if (pIoPort->modemStatus & C0C_MSB_DSR)
+    pIoPort->modemStatus |= C0C_MSB_RLSD;
   else
-    pIoPort->modemStatus &= ~bits;
+    pIoPort->modemStatus &= ~C0C_MSB_RLSD;
 
   modemStatusChanged = modemStatusOld ^ pIoPort->modemStatus;
 
@@ -706,5 +710,5 @@ VOID UpdateHandFlow(
   }
 
   if (bits)
-    SetModemStatus(pDevExt->pIoPortRemote, bits, TRUE, pQueueToComplete);
+    SetModemStatus(pDevExt->pIoPortRemote, bits, bits, pQueueToComplete);
 }
