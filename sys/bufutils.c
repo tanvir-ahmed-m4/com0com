@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.4  2005/11/29 08:35:14  vfrolov
+ * Implemented SERIAL_EV_RX80FULL
+ *
  * Revision 1.3  2005/11/28 12:57:16  vfrolov
  * Moved some C0C_BUFFER code to bufutils.c
  *
@@ -337,6 +340,13 @@ SIZE_T WriteRawData(PC0C_RAW_DATA pRawData, PNTSTATUS pStatus, PVOID pReadBuf, S
   return length;
 }
 
+VOID InitBufferBase(PC0C_BUFFER pBuf, PUCHAR pBase, SIZE_T size)
+{
+  pBuf->pBase = pBase;
+  pBuf->pEnd = pBuf->pBase + size;
+  pBuf->size80 = (size*4 + 4)/5;
+}
+
 BOOLEAN SetNewBufferBase(PC0C_BUFFER pBuf, PUCHAR pBase, SIZE_T size)
 {
   C0C_BUFFER newBuf;
@@ -346,8 +356,9 @@ BOOLEAN SetNewBufferBase(PC0C_BUFFER pBuf, PUCHAR pBase, SIZE_T size)
     return FALSE;
   }
 
-  newBuf.pFree = newBuf.pBusy = newBuf.pBase = pBase;
-  newBuf.pEnd = newBuf.pBase + size;
+  InitBufferBase(&newBuf, pBase, size);
+
+  newBuf.pFree = newBuf.pBusy = newBuf.pBase;
   newBuf.busy = 0;
 
   if (pBuf->pBase) {
@@ -390,9 +401,7 @@ VOID PurgeBuffer(PC0C_BUFFER pBuf)
 VOID InitBuffer(PC0C_BUFFER pBuf, PUCHAR pBase, SIZE_T size)
 {
   RtlZeroMemory(pBuf, sizeof(*pBuf));
-
-  pBuf->pBase = pBase;
-  pBuf->pEnd = pBuf->pBase + size;
+  InitBufferBase(pBuf, pBase, size);
   PurgeBuffer(pBuf);
 }
 

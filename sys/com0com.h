@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.16  2005/11/29 08:35:14  vfrolov
+ * Implemented SERIAL_EV_RX80FULL
+ *
  * Revision 1.15  2005/11/28 12:57:16  vfrolov
  * Moved some C0C_BUFFER code to bufutils.c
  *
@@ -121,6 +124,7 @@ typedef struct _C0C_BUFFER {
   PUCHAR                  pFree;
   PUCHAR                  pEnd;
   SIZE_T                  busy;
+  SIZE_T                  size80;
   BOOLEAN                 escape;
   C0C_RAW_DATA            insertData;
 } C0C_BUFFER, *PC0C_BUFFER;
