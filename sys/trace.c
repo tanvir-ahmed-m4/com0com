@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.15  2005/11/30 16:04:12  vfrolov
+ * Implemented IOCTL_SERIAL_GET_STATS and IOCTL_SERIAL_CLEAR_STATS
+ *
  * Revision 1.14  2005/09/28 10:06:42  vfrolov
  * Implemented IRP_MJ_QUERY_INFORMATION and IRP_MJ_SET_INFORMATION
  *
@@ -738,6 +741,38 @@ PCHAR AnsiStrCopyCommStatus(
       " AmountInInQueue=%lu",
       (long)pCommStatus->AmountInInQueue);
 }
+
+PCHAR AnsiStrCopyPerfStats(
+    PCHAR pDestStr,
+    PSIZE_T pSize,
+    IN PSERIALPERF_STATS pPerfStats)
+{
+  if (pPerfStats->ReceivedCount)
+    pDestStr = AnsiStrFormat(pDestStr, pSize,
+        " ReceivedCount=%lu", (long)pPerfStats->ReceivedCount);
+
+  if (pPerfStats->TransmittedCount)
+    pDestStr = AnsiStrFormat(pDestStr, pSize,
+        " TransmittedCount=%lu", (long)pPerfStats->TransmittedCount);
+
+  if (pPerfStats->FrameErrorCount)
+    pDestStr = AnsiStrFormat(pDestStr, pSize,
+        " FrameErrorCount=%lu", (long)pPerfStats->FrameErrorCount);
+
+  if (pPerfStats->SerialOverrunErrorCount)
+    pDestStr = AnsiStrFormat(pDestStr, pSize,
+        " SerialOverrunErrorCount=%lu", (long)pPerfStats->SerialOverrunErrorCount);
+
+  if (pPerfStats->BufferOverrunErrorCount)
+    pDestStr = AnsiStrFormat(pDestStr, pSize,
+        " BufferOverrunErrorCount=%lu", (long)pPerfStats->BufferOverrunErrorCount);
+
+  if (pPerfStats->ParityErrorCount)
+    pDestStr = AnsiStrFormat(pDestStr, pSize,
+        " ParityErrorCount=%lu", (long)pPerfStats->ParityErrorCount);
+
+  return pDestStr;
+}
 /********************************************************************/
 
 VOID GetTimeFields(PTIME_FIELDS pTimeFields)
@@ -1303,6 +1338,10 @@ VOID TraceIrp(
         case IOCTL_SERIAL_LSRMST_INSERT:
           if ((flags & TRACE_FLAG_PARAMS) && inLength >= sizeof(UCHAR))
             pDestStr = AnsiStrFormat(pDestStr, &size, " escapeChar=0x%02X", (int)(*(PUCHAR)pSysBuf & 0xFF));
+          break;
+        case IOCTL_SERIAL_GET_STATS:
+          if ((flags & TRACE_FLAG_RESULTS) && inform >= sizeof(SERIALPERF_STATS))
+            pDestStr = AnsiStrCopyPerfStats(pDestStr, &size, (PSERIALPERF_STATS)pSysBuf);
           break;
       }
       break;

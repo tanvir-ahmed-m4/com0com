@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.9  2005/11/30 16:04:12  vfrolov
+ * Implemented IOCTL_SERIAL_GET_STATS and IOCTL_SERIAL_CLEAR_STATS
+ *
  * Revision 1.8  2005/11/29 12:33:21  vfrolov
  * Changed SetModemStatus() to ability set and clear bits simultaneously
  *
@@ -96,6 +99,7 @@ NTSTATUS FdoPortOpen(IN PC0C_FDOPORT_EXTENSION pDevExt)
   pDevExt->pIoPortLocal->waitMask = 0;
   pDevExt->pIoPortLocal->eventMask = 0;
   pDevExt->pIoPortLocal->escapeChar = 0;
+  RtlZeroMemory(&pDevExt->pIoPortLocal->perfStats, sizeof(pDevExt->pIoPortLocal->perfStats));
   pDevExt->handFlow.XoffLimit = size >> 3;
   pDevExt->handFlow.XonLimit = size >> 1;
 

@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.20  2005/11/30 16:04:11  vfrolov
+ * Implemented IOCTL_SERIAL_GET_STATS and IOCTL_SERIAL_CLEAR_STATS
+ *
  * Revision 1.19  2005/11/29 12:33:21  vfrolov
  * Changed SetModemStatus() to ability set and clear bits simultaneously
  *
@@ -139,6 +142,9 @@ VOID OnRxChars(PC0C_IO_PORT pReadIoPort, PVOID pBuf, SIZE_T size, PLIST_ENTRY pQ
     if (pReadIoPort->eventMask)
       WaitComplete(pReadIoPort, pQueueToComplete);
   }
+
+  pReadIoPort->perfStats.ReceivedCount += size;
+  pReadIoPort->pDevExt->pIoPortRemote->perfStats.TransmittedCount += size;
 }
 
 NTSTATUS WriteBuffer(
@@ -231,6 +237,7 @@ NTSTATUS WriteOverrun(
       *pWriteLimit -= writeDone;
 
     AlertOverrun(pReadIoPort, pQueueToComplete);
+    pReadIoPort->perfStats.BufferOverrunErrorCount += writeDone;
     OnRxChars(pReadIoPort, pWriteBuf, writeDone, pQueueToComplete);
   }
 

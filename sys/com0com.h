@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.19  2005/11/30 16:04:11  vfrolov
+ * Implemented IOCTL_SERIAL_GET_STATS and IOCTL_SERIAL_CLEAR_STATS
+ *
  * Revision 1.18  2005/11/29 16:16:46  vfrolov
  * Removed FdoPortCancelQueue()
  *
@@ -172,6 +175,7 @@ typedef struct _C0C_IO_PORT {
   ULONG                   waitMask;
   ULONG                   eventMask;
   UCHAR                   escapeChar;
+  SERIALPERF_STATS        perfStats;
 
   #define C0C_MSB_CTS     0x10
   #define C0C_MSB_DSR     0x20
