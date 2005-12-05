@@ -105,3 +105,8 @@ A. To enable baud rate emulation for transferring data from CNCA0 to CNCB0 add
 
 [HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\com0com\Parameters\CNCA0]
 "EmuBR"=dword:FFFFFFFF
+
+Q. The HyperTerminal test succeeds, but I get a failure when trying to open the
+   port with CreateFile("CNCA0", ...). GetLastError() returns ERROR_FILE_NOT_FOUND.
+A. You must prefix name with the special characters "\\.\". Try to open the port
+   with CreateFile("\\\\.\\CNCA0", ...).
