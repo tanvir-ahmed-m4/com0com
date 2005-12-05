@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.13  2005/12/05 10:54:55  vfrolov
+ * Implemented IOCTL_SERIAL_IMMEDIATE_CHAR
+ *
  * Revision 1.12  2005/11/30 16:04:12  vfrolov
  * Implemented IOCTL_SERIAL_GET_STATS and IOCTL_SERIAL_CLEAR_STATS
  *
@@ -151,6 +154,9 @@ NTSTATUS FdoPortIoCtl(
       break;
     case IOCTL_SERIAL_WAIT_ON_MASK:
       status = FdoPortWaitOnMask(pDevExt, pIrp, pIrpStack);
+      break;
+    case IOCTL_SERIAL_IMMEDIATE_CHAR:
+      status = FdoPortImmediateChar(pDevExt, pIrp, pIrpStack);
       break;
     case IOCTL_SERIAL_PURGE: {
       LIST_ENTRY queueToComplete;

@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.5  2005/12/05 10:54:55  vfrolov
+ * Implemented IOCTL_SERIAL_IMMEDIATE_CHAR
+ *
  * Revision 1.4  2005/08/23 15:49:21  vfrolov
  * Implemented baudrate emulation
  *
@@ -183,7 +186,7 @@ NTSTATUS SetWriteTimeout(IN PC0C_FDOPORT_EXTENSION pDevExt, PIRP pIrp)
     LARGE_INTEGER total;
     ULONG length;
 
-    length = IoGetCurrentIrpStackLocation(pIrp)->Parameters.Write.Length;
+    length = GetWriteLength(pIrp);
 
     total.QuadPart = ((LONGLONG)(UInt32x32To64(length, multiplier) + constant)) * -10000;
 

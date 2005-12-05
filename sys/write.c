@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.5  2005/12/05 10:54:56  vfrolov
+ * Implemented IOCTL_SERIAL_IMMEDIATE_CHAR
+ *
  * Revision 1.4  2005/09/13 14:56:16  vfrolov
  * Implemented IRP_MJ_FLUSH_BUFFERS
  *
@@ -47,6 +50,17 @@ NTSTATUS StartIrpWrite(
       &pDevExt->pIoPortLocal->irpQueues[C0C_QUEUE_WRITE],
       TRUE,
       pQueueToComplete);
+}
+
+NTSTATUS FdoPortImmediateChar(
+    IN PC0C_FDOPORT_EXTENSION pDevExt,
+    IN PIRP pIrp,
+    IN PIO_STACK_LOCATION pIrpStack)
+{
+  if (pIrpStack->Parameters.DeviceIoControl.InputBufferLength < sizeof(UCHAR))
+    return STATUS_BUFFER_TOO_SMALL;
+
+  return FdoPortStartIrp(pDevExt, pIrp, C0C_QUEUE_WRITE, StartIrpWrite);
 }
 
 NTSTATUS FdoPortWrite(IN PC0C_FDOPORT_EXTENSION pDevExt, IN PIRP pIrp)

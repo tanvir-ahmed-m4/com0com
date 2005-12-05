@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.21  2005/12/05 10:54:55  vfrolov
+ * Implemented IOCTL_SERIAL_IMMEDIATE_CHAR
+ *
  * Revision 1.20  2005/11/30 16:04:11  vfrolov
  * Implemented IOCTL_SERIAL_GET_STATS and IOCTL_SERIAL_CLEAR_STATS
  *
@@ -94,6 +97,21 @@
 #define GET_REST_BUFFER(pIrp, done) \
     (((PUCHAR)(pIrp)->AssociatedIrp.SystemBuffer) + done)
 
+SIZE_T GetWriteLength(IN PIRP pIrp)
+{
+  PIO_STACK_LOCATION pIrpStack = IoGetCurrentIrpStackLocation(pIrp);
+
+  switch(pIrpStack->MajorFunction) {
+  case IRP_MJ_WRITE:
+    return pIrpStack->Parameters.Write.Length;
+  case IRP_MJ_DEVICE_CONTROL:
+    if (pIrpStack->Parameters.DeviceIoControl.IoControlCode == IOCTL_SERIAL_IMMEDIATE_CHAR)
+      return sizeof(UCHAR);
+    break;
+  }
+  return 0;
+}
+
 NTSTATUS ReadBuffer(PIRP pIrp, PC0C_BUFFER pBuf, PSIZE_T pReadDone)
 {
   NTSTATUS status;
@@ -164,7 +182,7 @@ NTSTATUS WriteBuffer(
   information = pIrp->IoStatus.Information;
 
   pWriteBuf = GET_REST_BUFFER(pIrp, information);
-  writeLength = IoGetCurrentIrpStackLocation(pIrp)->Parameters.Write.Length;
+  writeLength = GetWriteLength(pIrp);
 
   pBuf = &pReadIoPort->readBuf;
   length = writeLength - information;
@@ -221,7 +239,7 @@ NTSTATUS WriteOverrun(
   information = pIrp->IoStatus.Information;
 
   pWriteBuf = GET_REST_BUFFER(pIrp, information);
-  writeLength = IoGetCurrentIrpStackLocation(pIrp)->Parameters.Write.Length;
+  writeLength = GetWriteLength(pIrp);
 
   writeDone = writeLength - information;
 
@@ -269,8 +287,7 @@ VOID ReadWriteDirect(
                                                 - pIrpRead->IoStatus.Information;
 
   pWriteBuf = GET_REST_BUFFER(pIrpWrite, pIrpWrite->IoStatus.Information);
-  writeLength = IoGetCurrentIrpStackLocation(pIrpWrite)->Parameters.Write.Length
-                                                - pIrpWrite->IoStatus.Information;
+  writeLength = GetWriteLength(pIrpWrite) - pIrpWrite->IoStatus.Information;
 
   CopyCharsWithEscape(
       &pReadIoPort->readBuf, pReadIoPort->escapeChar,

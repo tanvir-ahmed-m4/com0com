@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.7  2005/12/05 10:54:55  vfrolov
+ * Implemented IOCTL_SERIAL_IMMEDIATE_CHAR
+ *
  * Revision 1.6  2005/11/29 16:16:46  vfrolov
  * Removed FdoPortCancelQueue()
  *
@@ -58,6 +61,7 @@ PC0C_IRP_STATE GetIrpState(IN PIRP pIrp)
   case IRP_MJ_DEVICE_CONTROL:
     switch (pIrpStack->Parameters.DeviceIoControl.IoControlCode) {
     case IOCTL_SERIAL_WAIT_ON_MASK:
+    case IOCTL_SERIAL_IMMEDIATE_CHAR:
       return (PC0C_IRP_STATE)&pIrpStack->Parameters.DeviceIoControl.Type3InputBuffer;
     }
     break;
@@ -200,6 +204,38 @@ NTSTATUS NoPending(IN PIRP pIrp, NTSTATUS status)
   return status;
 }
 
+NTSTATUS StartIrp(
+    IN PC0C_FDOPORT_EXTENSION pDevExt,
+    IN PIRP pIrp,
+    IN PC0C_IRP_STATE pState,
+    IN PC0C_IRP_QUEUE pQueue,
+    IN KIRQL oldIrql,
+    IN PC0C_FDOPORT_START_ROUTINE pStartRoutine)
+{
+  NTSTATUS status;
+  LIST_ENTRY queueToComplete;
+
+  pQueue->pCurrent = pIrp;
+  pState->flags |= C0C_IRP_FLAG_IS_CURRENT;
+
+  InitializeListHead(&queueToComplete);
+  status = pStartRoutine(pDevExt, &queueToComplete);
+
+  if (status == STATUS_PENDING) {
+    pIrp->IoStatus.Status = STATUS_PENDING;
+    IoMarkIrpPending(pIrp);
+  } else {
+    status = NoPending(pIrp, status);
+    ShiftQueue(pQueue);
+  }
+
+  KeReleaseSpinLock(pDevExt->pIoLock, oldIrql);
+
+  FdoPortCompleteQueue(&queueToComplete);
+
+  return status;
+}
+
 NTSTATUS FdoPortStartIrp(
     IN PC0C_FDOPORT_EXTENSION pDevExt,
     IN PIRP pIrp,
@@ -231,34 +267,44 @@ NTSTATUS FdoPortStartIrp(
     KeReleaseSpinLock(pDevExt->pIoLock, oldIrql);
   } else {
     if (!pQueue->pCurrent) {
-      LIST_ENTRY queueToComplete;
-
-      pQueue->pCurrent = pIrp;
-      pState->flags |= C0C_IRP_FLAG_IS_CURRENT;
-
-      InitializeListHead(&queueToComplete);
-      status = pStartRoutine(pDevExt, &queueToComplete);
-
-      if (status == STATUS_PENDING) {
-        pIrp->IoStatus.Status = STATUS_PENDING;
-        IoMarkIrpPending(pIrp);
-      } else {
-        status = NoPending(pIrp, status);
-        ShiftQueue(pQueue);
-      }
-
-      KeReleaseSpinLock(pDevExt->pIoLock, oldIrql);
-
-      FdoPortCompleteQueue(&queueToComplete);
+      status = StartIrp(pDevExt, pIrp, pState, pQueue, oldIrql, pStartRoutine);
     } else {
       PIO_STACK_LOCATION pIrpStack;
 
       pIrpStack = IoGetCurrentIrpStackLocation(pIrp);
 
       if (pIrpStack->MajorFunction == IRP_MJ_DEVICE_CONTROL &&
-          pIrpStack->Parameters.DeviceIoControl.IoControlCode == IOCTL_SERIAL_WAIT_ON_MASK) {
+          pIrpStack->Parameters.DeviceIoControl.IoControlCode == IOCTL_SERIAL_WAIT_ON_MASK)
+      {
         status = NoPending(pIrp, STATUS_INVALID_PARAMETER);
-      } else {
+      }
+      else
+      if (pIrpStack->MajorFunction == IRP_MJ_DEVICE_CONTROL &&
+          pIrpStack->Parameters.DeviceIoControl.IoControlCode == IOCTL_SERIAL_IMMEDIATE_CHAR)
+      {
+        PIO_STACK_LOCATION pCurrentStack;
+
+        pCurrentStack = IoGetCurrentIrpStackLocation(pQueue->pCurrent);
+
+        if (pCurrentStack->MajorFunction == IRP_MJ_DEVICE_CONTROL &&
+            pCurrentStack->Parameters.DeviceIoControl.IoControlCode == IOCTL_SERIAL_IMMEDIATE_CHAR)
+        {
+          status = NoPending(pIrp, STATUS_INVALID_PARAMETER);
+        } else {
+          PC0C_IRP_STATE pCurrentState;
+
+          pCurrentState = GetIrpState(pQueue->pCurrent);
+
+          HALT_UNLESS(pCurrentState);
+
+          pCurrentState->flags &= ~C0C_IRP_FLAG_IS_CURRENT;
+          InsertHeadList(&pQueue->queue, &pQueue->pCurrent->Tail.Overlay.ListEntry);
+          pCurrentState->flags |= C0C_IRP_FLAG_IN_QUEUE;
+
+          status = StartIrp(pDevExt, pIrp, pState, pQueue, oldIrql, pStartRoutine);
+        }
+      }
+      else {
         pIrp->IoStatus.Status = STATUS_PENDING;
         IoMarkIrpPending(pIrp);
         InsertTailList(&pQueue->queue, &pIrp->Tail.Overlay.ListEntry);
