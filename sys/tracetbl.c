@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.5  2005/12/06 13:01:54  vfrolov
+ * Implemented IOCTL_SERIAL_GET_DTRRTS
+ *
  * Revision 1.4  2005/09/28 10:06:42  vfrolov
  * Implemented IRP_MJ_QUERY_INFORMATION and IRP_MJ_SET_INFORMATION
  *
@@ -170,6 +173,12 @@ CODE2NAME codeNameTableModemStatus[] = {
   TOCODE2NAME(C0C_MSB_, DSR),
   TOCODE2NAME(C0C_MSB_, RING),
   TOCODE2NAME(C0C_MSB_, RLSD),
+  {0, NULL}
+};
+
+CODE2NAME codeNameTableDTRRTS[] = {
+  {SERIAL_DTR_STATE, "DTR"},
+  {SERIAL_RTS_STATE, "RTS"},
   {0, NULL}
 };
 

@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.14  2005/12/06 13:01:54  vfrolov
+ * Implemented IOCTL_SERIAL_GET_DTRRTS
+ *
  * Revision 1.13  2005/12/05 10:54:55  vfrolov
  * Implemented IOCTL_SERIAL_IMMEDIATE_CHAR
  *
@@ -133,6 +136,27 @@ NTSTATUS FdoPortIoCtl(
         }
       }
       break;
+    case IOCTL_SERIAL_GET_DTRRTS: {
+      ULONG modemStatusRemote;
+
+      if (pIrpStack->Parameters.DeviceIoControl.OutputBufferLength < sizeof(ULONG)) {
+        status = STATUS_BUFFER_TOO_SMALL;
+        break;
+      }
+
+      KeAcquireSpinLock(pDevExt->pIoLock, &oldIrql);
+      modemStatusRemote = pDevExt->pIoPortRemote->modemStatus;
+      KeReleaseSpinLock(pDevExt->pIoLock, oldIrql);
+
+      *(PULONG)pIrp->AssociatedIrp.SystemBuffer =
+          ((modemStatusRemote & C0C_MSB_DSR) ? SERIAL_DTR_STATE : 0) |
+          ((modemStatusRemote & C0C_MSB_CTS) ? SERIAL_RTS_STATE : 0);
+
+      pIrp->IoStatus.Information = sizeof(ULONG);
+
+      TraceIrp("FdoPortIoCtl", pIrp, &status, TRACE_FLAG_RESULTS);
+      break;
+    }
     case IOCTL_SERIAL_GET_MODEMSTATUS:
       if (pIrpStack->Parameters.DeviceIoControl.OutputBufferLength < sizeof(ULONG)) {
         status = STATUS_BUFFER_TOO_SMALL;

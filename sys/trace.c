@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.17  2005/12/06 13:01:54  vfrolov
+ * Implemented IOCTL_SERIAL_GET_DTRRTS
+ *
  * Revision 1.16  2005/12/05 10:54:55  vfrolov
  * Implemented IOCTL_SERIAL_IMMEDIATE_CHAR
  *
@@ -1255,6 +1258,13 @@ VOID TraceIrp(
             pDestStr = AnsiStrCopyStr(pDestStr, &size, " ");
             pDestStr = AnsiStrCopyMask(pDestStr, &size,
                 codeNameTableModemStatus, *((PULONG)pSysBuf));
+          }
+          break;
+        case IOCTL_SERIAL_GET_DTRRTS:
+          if ((flags & TRACE_FLAG_RESULTS) && inform >= sizeof(ULONG)) {
+            pDestStr = AnsiStrCopyStr(pDestStr, &size, " ");
+            pDestStr = AnsiStrCopyMask(pDestStr, &size,
+                codeNameTableDTRRTS, *((PULONG)pSysBuf));
           }
           break;
         case IOCTL_SERIAL_SET_WAIT_MASK:
