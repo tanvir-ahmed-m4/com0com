@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2004-2005 Vyacheslav Frolov
+ * Copyright (c) 2004-2006 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,10 @@
  *
  *
  * $Log$
+ * Revision 1.18  2006/01/10 09:44:04  vfrolov
+ * Added ability to enable/disable dump
+ * Added tracing of HoldReasons, WaitForImmediate, AmountInOutQueue for SERIAL_STATUS
+ *
  * Revision 1.17  2005/12/06 13:01:54  vfrolov
  * Implemented IOCTL_SERIAL_GET_DTRRTS
  *
@@ -100,6 +104,11 @@ typedef struct _TRACE_BUFFER {
   CHAR buf[TRACE_BUF_SIZE];
 } TRACE_BUFFER, *PTRACE_BUFFER;
 /********************************************************************/
+#define TRACE_ENABLE_IRP       0x00000001
+#define TRACE_ENABLE_DUMP      0x00000002
+
+#define TRACE_ENABLE_ALL       0xFFFFFFFF
+
 static struct {
   ULONG read;
   ULONG write;
@@ -575,7 +584,7 @@ PCHAR AnsiStrCopyMask(
   if (unknown) {
     if (count)
       pDestStr = AnsiStrCopyStr(pDestStr, pSize, "|");
-    pDestStr = AnsiStrFormat(pDestStr, pSize, "0x%lX", unknown);
+    pDestStr = AnsiStrFormat(pDestStr, pSize, "0x%lX", (long)unknown);
   }
 
   return AnsiStrCopyStr(pDestStr, pSize, "]");
@@ -607,7 +616,7 @@ PCHAR AnsiStrCopyFields(
   if (mask) {
     if (count)
       pDestStr = AnsiStrCopyStr(pDestStr, pSize, "|");
-    pDestStr = AnsiStrFormat(pDestStr, pSize, "0x%lX", mask);
+    pDestStr = AnsiStrFormat(pDestStr, pSize, "0x%lX", (long)mask);
   }
 
   return AnsiStrCopyStr(pDestStr, pSize, "]");
@@ -623,14 +632,14 @@ PCHAR AnsiStrCopyDump(
   CHAR bufA[DUMP_MAX + 1];
   SIZE_T i;
 
-  pDestStr = AnsiStrFormat(pDestStr, pSize, "%lu:", (ULONG)length);
+  pDestStr = AnsiStrFormat(pDestStr, pSize, "%lu:", (long)length);
 
   for (i = 0 ; i < length && i < DUMP_MAX ; i++) {
     UCHAR c = *(((PUCHAR)pData) + i);
 
     bufA[i] = (CHAR)((c >= 0x20 && c < 0x7F) ? c : '.');
 
-    pDestStr = AnsiStrFormat(pDestStr, pSize, " %02X", c);
+    pDestStr = AnsiStrFormat(pDestStr, pSize, " %02X", (int)c);
   }
 
   bufA[i] = 0;
@@ -738,14 +747,33 @@ PCHAR AnsiStrCopyCommStatus(
     PSIZE_T pSize,
     IN PSERIAL_STATUS pCommStatus)
 {
-  pDestStr = AnsiStrCopyStr(pDestStr, pSize, " Errors");
-  pDestStr = AnsiStrCopyMask(pDestStr, pSize,
-      codeNameTableErrors,
-      pCommStatus->Errors);
+  pDestStr = AnsiStrCopyStr(pDestStr, pSize, " {");
 
-  return AnsiStrFormat(pDestStr, pSize,
-      " AmountInInQueue=%lu",
-      (long)pCommStatus->AmountInInQueue);
+  if (pCommStatus->Errors) {
+    pDestStr = AnsiStrCopyStr(pDestStr, pSize, " Errors");
+    pDestStr = AnsiStrCopyMask(pDestStr, pSize,
+        codeNameTableErrors, pCommStatus->Errors);
+  }
+
+  if (pCommStatus->HoldReasons) {
+    pDestStr = AnsiStrCopyStr(pDestStr, pSize, " HoldReasons");
+    pDestStr = AnsiStrCopyMask(pDestStr, pSize,
+        codeNameTableHoldReasons, pCommStatus->HoldReasons);
+  }
+
+  if (pCommStatus->WaitForImmediate)
+    pDestStr = AnsiStrCopyStr(pDestStr, pSize, " WaitForImmediate=TRUE");
+
+  if (pCommStatus->AmountInInQueue)
+    pDestStr = AnsiStrFormat(pDestStr, pSize,
+        " AmountInInQueue=%lu", (long)pCommStatus->AmountInInQueue);
+
+  if (pCommStatus->AmountInOutQueue)
+    pDestStr = AnsiStrFormat(pDestStr, pSize,
+        " AmountInOutQueue=%lu", (long)pCommStatus->AmountInOutQueue);
+
+  pDestStr = AnsiStrCopyStr(pDestStr, pSize, " }");
+  return pDestStr;
 }
 
 PCHAR AnsiStrCopyPerfStats(
@@ -753,6 +781,8 @@ PCHAR AnsiStrCopyPerfStats(
     PSIZE_T pSize,
     IN PSERIALPERF_STATS pPerfStats)
 {
+  pDestStr = AnsiStrCopyStr(pDestStr, pSize, " {");
+
   if (pPerfStats->ReceivedCount)
     pDestStr = AnsiStrFormat(pDestStr, pSize,
         " ReceivedCount=%lu", (long)pPerfStats->ReceivedCount);
@@ -777,6 +807,7 @@ PCHAR AnsiStrCopyPerfStats(
     pDestStr = AnsiStrFormat(pDestStr, pSize,
         " ParityErrorCount=%lu", (long)pPerfStats->ParityErrorCount);
 
+  pDestStr = AnsiStrCopyStr(pDestStr, pSize, " }");
   return pDestStr;
 }
 /********************************************************************/
@@ -954,7 +985,7 @@ VOID TraceOutput(
       if (skipped) {
         SIZE_T tmp_size = size;
 
-        AnsiStrFormat(pDestStr, &tmp_size, "*** skipped %lu lines ***\r\n", skipped);
+        AnsiStrFormat(pDestStr, &tmp_size, "*** skipped %lu lines ***\r\n", (long)skipped);
         TraceWrite(pIoObject, handle, pBuf->buf);
       }
 
@@ -1165,35 +1196,35 @@ VOID TraceIrp(
   PVOID pSysBuf;
   ULONG_PTR inform;
   ULONG major;
-  ULONG disabled;
+  ULONG enableMask;
 
   if (!TRACE_FILE_OK)
     return;
 
   pIrpStack = IoGetCurrentIrpStackLocation(pIrp);
   major = pIrpStack->MajorFunction;
-  disabled = FALSE;
+  enableMask = TRACE_ENABLE_ALL;
 
   switch (major) {
     case IRP_MJ_WRITE:
-      disabled = !traceEnable.write;
+      enableMask = traceEnable.write;
       break;
     case IRP_MJ_READ:
-      disabled = !traceEnable.read;
+      enableMask = traceEnable.read;
       break;
     case IRP_MJ_DEVICE_CONTROL:
       switch (pIrpStack->Parameters.DeviceIoControl.IoControlCode) {
         case IOCTL_SERIAL_GET_TIMEOUTS:
-          disabled = !traceEnable.getTimeouts;
+          enableMask = traceEnable.getTimeouts;
           break;
         case IOCTL_SERIAL_SET_TIMEOUTS:
-          disabled = !traceEnable.setTimeouts;
+          enableMask = traceEnable.setTimeouts;
           break;
         case IOCTL_SERIAL_GET_COMMSTATUS:
-          disabled = !traceEnable.getCommStatus;
+          enableMask = traceEnable.getCommStatus;
           break;
         case IOCTL_SERIAL_GET_MODEMSTATUS:
-          disabled = !traceEnable.getModemStatus;
+          enableMask = traceEnable.getModemStatus;
           break;
       }
       break;
@@ -1201,7 +1232,7 @@ VOID TraceIrp(
 
   pDevExt = pIrpStack->DeviceObject->DeviceExtension;
 
-  if (disabled) {
+  if (!(enableMask & TRACE_ENABLE_IRP)) {
     TraceOutput(pDevExt, NULL);
     return;
   }
@@ -1238,11 +1269,14 @@ VOID TraceIrp(
           length = pIrpStack->Parameters.Write.Length;
         else
           length = pIrpStack->Parameters.Read.Length;
-        pDestStr = AnsiStrFormat(pDestStr, &size, " length=%u", length);
+        pDestStr = AnsiStrFormat(pDestStr, &size, " length=%lu", (long)length);
       }
       if (flags & TRACE_FLAG_RESULTS) {
         pDestStr = AnsiStrCopyStr(pDestStr, &size, " ");
-        pDestStr = AnsiStrCopyDump(pDestStr, &size, pSysBuf, inform);
+        if (enableMask & TRACE_ENABLE_DUMP)
+          pDestStr = AnsiStrCopyDump(pDestStr, &size, pSysBuf, inform);
+        else
+          pDestStr = AnsiStrFormat(pDestStr, &size, "%lu:", (long)inform);
       }
       break;
     case IRP_MJ_DEVICE_CONTROL: {
