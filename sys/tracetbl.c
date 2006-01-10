@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2004-2005 Vyacheslav Frolov
+ * Copyright (c) 2004-2006 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.6  2006/01/10 09:32:20  vfrolov
+ * Added codeNameTableHoldReasons[]
+ *
  * Revision 1.5  2005/12/06 13:01:54  vfrolov
  * Implemented IOCTL_SERIAL_GET_DTRRTS
  *
@@ -286,6 +289,17 @@ CODE2NAME codeNameTableErrors[] = {
   TOCODE2NAME(SERIAL_ERROR_, OVERRUN),
   TOCODE2NAME(SERIAL_ERROR_, QUEUEOVERRUN),
   TOCODE2NAME(SERIAL_ERROR_, PARITY),
+  {0, NULL}
+};
+
+CODE2NAME codeNameTableHoldReasons[] = {
+  TOCODE2NAME(SERIAL_TX_WAITING_, FOR_CTS),
+  TOCODE2NAME(SERIAL_TX_WAITING_, FOR_DSR),
+  TOCODE2NAME(SERIAL_TX_WAITING_, FOR_DCD),
+  TOCODE2NAME(SERIAL_TX_WAITING_, FOR_XON),
+  TOCODE2NAME(SERIAL_TX_WAITING_, XOFF_SENT),
+  TOCODE2NAME(SERIAL_TX_WAITING_, ON_BREAK),
+  TOCODE2NAME(SERIAL_RX_WAITING_, FOR_DSR),
   {0, NULL}
 };
 
