@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2004-2005 Vyacheslav Frolov
+ * Copyright (c) 2004-2006 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.8  2006/01/10 09:24:31  vfrolov
+ * Utilized C0C_COPYRIGHT_YEARS
+ *
  * Revision 1.7  2005/09/05 16:05:03  vfrolov
  * Moved version info to version.h
  *
@@ -61,7 +64,7 @@ VS_VERSION_INFO VERSIONINFO
       VALUE "FileDescription",  VER_PODUCT_NAME_STR VER_DEBUG_STR
       VALUE "FileVersion",      VER_VERSION_STR
       VALUE "InternalName",     "com0com\0"
-      VALUE "LegalCopyright",   "Copyright (c) 2004-2005 Vyacheslav Frolov\0"
+      VALUE "LegalCopyright",   "Copyright (c) " C0C_COPYRIGHT_YEARS " Vyacheslav Frolov\0"
       VALUE "OriginalFilename", "com0com.sys\0"
       VALUE "ProductName",      VER_PODUCT_NAME_STR
       VALUE "ProductVersion",   VER_VERSION_STR
