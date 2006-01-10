@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2004-2005 Vyacheslav Frolov
+ * Copyright (c) 2004-2006 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,12 @@
  *
  *
  * $Log$
+ * Revision 1.16  2006/01/10 10:17:23  vfrolov
+ * Implemented flow control and handshaking
+ * Implemented IOCTL_SERIAL_SET_XON and IOCTL_SERIAL_SET_XOFF
+ * Added setting of HoldReasons, WaitForImmediate and AmountInOutQueue
+ *   fields of SERIAL_STATUS for IOCTL_SERIAL_GET_COMMSTATUS
+ *
  * Revision 1.15  2005/12/28 10:01:59  vfrolov
  * Added stub for IOCTL_SERIAL_SET_XON
  *
@@ -70,6 +76,7 @@
 #include "timeout.h"
 #include "delay.h"
 #include "bufutils.h"
+#include "handflow.h"
 
 NTSTATUS FdoPortIoCtl(
     IN PC0C_FDOPORT_EXTENSION pDevExt,
@@ -110,6 +117,13 @@ NTSTATUS FdoPortIoCtl(
             C0C_MSB_CTS,
             &queueToComplete);
 
+          if (pDevExt->pIoPortRemote->tryWrite) {
+            ReadWrite(
+                pDevExt->pIoPortLocal, FALSE,
+                pDevExt->pIoPortRemote, FALSE,
+                &queueToComplete);
+          }
+
           KeReleaseSpinLock(pDevExt->pIoLock, oldIrql);
           FdoPortCompleteQueue(&queueToComplete);
         }
@@ -133,6 +147,13 @@ NTSTATUS FdoPortIoCtl(
             code == IOCTL_SERIAL_SET_DTR ? C0C_MSB_DSR : 0,
             C0C_MSB_DSR,
             &queueToComplete);
+
+          if (pDevExt->pIoPortRemote->tryWrite) {
+            ReadWrite(
+                pDevExt->pIoPortLocal, FALSE,
+                pDevExt->pIoPortRemote, FALSE,
+                &queueToComplete);
+          }
 
           KeReleaseSpinLock(pDevExt->pIoLock, oldIrql);
           FdoPortCompleteQueue(&queueToComplete);
@@ -160,7 +181,28 @@ NTSTATUS FdoPortIoCtl(
       TraceIrp("FdoPortIoCtl", pIrp, &status, TRACE_FLAG_RESULTS);
       break;
     }
-    case IOCTL_SERIAL_SET_XON:
+    case IOCTL_SERIAL_SET_XON: {
+      LIST_ENTRY queueToComplete;
+
+      InitializeListHead(&queueToComplete);
+
+      KeAcquireSpinLock(pDevExt->pIoLock, &oldIrql);
+      SetXonXoffHolding(pDevExt->pIoPortLocal, C0C_XCHAR_ON);
+
+      if (pDevExt->pIoPortRemote->tryWrite) {
+        ReadWrite(
+            pDevExt->pIoPortLocal, FALSE,
+            pDevExt->pIoPortRemote, FALSE,
+            &queueToComplete);
+      }
+      KeReleaseSpinLock(pDevExt->pIoLock, oldIrql);
+      FdoPortCompleteQueue(&queueToComplete);
+      break;
+    }
+    case IOCTL_SERIAL_SET_XOFF:
+      KeAcquireSpinLock(pDevExt->pIoLock, &oldIrql);
+      SetXonXoffHolding(pDevExt->pIoPortLocal, C0C_XCHAR_OFF);
+      KeReleaseSpinLock(pDevExt->pIoLock, oldIrql);
       break;
     case IOCTL_SERIAL_GET_MODEMSTATUS:
       if (pIrpStack->Parameters.DeviceIoControl.OutputBufferLength < sizeof(ULONG)) {
@@ -219,6 +261,13 @@ NTSTATUS FdoPortIoCtl(
 
       if (*pSysBuf & SERIAL_PURGE_RXCLEAR) {
         PurgeBuffer(&pDevExt->pIoPortLocal->readBuf);
+        UpdateHandFlow(pDevExt, TRUE, &queueToComplete);
+        if (pDevExt->pIoPortRemote->tryWrite) {
+          ReadWrite(
+              pDevExt->pIoPortLocal, FALSE,
+              pDevExt->pIoPortRemote, FALSE,
+              &queueToComplete);
+        }
       }
 
       KeReleaseSpinLock(pDevExt->pIoLock, oldIrql);
@@ -229,6 +278,8 @@ NTSTATUS FdoPortIoCtl(
     }
     case IOCTL_SERIAL_GET_COMMSTATUS: {
       PSERIAL_STATUS pSysBuf;
+      PC0C_IO_PORT pIoPort;
+      PIRP pIrpWrite;
 
       if (pIrpStack->Parameters.DeviceIoControl.OutputBufferLength < sizeof(SERIAL_STATUS)) {
         status = STATUS_BUFFER_TOO_SMALL;
@@ -236,12 +287,28 @@ NTSTATUS FdoPortIoCtl(
       }
 
       pSysBuf = (PSERIAL_STATUS)pIrp->AssociatedIrp.SystemBuffer;
+      pIoPort = pDevExt->pIoPortLocal;
 
       KeAcquireSpinLock(pDevExt->pIoLock, &oldIrql);
       RtlZeroMemory(pSysBuf, sizeof(*pSysBuf));
-      pSysBuf->AmountInInQueue = (ULONG)C0C_BUFFER_BUSY(&pDevExt->pIoPortLocal->readBuf);
-      pSysBuf->Errors = pDevExt->pIoPortLocal->errors;
-      pDevExt->pIoPortLocal->errors = 0;
+      pSysBuf->AmountInInQueue = (ULONG)C0C_BUFFER_BUSY(&pIoPort->readBuf);
+
+      pIrpWrite = pIoPort->irpQueues[C0C_QUEUE_WRITE].pCurrent;
+
+      if (pIrpWrite) {
+        PIO_STACK_LOCATION pIrpStackWrite = IoGetCurrentIrpStackLocation(pIrpWrite);
+
+        if (pIrpStackWrite->MajorFunction == IRP_MJ_DEVICE_CONTROL &&
+            pIrpStackWrite->Parameters.DeviceIoControl.IoControlCode == IOCTL_SERIAL_IMMEDIATE_CHAR)
+        {
+          pSysBuf->WaitForImmediate = TRUE;
+        }
+      }
+
+      pSysBuf->AmountInOutQueue = pIoPort->amountInWriteQueue;
+      pSysBuf->HoldReasons = pIoPort->writeHolding;
+      pSysBuf->Errors = pIoPort->errors;
+      pIoPort->errors = 0;
       KeReleaseSpinLock(pDevExt->pIoLock, oldIrql);
       pIrp->IoStatus.Information = sizeof(SERIAL_STATUS);
 
@@ -273,15 +340,7 @@ NTSTATUS FdoPortIoCtl(
       InitializeListHead(&queueToComplete);
       KeAcquireSpinLock(pDevExt->pIoLock, &oldIrql);
 
-      if (pDevExt->pIoPortLocal->escapeChar &&
-            (pSysBuf->FlowReplace & SERIAL_ERROR_CHAR)) {
-        status = STATUS_INVALID_PARAMETER;
-      }
-
-      if (status == STATUS_SUCCESS) {
-        pDevExt->handFlow = *pSysBuf;
-        UpdateHandFlow(pDevExt, &queueToComplete);
-      }
+      status = SetHandFlow(pDevExt, pSysBuf, &queueToComplete);
 
       KeReleaseSpinLock(pDevExt->pIoLock, oldIrql);
       FdoPortCompleteQueue(&queueToComplete);
@@ -517,6 +576,7 @@ NTSTATUS FdoPortIoCtl(
       break;
     case IOCTL_SERIAL_SET_QUEUE_SIZE: {
       PSERIAL_QUEUE_SIZE pSysBuf = (PSERIAL_QUEUE_SIZE)pIrp->AssociatedIrp.SystemBuffer;
+      LIST_ENTRY queueToComplete;
       PC0C_BUFFER pReadBuf;
       PUCHAR pBase;
 
@@ -544,14 +604,24 @@ NTSTATUS FdoPortIoCtl(
       if (!pBase)
         break;
 
+      InitializeListHead(&queueToComplete);
       KeAcquireSpinLock(pDevExt->pIoLock, &oldIrql);
 
       if (SetNewBufferBase(pReadBuf, pBase, pSysBuf->InSize)) {
         pDevExt->handFlow.XoffLimit = pSysBuf->InSize >> 3;
         pDevExt->handFlow.XonLimit = pSysBuf->InSize >> 1;
+        SetLimit(pDevExt);
+        UpdateHandFlow(pDevExt, TRUE, &queueToComplete);
+        if (pDevExt->pIoPortRemote->tryWrite) {
+          ReadWrite(
+              pDevExt->pIoPortLocal, FALSE,
+              pDevExt->pIoPortRemote, FALSE,
+              &queueToComplete);
+        }
       }
 
       KeReleaseSpinLock(pDevExt->pIoLock, oldIrql);
+      FdoPortCompleteQueue(&queueToComplete);
       break;
     }
     case IOCTL_SERIAL_GET_STATS:

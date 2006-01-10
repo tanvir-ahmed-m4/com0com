@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2004-2005 Vyacheslav Frolov
+ * Copyright (c) 2004-2006 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,12 @@
  *
  *
  * $Log$
+ * Revision 1.11  2006/01/10 10:17:23  vfrolov
+ * Implemented flow control and handshaking
+ * Implemented IOCTL_SERIAL_SET_XON and IOCTL_SERIAL_SET_XOFF
+ * Added setting of HoldReasons, WaitForImmediate and AmountInOutQueue
+ *   fields of SERIAL_STATUS for IOCTL_SERIAL_GET_COMMSTATUS
+ *
  * Revision 1.10  2005/09/27 16:41:01  vfrolov
  * Fixed DeviceType
  *
@@ -64,7 +70,7 @@
 NTSTATUS InitCommonExt(
     PC0C_COMMON_EXTENSION pDevExt,
     IN PDEVICE_OBJECT pDevObj,
-    int doType,
+    short doType,
     PWCHAR pPortName)
 {
   pDevExt->pDevObj = pDevObj;

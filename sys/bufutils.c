@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2004-2005 Vyacheslav Frolov
+ * Copyright (c) 2004-2006 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,12 @@
  *
  *
  * $Log$
+ * Revision 1.5  2006/01/10 10:17:23  vfrolov
+ * Implemented flow control and handshaking
+ * Implemented IOCTL_SERIAL_SET_XON and IOCTL_SERIAL_SET_XOFF
+ * Added setting of HoldReasons, WaitForImmediate and AmountInOutQueue
+ *   fields of SERIAL_STATUS for IOCTL_SERIAL_GET_COMMSTATUS
+ *
  * Revision 1.4  2005/11/29 08:35:14  vfrolov
  * Implemented SERIAL_EV_RX80FULL
  *
@@ -41,6 +47,7 @@
  */
 #define FILE_ID 8
 
+/********************************************************************/
 VOID CompactRawData(PC0C_RAW_DATA pRawData, SIZE_T writeDone)
 {
   if (writeDone) {
@@ -84,9 +91,40 @@ NTSTATUS MoveRawData(PC0C_RAW_DATA pDstRawData, PC0C_RAW_DATA pSrcRawData)
   }
   return pSrcRawData->size ? STATUS_PENDING : STATUS_SUCCESS;
 }
+/********************************************************************/
+
+VOID FlowFilterInit(PC0C_IO_PORT pIoPort, PC0C_FLOW_FILTER pFlowFilter)
+{
+  PSERIAL_HANDFLOW pHandFlow;
+
+  RtlZeroMemory(pFlowFilter, sizeof(*pFlowFilter));
+
+  pHandFlow = &pIoPort->pDevExt->handFlow;
+
+  if (pHandFlow->FlowReplace & SERIAL_AUTO_TRANSMIT) {
+    pFlowFilter->flags |= C0C_FLOW_FILTER_AUTO_TRANSMIT;
+    pFlowFilter->xonChar = pIoPort->pDevExt->specialChars.XonChar;
+    pFlowFilter->xoffChar = pIoPort->pDevExt->specialChars.XoffChar;
+  }
+
+  if (pHandFlow->FlowReplace & SERIAL_NULL_STRIPPING)
+    pFlowFilter->flags |= C0C_FLOW_FILTER_NULL_STRIPPING;
+
+  if (pIoPort->waitMask & SERIAL_EV_RXCHAR)
+    pFlowFilter->flags |= C0C_FLOW_FILTER_EV_RXCHAR;
+
+  if (pIoPort->waitMask & SERIAL_EV_RXFLAG) {
+    pFlowFilter->flags |= C0C_FLOW_FILTER_EV_RXFLAG;
+    pFlowFilter->eventChar = pIoPort->pDevExt->specialChars.EventChar;
+  }
+
+  pFlowFilter->escapeChar = pIoPort->escapeChar;
+}
+/********************************************************************/
 
 VOID CopyCharsWithEscape(
-    PC0C_BUFFER pBuf, UCHAR escapeChar,
+    PC0C_BUFFER pBuf,
+    PC0C_FLOW_FILTER pFlowFilter,
     PUCHAR pReadBuf, SIZE_T readLength,
     PUCHAR pWriteBuf, SIZE_T writeLength,
     PSIZE_T pReadDone,
@@ -94,6 +132,8 @@ VOID CopyCharsWithEscape(
 {
   SIZE_T readDone;
   SIZE_T writeDone;
+
+  HALT_UNLESS(pReadBuf || (pFlowFilter && !readLength));
 
   readDone = 0;
 
@@ -120,7 +160,7 @@ VOID CopyCharsWithEscape(
     CompactRawData(&pBuf->insertData, length);
   }
 
-  if (!escapeChar) {
+  if (!pFlowFilter) {
     writeDone = writeLength < readLength ? writeLength : readLength;
 
     if (writeDone) {
@@ -133,22 +173,48 @@ VOID CopyCharsWithEscape(
     while (writeLength--) {
       UCHAR curChar;
 
-      if (!readLength--)
-        break;
-
       curChar = *pWriteBuf++;
-      writeDone++;
-      *pReadBuf++ = curChar;
-      readDone++;
 
-      if (curChar == escapeChar) {
-        if (!readLength--) {
-          pBuf->escape = TRUE;
-          break;
+      if (!curChar && (pFlowFilter->flags & C0C_FLOW_FILTER_NULL_STRIPPING)) {
+      }
+      else
+      if ((pFlowFilter->flags & C0C_FLOW_FILTER_AUTO_TRANSMIT) &&
+          (curChar == pFlowFilter->xoffChar || curChar == pFlowFilter->xonChar))
+      {
+        if (curChar == pFlowFilter->xoffChar)
+          pFlowFilter->lastXonXoff = C0C_XCHAR_OFF;
+        else
+          pFlowFilter->lastXonXoff = C0C_XCHAR_ON;
+      }
+      else {
+        if (pReadBuf) {
+          if (!readLength--)
+            break;
+
+          *pReadBuf++ = curChar;
+
+          if (pFlowFilter->flags & C0C_FLOW_FILTER_EV_RXCHAR)
+            pFlowFilter->events |= C0C_FLOW_FILTER_EV_RXCHAR;
+
+          if ((pFlowFilter->flags & C0C_FLOW_FILTER_EV_RXFLAG) &&
+              curChar == pFlowFilter->eventChar)
+          {
+            pFlowFilter->events |= C0C_FLOW_FILTER_EV_RXFLAG;
+          }
+
+          if (pFlowFilter->escapeChar && curChar == pFlowFilter->escapeChar) {
+            if (!readLength--) {
+              pBuf->escape = TRUE;
+              readLength++;
+            } else {
+              *pReadBuf++ = SERIAL_LSRMST_ESCAPE;
+              readDone++;
+            }
+          }
         }
-        *pReadBuf++ = SERIAL_LSRMST_ESCAPE;
         readDone++;
       }
+      writeDone++;
     }
   }
 
@@ -214,25 +280,32 @@ SIZE_T ReadFromBuffer(PC0C_BUFFER pBuf, PVOID pRead, SIZE_T readLength)
   return pReadBuf - (PUCHAR)pRead;
 }
 
-SIZE_T WriteToBuffer(PC0C_BUFFER pBuf, PVOID pWrite, SIZE_T writeLength, UCHAR escapeChar)
+SIZE_T WriteToBuffer(
+    PC0C_BUFFER pBuf,
+    PVOID pWrite,
+    SIZE_T writeLength,
+    PC0C_FLOW_FILTER pFlowFilter)
 {
   PUCHAR pWriteBuf = (PUCHAR)pWrite;
 
   while (writeLength) {
     SIZE_T readDone, writeDone;
     SIZE_T readLength;
-    PVOID pReadBuf;
+    PUCHAR pReadBuf;
 
-    if ((SIZE_T)(pBuf->pEnd - pBuf->pBase) <= pBuf->busy)
+    if (pBuf->limit <= pBuf->busy)
       break;
-
-    readLength = pBuf->pBusy <= pBuf->pFree  ?
-        pBuf->pEnd - pBuf->pFree : pBuf->pBusy - pBuf->pFree;
 
     pReadBuf = pBuf->pFree;
 
+    readLength = pBuf->pBusy <= pReadBuf ?
+        pBuf->pEnd - pReadBuf : pBuf->pBusy - pReadBuf;
+
+    if (readLength > (pBuf->limit - pBuf->busy))
+      readLength = pBuf->limit - pBuf->busy;
+
     CopyCharsWithEscape(
-        pBuf, escapeChar,
+        pBuf, pFlowFilter,
         pReadBuf, readLength,
         pWriteBuf, writeLength,
         &readDone, &writeDone);
@@ -251,7 +324,7 @@ SIZE_T WriteToBuffer(PC0C_BUFFER pBuf, PVOID pWrite, SIZE_T writeLength, UCHAR e
 
 VOID WriteMandatoryToBuffer(PC0C_BUFFER pBuf, UCHAR mandatoryChar)
 {
-  if ((SIZE_T)(pBuf->pEnd - pBuf->pBase) <= pBuf->busy) {
+  if (C0C_BUFFER_SIZE(pBuf) <= pBuf->busy) {
     if (pBuf->pBase) {
       if (pBuf->pFree == pBuf->pBase)
         *(pBuf->pEnd - 1) = mandatoryChar;
@@ -292,7 +365,7 @@ NTSTATUS WriteRawDataToBuffer(PC0C_RAW_DATA pRawData, PC0C_BUFFER pBuf)
 
     pWriteBuf = pRawData->data;
 
-    if ((SIZE_T)(pBuf->pEnd - pBuf->pBase) <= pBuf->busy)
+    if (C0C_BUFFER_SIZE(pBuf) <= pBuf->busy)
       break;
 
     readLength = pBuf->pBusy <= pBuf->pFree  ?
@@ -301,7 +374,7 @@ NTSTATUS WriteRawDataToBuffer(PC0C_RAW_DATA pRawData, PC0C_BUFFER pBuf)
     pReadBuf = pBuf->pFree;
 
     CopyCharsWithEscape(
-        pBuf, 0,
+        pBuf, NULL,
         pReadBuf, readLength,
         pWriteBuf, writeLength,
         &readDone, &writeDone);
@@ -344,6 +417,7 @@ VOID InitBufferBase(PC0C_BUFFER pBuf, PUCHAR pBase, SIZE_T size)
 {
   pBuf->pBase = pBase;
   pBuf->pEnd = pBuf->pBase + size;
+  pBuf->limit = size;
   pBuf->size80 = (size*4 + 4)/5;
 }
 
@@ -412,3 +486,12 @@ VOID FreeBuffer(PC0C_BUFFER pBuf)
 
   RtlZeroMemory(pBuf, sizeof(*pBuf));
 }
+
+VOID SetBufferLimit(PC0C_BUFFER pBuf, SIZE_T limit)
+{
+  if (limit > C0C_BUFFER_SIZE(pBuf))
+    limit = C0C_BUFFER_SIZE(pBuf);
+
+  pBuf->limit = limit;
+}
+/********************************************************************/

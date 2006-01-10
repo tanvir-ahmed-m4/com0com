@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2004-2005 Vyacheslav Frolov
+ * Copyright (c) 2004-2006 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,12 @@
  *
  *
  * $Log$
+ * Revision 1.23  2006/01/10 10:17:23  vfrolov
+ * Implemented flow control and handshaking
+ * Implemented IOCTL_SERIAL_SET_XON and IOCTL_SERIAL_SET_XOFF
+ * Added setting of HoldReasons, WaitForImmediate and AmountInOutQueue
+ *   fields of SERIAL_STATUS for IOCTL_SERIAL_GET_COMMSTATUS
+ *
  * Revision 1.22  2005/12/06 13:04:32  vfrolov
  * Fixed data types
  *
@@ -91,6 +97,7 @@
 #include "timeout.h"
 #include "delay.h"
 #include "bufutils.h"
+#include "handflow.h"
 
 /*
  * FILE_ID used by HALT_UNLESS to put it on BSOD
@@ -99,6 +106,25 @@
 
 #define GET_REST_BUFFER(pIrp, done) \
     (((PUCHAR)(pIrp)->AssociatedIrp.SystemBuffer) + done)
+
+typedef struct _RW_DATA {
+
+  #define RW_DATA_TYPE_IRP   1
+  #define RW_DATA_TYPE_CHR   2
+
+  short type;
+
+  union {
+    struct {
+      PIRP pIrp;
+      NTSTATUS status;
+    } irp;
+    struct {
+      UCHAR chr;
+      BOOLEAN isChr;
+    } chr;
+  } data;
+} RW_DATA, *PRW_DATA;
 
 ULONG GetWriteLength(IN PIRP pIrp)
 {
@@ -141,24 +167,20 @@ NTSTATUS ReadBuffer(PIRP pIrp, PC0C_BUFFER pBuf, PSIZE_T pReadDone)
   return status;
 }
 
-VOID OnRxChars(PC0C_IO_PORT pReadIoPort, PVOID pBuf, SIZE_T size, PLIST_ENTRY pQueueToComplete)
+VOID OnRxChars(
+    PC0C_IO_PORT pReadIoPort,
+    SIZE_T size,
+    PC0C_FLOW_FILTER pFlowFilter,
+    PLIST_ENTRY pQueueToComplete)
 {
-  if (pReadIoPort->waitMask & (SERIAL_EV_RXCHAR | SERIAL_EV_RXFLAG)) {
-    if (pReadIoPort->waitMask & SERIAL_EV_RXCHAR)
+  SetXonXoffHolding(pReadIoPort, pFlowFilter->lastXonXoff);
+
+  if (pFlowFilter->events & (C0C_FLOW_FILTER_EV_RXCHAR | C0C_FLOW_FILTER_EV_RXFLAG)) {
+    if (pFlowFilter->events & C0C_FLOW_FILTER_EV_RXCHAR)
       pReadIoPort->eventMask |= SERIAL_EV_RXCHAR;
 
-    if (pReadIoPort->waitMask & SERIAL_EV_RXFLAG) {
-      PUCHAR p = (PUCHAR)pBuf;
-      SIZE_T s = size;
-      UCHAR c = pReadIoPort->pDevExt->specialChars.EventChar;
-
-      while (s--) {
-        if (c == *p++) {
-          pReadIoPort->eventMask |= SERIAL_EV_RXFLAG;
-          break;
-        }
-      }
-    }
+    if (pFlowFilter->events & C0C_FLOW_FILTER_EV_RXFLAG)
+      pReadIoPort->eventMask |= SERIAL_EV_RXFLAG;
 
     if (pReadIoPort->eventMask)
       WaitComplete(pReadIoPort, pQueueToComplete);
@@ -168,24 +190,33 @@ VOID OnRxChars(PC0C_IO_PORT pReadIoPort, PVOID pBuf, SIZE_T size, PLIST_ENTRY pQ
   pReadIoPort->pDevExt->pIoPortRemote->perfStats.TransmittedCount += (ULONG)size;
 }
 
-NTSTATUS WriteBuffer(
-    PIRP pIrp,
+VOID WriteBuffer(
+    PRW_DATA pDataWrite,
     PC0C_IO_PORT pReadIoPort,
     PLIST_ENTRY pQueueToComplete,
     PSIZE_T pWriteLimit,
     PSIZE_T pWriteDone)
 {
-  NTSTATUS status;
   SIZE_T writeLength, information;
   SIZE_T writeDone;
+  C0C_FLOW_FILTER flowFilter;
   PVOID pWriteBuf;
   PC0C_BUFFER pBuf;
   SIZE_T length;
 
-  information = pIrp->IoStatus.Information;
+  if (pDataWrite->type == RW_DATA_TYPE_IRP) {
+    PIRP pIrp = pDataWrite->data.irp.pIrp;
 
-  pWriteBuf = GET_REST_BUFFER(pIrp, information);
-  writeLength = GetWriteLength(pIrp);
+    information = pIrp->IoStatus.Information;
+    pWriteBuf = GET_REST_BUFFER(pIrp, information);
+    writeLength = GetWriteLength(pIrp);
+  } else {
+    HALT_UNLESS1(pDataWrite->type == RW_DATA_TYPE_CHR, pDataWrite->type);
+
+    information = 0;
+    pWriteBuf = &pDataWrite->data.chr.chr;
+    writeLength = pDataWrite->data.chr.isChr ? 1 : 0;
+  }
 
   pBuf = &pReadIoPort->readBuf;
   length = writeLength - information;
@@ -193,25 +224,34 @@ NTSTATUS WriteBuffer(
   if (pWriteLimit && length > *pWriteLimit)
     length = *pWriteLimit;
 
-  writeDone = WriteToBuffer(pBuf, pWriteBuf, length, pReadIoPort->escapeChar);
+  FlowFilterInit(pReadIoPort, &flowFilter);
+
+  writeDone = WriteToBuffer(pBuf, pWriteBuf, length, &flowFilter);
 
   if (writeDone) {
     *pWriteDone += writeDone;
     information += writeDone;
-    pIrp->IoStatus.Information = information;
+
+    if (pDataWrite->type == RW_DATA_TYPE_IRP) {
+      pDataWrite->data.irp.pIrp->IoStatus.Information = information;
+      pReadIoPort->pDevExt->pIoPortRemote->amountInWriteQueue -= (ULONG)writeDone;
+    }
 
     if (pWriteLimit)
       *pWriteLimit -= writeDone;
 
-    OnRxChars(pReadIoPort, pWriteBuf, writeDone, pQueueToComplete);
+    OnRxChars(pReadIoPort, writeDone, &flowFilter, pQueueToComplete);
   }
 
-  if (information == writeLength)
-    status = STATUS_SUCCESS;
-  else
-    status = STATUS_PENDING;
+  if (information == writeLength) {
+    if (pDataWrite->type == RW_DATA_TYPE_IRP) {
+      pDataWrite->data.irp.status = STATUS_SUCCESS;
+    } else {
+      HALT_UNLESS1(pDataWrite->type == RW_DATA_TYPE_CHR, pDataWrite->type);
 
-  return status;
+      pDataWrite->data.chr.isChr = FALSE;
+    }
+  }
 }
 
 VOID AlertOverrun(PC0C_IO_PORT pReadIoPort, PLIST_ENTRY pQueueToComplete)
@@ -227,54 +267,81 @@ VOID AlertOverrun(PC0C_IO_PORT pReadIoPort, PLIST_ENTRY pQueueToComplete)
   }
 }
 
-NTSTATUS WriteOverrun(
-    PIRP pIrp,
+VOID WriteOverrun(
+    PRW_DATA pDataWrite,
     PC0C_IO_PORT pReadIoPort,
     PLIST_ENTRY pQueueToComplete,
     PSIZE_T pWriteLimit,
     PSIZE_T pWriteDone)
 {
-  NTSTATUS status;
   SIZE_T writeLength, information;
-  SIZE_T writeDone;
+  SIZE_T writeDone, readDone;
+  C0C_FLOW_FILTER flowFilter;
   PVOID pWriteBuf;
+  SIZE_T length;
 
-  information = pIrp->IoStatus.Information;
+  if (pDataWrite->type == RW_DATA_TYPE_IRP) {
+    PIRP pIrp = pDataWrite->data.irp.pIrp;
 
-  pWriteBuf = GET_REST_BUFFER(pIrp, information);
-  writeLength = GetWriteLength(pIrp);
+    information = pIrp->IoStatus.Information;
+    pWriteBuf = GET_REST_BUFFER(pIrp, information);
+    writeLength = GetWriteLength(pIrp);
+  } else {
+    HALT_UNLESS1(pDataWrite->type == RW_DATA_TYPE_CHR, pDataWrite->type);
 
-  writeDone = writeLength - information;
+    information = 0;
+    pWriteBuf = &pDataWrite->data.chr.chr;
+    writeLength = pDataWrite->data.chr.isChr ? 1 : 0;
+  }
 
-  if (pWriteLimit && writeDone > *pWriteLimit)
-    writeDone = *pWriteLimit;
+  length = writeLength - information;
+
+  if (pWriteLimit && length > *pWriteLimit)
+    length = *pWriteLimit;
+
+  FlowFilterInit(pReadIoPort, &flowFilter);
+
+  CopyCharsWithEscape(
+      &pReadIoPort->readBuf, &flowFilter,
+      NULL, 0,
+      pWriteBuf, length,
+      &readDone, &writeDone);
 
   if (writeDone) {
     *pWriteDone += writeDone;
     information += writeDone;
-    pIrp->IoStatus.Information = information;
+
+    if (pDataWrite->type == RW_DATA_TYPE_IRP) {
+      pDataWrite->data.irp.pIrp->IoStatus.Information = information;
+      pReadIoPort->pDevExt->pIoPortRemote->amountInWriteQueue -= (ULONG)writeDone;
+    }
 
     if (pWriteLimit)
       *pWriteLimit -= writeDone;
 
-    AlertOverrun(pReadIoPort, pQueueToComplete);
-    pReadIoPort->perfStats.BufferOverrunErrorCount += (ULONG)writeDone;
-    OnRxChars(pReadIoPort, pWriteBuf, writeDone, pQueueToComplete);
+    if (readDone) {
+      AlertOverrun(pReadIoPort, pQueueToComplete);
+      pReadIoPort->perfStats.BufferOverrunErrorCount += (ULONG)readDone;
+    }
+
+    OnRxChars(pReadIoPort, writeDone, &flowFilter, pQueueToComplete);
   }
 
-  if (information == writeLength)
-    status = STATUS_SUCCESS;
-  else
-    status = STATUS_PENDING;
+  if (information == writeLength) {
+    if (pDataWrite->type == RW_DATA_TYPE_IRP) {
+      pDataWrite->data.irp.status = STATUS_SUCCESS;
+    } else {
+      HALT_UNLESS1(pDataWrite->type == RW_DATA_TYPE_CHR, pDataWrite->type);
 
-  return status;
+      pDataWrite->data.chr.isChr = FALSE;
+    }
+  }
 }
 
 VOID ReadWriteDirect(
     PIRP pIrpRead,
-    PIRP pIrpWrite,
+    PRW_DATA pDataWrite,
     PNTSTATUS pStatusRead,
-    PNTSTATUS pStatusWrite,
     PC0C_IO_PORT pReadIoPort,
     PLIST_ENTRY pQueueToComplete,
     PSIZE_T pWriteLimit,
@@ -283,17 +350,29 @@ VOID ReadWriteDirect(
 {
   SIZE_T readDone, writeDone;
   SIZE_T writeLength, readLength;
+  C0C_FLOW_FILTER flowFilter;
   PVOID pWriteBuf, pReadBuf;
 
   pReadBuf = GET_REST_BUFFER(pIrpRead, pIrpRead->IoStatus.Information);
   readLength = IoGetCurrentIrpStackLocation(pIrpRead)->Parameters.Read.Length
                                                 - pIrpRead->IoStatus.Information;
 
-  pWriteBuf = GET_REST_BUFFER(pIrpWrite, pIrpWrite->IoStatus.Information);
-  writeLength = GetWriteLength(pIrpWrite) - pIrpWrite->IoStatus.Information;
+  if (pDataWrite->type == RW_DATA_TYPE_IRP) {
+    PIRP pIrpWrite = pDataWrite->data.irp.pIrp;
+
+    pWriteBuf = GET_REST_BUFFER(pIrpWrite, pIrpWrite->IoStatus.Information);
+    writeLength = GetWriteLength(pIrpWrite) - pIrpWrite->IoStatus.Information;
+  } else {
+    HALT_UNLESS1(pDataWrite->type == RW_DATA_TYPE_CHR, pDataWrite->type);
+
+    pWriteBuf = &pDataWrite->data.chr.chr;
+    writeLength = pDataWrite->data.chr.isChr ? 1 : 0;
+  }
+
+  FlowFilterInit(pReadIoPort, &flowFilter);
 
   CopyCharsWithEscape(
-      &pReadIoPort->readBuf, pReadIoPort->escapeChar,
+      &pReadIoPort->readBuf, &flowFilter,
       pReadBuf, readLength,
       pWriteBuf, (pWriteLimit && writeLength > *pWriteLimit) ? *pWriteLimit : writeLength,
       &readDone, &writeDone);
@@ -302,15 +381,27 @@ VOID ReadWriteDirect(
     *pWriteLimit -= writeDone;
 
   pIrpRead->IoStatus.Information += readDone;
-  pIrpWrite->IoStatus.Information += writeDone;
+
+  if (pDataWrite->type == RW_DATA_TYPE_IRP) {
+    pDataWrite->data.irp.pIrp->IoStatus.Information += writeDone;
+    pReadIoPort->pDevExt->pIoPortRemote->amountInWriteQueue -= (ULONG)writeDone;
+  }
 
   if (readDone == readLength)
     *pStatusRead = STATUS_SUCCESS;
-  if (writeDone == writeLength)
-    *pStatusWrite = STATUS_SUCCESS;
+
+  if (writeDone == writeLength) {
+    if (pDataWrite->type == RW_DATA_TYPE_IRP) {
+      pDataWrite->data.irp.status = STATUS_SUCCESS;
+    } else {
+      HALT_UNLESS1(pDataWrite->type == RW_DATA_TYPE_CHR, pDataWrite->type);
+
+      pDataWrite->data.chr.isChr = FALSE;
+    }
+  }
 
   if (writeDone)
-    OnRxChars(pReadIoPort, pWriteBuf, writeDone, pQueueToComplete);
+    OnRxChars(pReadIoPort, writeDone, &flowFilter, pQueueToComplete);
 
   *pReadDone += readDone;
   *pWriteDone += writeDone;
@@ -406,7 +497,6 @@ NTSTATUS StopCurrentIrp(
       if (pCancelRoutine) {
         ShiftQueue(pQueue);
         pIrp->IoStatus.Status = STATUS_CANCELLED;
-        pIrp->IoStatus.Information = 0;
         InsertTailList(pQueueToComplete, &pIrp->Tail.Overlay.ListEntry);
         return STATUS_CANCELLED;
       }
@@ -421,7 +511,7 @@ NTSTATUS StopCurrentIrp(
 }
 
 NTSTATUS FdoPortIo(
-    int ioType,
+    short ioType,
     PVOID pParam,
     PC0C_IO_PORT pIoPort,
     PC0C_IRP_QUEUE pQueue,
@@ -479,32 +569,52 @@ NTSTATUS FdoPortIo(
       status = WriteRawDataToBuffer((PC0C_RAW_DATA)pParam, &pIoPort->readBuf);
       if (status == STATUS_PENDING && !pIoPort->emuOverrun)
         status = MoveRawData(&pIoPort->readBuf.insertData, (PC0C_RAW_DATA)pParam);
+      UpdateHandFlow(pIoPort->pDevExt, FALSE, pQueueToComplete);
       break;
     }
   }
   return status;
 }
 
-NTSTATUS ReadWrite(
+NTSTATUS TryReadWrite(
     PC0C_IO_PORT pIoPortRead,
-    PC0C_IRP_QUEUE pQueueRead,
     BOOLEAN startRead,
     PC0C_IO_PORT pIoPortWrite,
-    PC0C_IRP_QUEUE pQueueWrite,
     BOOLEAN startWrite,
     PLIST_ENTRY pQueueToComplete)
 {
   NTSTATUS status;
   SIZE_T readBufBusyBeg, readBufBusyEnd;
+
+  RW_DATA dataIrpRead;
+  PC0C_IRP_QUEUE pQueueRead;
   BOOLEAN firstRead;
+  PDRIVER_CANCEL pCancelRoutineRead;
+  SIZE_T doneRead;
+
+  RW_DATA dataCharX;
+
+  RW_DATA dataIrpWrite;
+  PC0C_IRP_QUEUE pQueueWrite;
+  BOOLEAN firstWrite;
+  PDRIVER_CANCEL pCancelRoutineWrite;
+  SIZE_T doneWrite;
+  BOOLEAN wasWrite;
+
   PC0C_ADAPTIVE_DELAY pWriteDelay;
   SIZE_T writeLimit;
   PSIZE_T pWriteLimit;
 
+  dataIrpRead.type = RW_DATA_TYPE_IRP;
+  dataCharX.type = RW_DATA_TYPE_CHR;
+  dataIrpWrite.type = RW_DATA_TYPE_IRP;
+
+  pQueueRead = &pIoPortRead->irpQueues[C0C_QUEUE_READ];
+  pQueueWrite = &pIoPortWrite->irpQueues[C0C_QUEUE_WRITE];
   pWriteDelay = pIoPortWrite->pWriteDelay;
 
   if (pWriteDelay) {
-    if (pQueueWrite->pCurrent) {
+    if (pQueueWrite->pCurrent || pIoPortWrite->sendXonXoff) {
       StartWriteDelayTimer(pWriteDelay);
       writeLimit = GetWriteLimit(pWriteDelay);
       status = STATUS_PENDING;
@@ -521,134 +631,369 @@ NTSTATUS ReadWrite(
 
   readBufBusyBeg = C0C_BUFFER_BUSY(&pIoPortRead->readBuf);
 
-  for (firstRead = TRUE ;; firstRead = FALSE) {
-    NTSTATUS statusRead;
-    PDRIVER_CANCEL pCancelRoutineRead;
-    PIRP pIrpRead;
-    SIZE_T doneRead;
-    BOOLEAN firstWrite, wasWrite;
+  /* get first pIrpRead */
 
-    if (startRead) {
-      pIrpRead = pQueueRead->pCurrent;
-      pCancelRoutineRead = NULL;
+  dataIrpRead.data.irp.status = STATUS_SUCCESS;
+  doneRead = 0;
+  firstRead = TRUE;
+
+  if (startRead) {
+    dataIrpRead.data.irp.pIrp = pQueueRead->pCurrent;
+    pCancelRoutineRead = NULL;
+  } else {
+    dataIrpRead.data.irp.pIrp = StartCurrentIrp(pQueueRead, &pCancelRoutineRead, &firstRead);
+  }
+
+  /* read from buffer */
+
+  while (dataIrpRead.data.irp.pIrp) {
+    dataIrpRead.data.irp.status = ReadBuffer(dataIrpRead.data.irp.pIrp, &pIoPortRead->readBuf, &doneRead);
+
+    if (dataIrpRead.data.irp.status == STATUS_PENDING)
+      break;
+
+    if (startRead && firstRead) {
+      status = dataIrpRead.data.irp.status;
+      ShiftQueue(pQueueRead);
     } else {
-      pIrpRead = StartCurrentIrp(pQueueRead, &pCancelRoutineRead, &firstRead);
+      StopCurrentIrp(dataIrpRead.data.irp.status, pCancelRoutineRead, firstRead,
+                     doneRead, pIoPortRead, pQueueRead, pQueueToComplete);
     }
+
+    /* get next pIrpRead */
 
     doneRead = 0;
+    firstRead = FALSE;
 
-    if (pIrpRead)
-      statusRead = ReadBuffer(pIrpRead, &pIoPortRead->readBuf, &doneRead);
-    else
-      statusRead = STATUS_SUCCESS;
-
-    wasWrite = FALSE;
-
-    for (firstWrite = TRUE ;; firstWrite = FALSE) {
-      NTSTATUS statusWrite;
-      PDRIVER_CANCEL pCancelRoutineWrite;
-      PIRP pIrpWrite;
-      SIZE_T doneWrite;
-
-      if(startWrite) {
-        pIrpWrite = firstWrite ? pQueueWrite->pCurrent : NULL;
-        pCancelRoutineWrite = NULL;
-      } else {
-        pIrpWrite = StartCurrentIrp(pQueueWrite, startWrite ? NULL : &pCancelRoutineWrite, &firstWrite);
-      }
-
-      if (!pIrpWrite) {
-        if (wasWrite && pIoPortWrite->waitMask & SERIAL_EV_TXEMPTY) {
-          pIoPortWrite->eventMask |= SERIAL_EV_TXEMPTY;
-          WaitComplete(pIoPortWrite, pQueueToComplete);
-        }
-        break;
-      }
-
-      statusWrite = STATUS_PENDING;
-      doneWrite = 0;
-
-      if (IoGetCurrentIrpStackLocation(pIrpWrite)->MajorFunction == IRP_MJ_FLUSH_BUFFERS) {
-        pIrpWrite->IoStatus.Information = 0;
-        statusWrite = STATUS_SUCCESS;
-      }
-      else
-      if (!pWriteLimit || *pWriteLimit) {
-        if (statusRead == STATUS_PENDING)
-          ReadWriteDirect(
-              pIrpRead, pIrpWrite,
-              &statusRead, &statusWrite,
-              pIoPortRead,
-              pQueueToComplete,
-              pWriteLimit,
-              &doneRead, &doneWrite);
-
-        if (statusWrite == STATUS_PENDING) {
-          statusWrite = WriteBuffer(pIrpWrite, pIoPortRead, pQueueToComplete, pWriteLimit, &doneWrite);
-
-          if (pIoPortRead->emuOverrun && !pIrpRead && statusWrite == STATUS_PENDING)
-            statusWrite = WriteOverrun(pIrpWrite, pIoPortRead, pQueueToComplete, pWriteLimit, &doneWrite);
-        }
-
-        if (doneWrite) {
-          wasWrite = TRUE;
-
-          if (pWriteDelay)
-            pWriteDelay->sentFrames += doneWrite;
-        }
-      }
-
-      if (startWrite) {
-        status = statusWrite;
-        if (status == STATUS_PENDING)
-          status = FdoPortSetIrpTimeout(pIoPortWrite->pDevExt, pIrpWrite);
-        continue;
-      }
-
-      statusWrite = StopCurrentIrp(statusWrite,
-                                   pCancelRoutineWrite,
-                                   firstWrite,
-                                   doneWrite,
-                                   pIoPortWrite,
-                                   pQueueWrite,
-                                   pQueueToComplete);
-
-      if (statusWrite == STATUS_PENDING)
-        break;
-    }
-
-    if (!pIrpRead)
-      break;
-
-    if (startRead) {
-      status = statusRead;
-      if (status == STATUS_PENDING)
-        status = FdoPortSetIrpTimeout(pIoPortRead->pDevExt, pIrpRead);
-      break;
-    }
-
-    statusRead = StopCurrentIrp(statusRead,
-                                pCancelRoutineRead,
-                                firstRead,
-                                doneRead,
-                                pIoPortRead,
-                                pQueueRead,
-                                pQueueToComplete);
-
-    if (statusRead == STATUS_PENDING)
-      break;
+    dataIrpRead.data.irp.pIrp =
+        StartCurrentIrp(pQueueRead, &pCancelRoutineRead, &firstRead);
   }
 
   readBufBusyEnd = C0C_BUFFER_BUSY(&pIoPortRead->readBuf);
 
-  if (readBufBusyBeg != readBufBusyEnd) {
-    if ((pIoPortRead->waitMask & SERIAL_EV_RX80FULL) &&
-        readBufBusyEnd > pIoPortRead->readBuf.size80 &&
-        readBufBusyBeg <= pIoPortRead->readBuf.size80)
-    {
-      pIoPortRead->eventMask |= SERIAL_EV_RX80FULL;
-      WaitComplete(pIoPortRead, pQueueToComplete);
+  if (readBufBusyBeg > readBufBusyEnd) {
+    UpdateHandFlow(pIoPortRead->pDevExt, TRUE, pQueueToComplete);
+    readBufBusyBeg = readBufBusyEnd;
+  }
+
+  /* get XON or XOFF char */
+
+  switch (pIoPortWrite->sendXonXoff) {
+  case C0C_XCHAR_ON:
+    dataCharX.data.chr.chr = pIoPortWrite->pDevExt->specialChars.XonChar;
+    dataCharX.data.chr.isChr = TRUE;
+    break;
+  case C0C_XCHAR_OFF:
+    dataCharX.data.chr.chr = pIoPortWrite->pDevExt->specialChars.XoffChar;
+    dataCharX.data.chr.isChr = TRUE;
+    break;
+  default:
+    dataCharX.data.chr.isChr = FALSE;
+  }
+
+  /* get first pIrpWrite */
+
+  wasWrite = FALSE;
+  doneWrite = 0;
+  firstWrite = TRUE;
+
+  if(startWrite) {
+    dataIrpWrite.data.irp.pIrp = pQueueWrite->pCurrent;
+    pCancelRoutineWrite = NULL;
+  } else {
+    dataIrpWrite.data.irp.pIrp =
+        StartCurrentIrp(pQueueWrite, &pCancelRoutineWrite, &firstWrite);
+  }
+
+  /* read/write direct */
+
+  while (dataIrpRead.data.irp.pIrp) {
+    if (dataCharX.data.chr.isChr) {
+      if (!pWriteLimit || *pWriteLimit) {
+        if ((pIoPortWrite->writeHolding & ~SERIAL_TX_WAITING_FOR_XON) == 0) {
+          if (dataIrpRead.data.irp.status == STATUS_PENDING) {
+            SIZE_T done = 0;
+
+            ReadWriteDirect(dataIrpRead.data.irp.pIrp,
+                            &dataCharX,
+                            &dataIrpRead.data.irp.status,
+                            pIoPortRead,
+                            pQueueToComplete,
+                            pWriteLimit,
+                            &doneRead, &done);
+
+            if (done) {
+              if (pWriteDelay)
+                pWriteDelay->sentFrames += done;
+            }
+          }
+        }
+        else
+        if (pWriteDelay) {
+          pWriteDelay->sentFrames += *pWriteLimit;
+          *pWriteLimit = 0;
+        }
+      }
     }
+
+    while (dataIrpWrite.data.irp.pIrp) {
+      if (IoGetCurrentIrpStackLocation(dataIrpWrite.data.irp.pIrp)->MajorFunction ==
+                                                                IRP_MJ_FLUSH_BUFFERS)
+      {
+        dataIrpWrite.data.irp.status = STATUS_SUCCESS;
+      } else {
+        dataIrpWrite.data.irp.status = STATUS_PENDING;
+
+        if (!pWriteLimit || *pWriteLimit) {
+          if (!pIoPortWrite->writeHolding) {
+            if (dataIrpRead.data.irp.status == STATUS_PENDING) {
+              SIZE_T done = 0;
+
+              ReadWriteDirect(dataIrpRead.data.irp.pIrp,
+                              &dataIrpWrite,
+                              &dataIrpRead.data.irp.status,
+                              pIoPortRead,
+                              pQueueToComplete,
+                              pWriteLimit,
+                              &doneRead, &done);
+
+              if (done) {
+                doneWrite += done;
+                wasWrite = TRUE;
+
+                if (pWriteDelay)
+                  pWriteDelay->sentFrames += done;
+              }
+            }
+          }
+          else
+          if (pWriteDelay) {
+            pWriteDelay->sentFrames += *pWriteLimit;
+            *pWriteLimit = 0;
+          }
+        }
+      }
+
+      if (dataIrpWrite.data.irp.status == STATUS_PENDING)
+        break;
+
+      if(startWrite && firstWrite) {
+        status = dataIrpWrite.data.irp.status;
+        ShiftQueue(pQueueWrite);
+      } else {
+        StopCurrentIrp(dataIrpWrite.data.irp.status, pCancelRoutineWrite, firstWrite,
+                       doneWrite, pIoPortWrite, pQueueWrite, pQueueToComplete);
+      }
+
+      /* get next pIrpWrite */
+
+      doneWrite = 0;
+      firstWrite = FALSE;
+
+      dataIrpWrite.data.irp.pIrp =
+          StartCurrentIrp(pQueueWrite, &pCancelRoutineWrite, &firstWrite);
+    }
+
+    if (startRead && firstRead) {
+      if (dataIrpRead.data.irp.status == STATUS_PENDING)
+        dataIrpRead.data.irp.status =
+            FdoPortSetIrpTimeout(pIoPortRead->pDevExt, dataIrpRead.data.irp.pIrp);
+
+      status = dataIrpRead.data.irp.status;
+
+      if (dataIrpRead.data.irp.status != STATUS_PENDING)
+        ShiftQueue(pQueueRead);
+    } else {
+      dataIrpRead.data.irp.status = StopCurrentIrp(
+          dataIrpRead.data.irp.status, pCancelRoutineRead, firstRead,
+          doneRead, pIoPortRead, pQueueRead, pQueueToComplete);
+    }
+
+    /* get next pIrpRead */
+
+    if (dataIrpRead.data.irp.status != STATUS_PENDING) {
+      doneRead = 0;
+      firstRead = FALSE;
+      dataIrpRead.data.irp.pIrp =
+          StartCurrentIrp(pQueueRead, &pCancelRoutineRead, &firstRead);
+    } else {
+      dataIrpRead.data.irp.pIrp = NULL;
+    }
+  }
+
+  /* write to buffer */
+
+  if (dataCharX.data.chr.isChr) {
+    if (!pWriteLimit || *pWriteLimit) {
+      if ((pIoPortWrite->writeHolding & ~SERIAL_TX_WAITING_FOR_XON) == 0) {
+        SIZE_T done = 0;
+
+        WriteBuffer(&dataCharX, pIoPortRead,
+                    pQueueToComplete, pWriteLimit, &done);
+
+        readBufBusyEnd = C0C_BUFFER_BUSY(&pIoPortRead->readBuf);
+
+        if (readBufBusyBeg < readBufBusyEnd) {
+          if ((pIoPortRead->waitMask & SERIAL_EV_RX80FULL) &&
+              readBufBusyEnd > pIoPortRead->readBuf.size80 &&
+              readBufBusyBeg <= pIoPortRead->readBuf.size80)
+          {
+            pIoPortRead->eventMask |= SERIAL_EV_RX80FULL;
+            WaitComplete(pIoPortRead, pQueueToComplete);
+          }
+
+          UpdateHandFlow(pIoPortRead->pDevExt, FALSE, pQueueToComplete);
+          readBufBusyBeg = readBufBusyEnd;
+        }
+
+        if (pIoPortRead->emuOverrun &&
+            dataCharX.data.chr.isChr &&
+            (pIoPortWrite->writeHolding & ~SERIAL_TX_WAITING_FOR_XON) == 0 &&
+            C0C_BUFFER_BUSY(&pIoPortRead->readBuf) >= C0C_BUFFER_SIZE(&pIoPortRead->readBuf))
+        {
+          WriteOverrun(&dataCharX, pIoPortRead,
+                       pQueueToComplete, pWriteLimit, &done);
+        }
+
+        if (done) {
+          if (pWriteDelay)
+            pWriteDelay->sentFrames += done;
+        }
+      }
+      else
+      if (pWriteDelay) {
+        pWriteDelay->sentFrames += *pWriteLimit;
+        *pWriteLimit = 0;
+      }
+    }
+  }
+
+  if (!dataCharX.data.chr.isChr)
+    pIoPortWrite->sendXonXoff = 0;
+
+  while (dataIrpWrite.data.irp.pIrp) {
+    if (IoGetCurrentIrpStackLocation(dataIrpWrite.data.irp.pIrp)->MajorFunction ==
+                                                              IRP_MJ_FLUSH_BUFFERS)
+    {
+      dataIrpWrite.data.irp.status = STATUS_SUCCESS;
+    } else {
+      dataIrpWrite.data.irp.status = STATUS_PENDING;
+
+      if (!pWriteLimit || *pWriteLimit) {
+        if (!pIoPortWrite->writeHolding) {
+          SIZE_T done = 0;
+
+          WriteBuffer(&dataIrpWrite, pIoPortRead,
+                      pQueueToComplete, pWriteLimit, &done);
+
+          readBufBusyEnd = C0C_BUFFER_BUSY(&pIoPortRead->readBuf);
+
+          if (readBufBusyBeg < readBufBusyEnd) {
+            if ((pIoPortRead->waitMask & SERIAL_EV_RX80FULL) &&
+                readBufBusyEnd > pIoPortRead->readBuf.size80 &&
+                readBufBusyBeg <= pIoPortRead->readBuf.size80)
+            {
+              pIoPortRead->eventMask |= SERIAL_EV_RX80FULL;
+              WaitComplete(pIoPortRead, pQueueToComplete);
+            }
+
+            UpdateHandFlow(pIoPortRead->pDevExt, FALSE, pQueueToComplete);
+            readBufBusyBeg = readBufBusyEnd;
+          }
+
+          if (pIoPortRead->emuOverrun &&
+              dataIrpWrite.data.irp.status == STATUS_PENDING &&
+              !pIoPortWrite->writeHolding &&
+              C0C_BUFFER_BUSY(&pIoPortRead->readBuf) >= C0C_BUFFER_SIZE(&pIoPortRead->readBuf))
+          {
+            WriteOverrun(&dataIrpWrite, pIoPortRead,
+                         pQueueToComplete, pWriteLimit, &done);
+          }
+
+          if (done) {
+            doneWrite += done;
+            wasWrite = TRUE;
+
+            if (pWriteDelay)
+              pWriteDelay->sentFrames += done;
+          }
+        }
+        else
+        if (pWriteDelay) {
+          pWriteDelay->sentFrames += *pWriteLimit;
+          *pWriteLimit = 0;
+        }
+      }
+    }
+
+    if(startWrite && firstWrite) {
+      if (dataIrpWrite.data.irp.status == STATUS_PENDING)
+        dataIrpWrite.data.irp.status =
+            FdoPortSetIrpTimeout(pIoPortWrite->pDevExt, dataIrpWrite.data.irp.pIrp);
+
+      status = dataIrpWrite.data.irp.status;
+
+      if (dataIrpWrite.data.irp.status != STATUS_PENDING)
+        ShiftQueue(pQueueWrite);
+    } else {
+      dataIrpWrite.data.irp.status =
+          StopCurrentIrp(dataIrpWrite.data.irp.status, pCancelRoutineWrite, firstWrite,
+                         doneWrite, pIoPortWrite, pQueueWrite, pQueueToComplete);
+    }
+
+    /* get next pIrpWrite */
+
+    if (dataIrpWrite.data.irp.status != STATUS_PENDING) {
+      doneWrite = 0;
+      firstWrite = FALSE;
+      dataIrpWrite.data.irp.pIrp = StartCurrentIrp(pQueueWrite, &pCancelRoutineWrite, &firstWrite);
+    } else {
+      dataIrpWrite.data.irp.pIrp = NULL;
+    }
+  }
+
+  if (wasWrite && !pQueueWrite->pCurrent &&
+      pIoPortWrite->waitMask & SERIAL_EV_TXEMPTY)
+  {
+    pIoPortWrite->eventMask |= SERIAL_EV_TXEMPTY;
+    WaitComplete(pIoPortWrite, pQueueToComplete);
+  }
+
+  return status;
+}
+
+NTSTATUS ReadWrite(
+    PC0C_IO_PORT pIoPortRead,
+    BOOLEAN startRead,
+    PC0C_IO_PORT pIoPortWrite,
+    BOOLEAN startWrite,
+    PLIST_ENTRY pQueueToComplete)
+{
+  NTSTATUS status;
+
+  status = TryReadWrite(
+      pIoPortRead, startRead,
+      pIoPortWrite, startWrite,
+      pQueueToComplete);
+
+  pIoPortWrite->tryWrite = FALSE;
+
+  while (pIoPortRead->tryWrite) {
+    PC0C_IO_PORT pIoPortTmp;
+
+    pIoPortTmp = pIoPortRead;
+    pIoPortRead = pIoPortWrite;
+    pIoPortWrite = pIoPortTmp;
+
+    TryReadWrite(
+        pIoPortRead, FALSE,
+        pIoPortWrite, FALSE,
+        pQueueToComplete);
+
+    pIoPortWrite->tryWrite = FALSE;
+
+    if (status == STATUS_PENDING && (startRead || startWrite))
+      break;
   }
 
   return status;
@@ -678,6 +1023,8 @@ VOID SetModemStatus(
 
   if (modemStatusChanged) {
     TraceModemStatus(pIoPort);
+
+    SetModemStatusHolding(pIoPort);
 
     if (pIoPort->escapeChar) {
       NTSTATUS status;
@@ -715,27 +1062,4 @@ VOID SetModemStatus(
 
     WaitComplete(pIoPort, pQueueToComplete);
   }
-}
-
-VOID UpdateHandFlow(
-    IN PC0C_FDOPORT_EXTENSION pDevExt,
-    IN PLIST_ENTRY pQueueToComplete)
-{
-  ULONG bits = 0;
-
-  switch (pDevExt->handFlow.FlowReplace & SERIAL_RTS_MASK) {
-  case SERIAL_RTS_CONTROL:
-  case SERIAL_RTS_HANDSHAKE:
-  case SERIAL_TRANSMIT_TOGGLE:
-    bits |= C0C_MSB_CTS;
-  }
-
-  switch (pDevExt->handFlow.ControlHandShake & SERIAL_DTR_MASK) {
-  case SERIAL_DTR_CONTROL:
-  case SERIAL_DTR_HANDSHAKE:
-    bits |= C0C_MSB_DSR;
-  }
-
-  if (bits)
-    SetModemStatus(pDevExt->pIoPortRemote, bits, bits, pQueueToComplete);
 }

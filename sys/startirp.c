@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2004-2005 Vyacheslav Frolov
+ * Copyright (c) 2004-2006 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,12 @@
  *
  *
  * $Log$
+ * Revision 1.8  2006/01/10 10:17:23  vfrolov
+ * Implemented flow control and handshaking
+ * Implemented IOCTL_SERIAL_SET_XON and IOCTL_SERIAL_SET_XOFF
+ * Added setting of HoldReasons, WaitForImmediate and AmountInOutQueue
+ *   fields of SERIAL_STATUS for IOCTL_SERIAL_GET_COMMSTATUS
+ *
  * Revision 1.7  2005/12/05 10:54:55  vfrolov
  * Implemented IOCTL_SERIAL_IMMEDIATE_CHAR
  *
@@ -120,6 +126,11 @@ VOID CancelRoutine(IN PDEVICE_OBJECT pDevObj, IN PIRP pIrp)
 
   KeAcquireSpinLock(pDevExt->pIoLock, &oldIrql);
 
+  if (pState->iQueue == C0C_QUEUE_WRITE) {
+    pDevExt->pIoPortLocal->amountInWriteQueue -=
+        GetWriteLength(pIrp) - (ULONG)pIrp->IoStatus.Information;
+  }
+
   if (pState->flags & C0C_IRP_FLAG_IN_QUEUE) {
     RemoveEntryList(&pIrp->Tail.Overlay.ListEntry);
     pState->flags &= ~C0C_IRP_FLAG_IN_QUEUE;
@@ -153,7 +164,6 @@ VOID CancelQueue(PC0C_IRP_QUEUE pQueue, PLIST_ENTRY pQueueToComplete)
 
     if (pCancelRoutine) {
       pIrp->IoStatus.Status = STATUS_CANCELLED;
-      pIrp->IoStatus.Information = 0;
       InsertTailList(pQueueToComplete, &pIrp->Tail.Overlay.ListEntry);
     }
   }
@@ -179,12 +189,28 @@ VOID FdoPortCompleteQueue(IN PLIST_ENTRY pQueueToComplete)
 {
   while (!IsListEmpty(pQueueToComplete)) {
     PIRP pIrp;
+    PC0C_IRP_STATE pState;
     PLIST_ENTRY pListEntry;
 
     pListEntry = RemoveHeadList(pQueueToComplete);
     pIrp = CONTAINING_RECORD(pListEntry, IRP, Tail.Overlay.ListEntry);
 
     TraceIrp("complete", pIrp, &pIrp->IoStatus.Status, TRACE_FLAG_RESULTS);
+
+    pState = GetIrpState(pIrp);
+    HALT_UNLESS(pState);
+
+    if (pState->iQueue == C0C_QUEUE_WRITE) {
+      PC0C_FDOPORT_EXTENSION pDevExt;
+
+      pDevExt = IoGetCurrentIrpStackLocation(pIrp)->DeviceObject->DeviceExtension;
+
+      pDevExt->pIoPortLocal->amountInWriteQueue -=
+          GetWriteLength(pIrp) - (ULONG)pIrp->IoStatus.Information;
+    }
+
+    if (pIrp->IoStatus.Status == STATUS_CANCELLED)
+      pIrp->IoStatus.Information = 0;
 
     IoCompleteRequest(pIrp, IO_SERIAL_INCREMENT);
   }
@@ -218,6 +244,9 @@ NTSTATUS StartIrp(
   pQueue->pCurrent = pIrp;
   pState->flags |= C0C_IRP_FLAG_IS_CURRENT;
 
+  if (pState->iQueue == C0C_QUEUE_WRITE)
+    pDevExt->pIoPortLocal->amountInWriteQueue += GetWriteLength(pIrp);
+
   InitializeListHead(&queueToComplete);
   status = pStartRoutine(pDevExt, &queueToComplete);
 
@@ -226,7 +255,14 @@ NTSTATUS StartIrp(
     IoMarkIrpPending(pIrp);
   } else {
     status = NoPending(pIrp, status);
-    ShiftQueue(pQueue);
+
+    if (pState->iQueue == C0C_QUEUE_WRITE && status != STATUS_PENDING) {
+      pDevExt->pIoPortLocal->amountInWriteQueue -=
+          GetWriteLength(pIrp) - (ULONG)pIrp->IoStatus.Information;
+    }
+
+    if (pQueue->pCurrent == pIrp)
+      ShiftQueue(pQueue);
   }
 
   KeReleaseSpinLock(pDevExt->pIoLock, oldIrql);
@@ -309,6 +345,10 @@ NTSTATUS FdoPortStartIrp(
         IoMarkIrpPending(pIrp);
         InsertTailList(&pQueue->queue, &pIrp->Tail.Overlay.ListEntry);
         pState->flags |= C0C_IRP_FLAG_IN_QUEUE;
+
+        if (pState->iQueue == C0C_QUEUE_WRITE)
+          pDevExt->pIoPortLocal->amountInWriteQueue += GetWriteLength(pIrp);
+
         status = STATUS_PENDING;
       }
 

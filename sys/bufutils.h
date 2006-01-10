@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2005 Vyacheslav Frolov
+ * Copyright (c) 2005-2006 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,12 @@
  *
  *
  * $Log$
+ * Revision 1.4  2006/01/10 10:17:23  vfrolov
+ * Implemented flow control and handshaking
+ * Implemented IOCTL_SERIAL_SET_XON and IOCTL_SERIAL_SET_XOFF
+ * Added setting of HoldReasons, WaitForImmediate and AmountInOutQueue
+ *   fields of SERIAL_STATUS for IOCTL_SERIAL_GET_COMMSTATUS
+ *
  * Revision 1.3  2005/11/28 12:57:16  vfrolov
  * Moved some C0C_BUFFER code to bufutils.c
  *
@@ -33,15 +39,38 @@
 #ifndef _C0C_BUFUTILS_H_
 #define _C0C_BUFUTILS_H_
 
+typedef struct _C0C_FLOW_FILTER {
+  #define C0C_FLOW_FILTER_AUTO_TRANSMIT      0x01
+  #define C0C_FLOW_FILTER_EV_RXCHAR          0x02
+  #define C0C_FLOW_FILTER_EV_RXFLAG          0x04
+  #define C0C_FLOW_FILTER_NULL_STRIPPING     0x08
+
+  UCHAR flags;
+  UCHAR xonChar;
+  UCHAR xoffChar;
+  UCHAR eventChar;
+  UCHAR escapeChar;
+
+  UCHAR events;
+  UCHAR lastXonXoff;
+} C0C_FLOW_FILTER, *PC0C_FLOW_FILTER;
+
+
 NTSTATUS MoveRawData(PC0C_RAW_DATA pDstRawData, PC0C_RAW_DATA pSrcRawData);
+VOID FlowFilterInit(PC0C_IO_PORT pIoPort, PC0C_FLOW_FILTER pFlowFilter);
 VOID CopyCharsWithEscape(
-    PC0C_BUFFER pBuf, UCHAR escapeChar,
+    PC0C_BUFFER pBuf,
+    PC0C_FLOW_FILTER pFlowFilter,
     PUCHAR pReadBuf, SIZE_T readLength,
     PUCHAR pWriteBuf, SIZE_T writeLength,
     PSIZE_T pReadDone,
     PSIZE_T pWriteDone);
 SIZE_T ReadFromBuffer(PC0C_BUFFER pBuf, PVOID pRead, SIZE_T readLength);
-SIZE_T WriteToBuffer(PC0C_BUFFER pBuf, PVOID pWrite, SIZE_T writeLength, UCHAR escapeChar);
+SIZE_T WriteToBuffer(
+    PC0C_BUFFER pBuf,
+    PVOID pWrite,
+    SIZE_T writeLength,
+    PC0C_FLOW_FILTER pFlowFilter);
 VOID WriteMandatoryToBuffer(PC0C_BUFFER pBuf, UCHAR mandatoryChar);
 NTSTATUS WriteRawDataToBuffer(PC0C_RAW_DATA pRawData, PC0C_BUFFER pBuf);
 SIZE_T WriteRawData(PC0C_RAW_DATA pRawData, PNTSTATUS pStatus, PVOID pReadBuf, SIZE_T readLength);
@@ -49,5 +78,6 @@ BOOLEAN SetNewBufferBase(PC0C_BUFFER pBuf, PUCHAR pBase, SIZE_T size);
 VOID PurgeBuffer(PC0C_BUFFER pBuf);
 VOID InitBuffer(PC0C_BUFFER pBuf, PUCHAR pBase, SIZE_T size);
 VOID FreeBuffer(PC0C_BUFFER pBuf);
+VOID SetBufferLimit(PC0C_BUFFER pBuf, SIZE_T limit);
 
 #endif /* _C0C_BUFUTILS_H_ */
