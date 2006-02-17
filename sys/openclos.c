@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.11  2006/02/17 07:55:13  vfrolov
+ * Implemented IOCTL_SERIAL_SET_BREAK_ON and IOCTL_SERIAL_SET_BREAK_OFF
+ *
  * Revision 1.10  2006/01/10 10:17:23  vfrolov
  * Implemented flow control and handshaking
  * Implemented IOCTL_SERIAL_SET_XON and IOCTL_SERIAL_SET_XOFF
@@ -138,6 +141,7 @@ NTSTATUS FdoPortClose(IN PC0C_FDOPORT_EXTENSION pDevExt)
   pDevExt->pIoPortLocal->flipXoffLimit = FALSE;
   SetModemStatus(pDevExt->pIoPortRemote, 0, C0C_MSB_CTS | C0C_MSB_DSR, &queueToComplete);
   FreeBuffer(&pDevExt->pIoPortLocal->readBuf);
+  SetBreakHolding(pDevExt->pIoPortLocal, FALSE);
 
   KeReleaseSpinLock(pDevExt->pIoLock, oldIrql);
 

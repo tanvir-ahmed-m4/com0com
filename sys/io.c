@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.24  2006/02/17 07:55:13  vfrolov
+ * Implemented IOCTL_SERIAL_SET_BREAK_ON and IOCTL_SERIAL_SET_BREAK_OFF
+ *
  * Revision 1.23  2006/01/10 10:17:23  vfrolov
  * Implemented flow control and handshaking
  * Implemented IOCTL_SERIAL_SET_XON and IOCTL_SERIAL_SET_XOFF
@@ -121,10 +124,24 @@ typedef struct _RW_DATA {
     } irp;
     struct {
       UCHAR chr;
+
+      #define RW_DATA_TYPE_CHR_NONE   0
+      #define RW_DATA_TYPE_CHR_XCHR   1
+      #define RW_DATA_TYPE_CHR_BREAK  2
+
+      short type;
+
       BOOLEAN isChr;
     } chr;
   } data;
 } RW_DATA, *PRW_DATA;
+
+#define CAN_WRITE_RW_DATA_CHR(pIoPort, dataChar) \
+  ( \
+    ((dataChar).data.chr.type == RW_DATA_TYPE_CHR_XCHR && \
+          ((pIoPort)->writeHolding & ~SERIAL_TX_WAITING_FOR_XON) == 0) || \
+    ((dataChar).data.chr.type == RW_DATA_TYPE_CHR_BREAK) \
+  ) \
 
 ULONG GetWriteLength(IN PIRP pIrp)
 {
@@ -167,6 +184,17 @@ NTSTATUS ReadBuffer(PIRP pIrp, PC0C_BUFFER pBuf, PSIZE_T pReadDone)
   return status;
 }
 
+VOID OnRxBreak(
+    PC0C_IO_PORT pReadIoPort,
+    PLIST_ENTRY pQueueToComplete)
+{
+  pReadIoPort->errors |= SERIAL_ERROR_BREAK;
+  pReadIoPort->eventMask |= pReadIoPort->waitMask & (SERIAL_EV_BREAK | SERIAL_EV_ERR);
+
+  if (pReadIoPort->eventMask)
+    WaitComplete(pReadIoPort, pQueueToComplete);
+}
+
 VOID OnRxChars(
     PC0C_IO_PORT pReadIoPort,
     SIZE_T size,
@@ -187,7 +215,6 @@ VOID OnRxChars(
   }
 
   pReadIoPort->perfStats.ReceivedCount += (ULONG)size;
-  pReadIoPort->pDevExt->pIoPortRemote->perfStats.TransmittedCount += (ULONG)size;
 }
 
 VOID WriteBuffer(
@@ -203,6 +230,9 @@ VOID WriteBuffer(
   PVOID pWriteBuf;
   PC0C_BUFFER pBuf;
   SIZE_T length;
+  BOOLEAN isBreak;
+
+  isBreak = FALSE;
 
   if (pDataWrite->type == RW_DATA_TYPE_IRP) {
     PIRP pIrp = pDataWrite->data.irp.pIrp;
@@ -216,6 +246,8 @@ VOID WriteBuffer(
     information = 0;
     pWriteBuf = &pDataWrite->data.chr.chr;
     writeLength = pDataWrite->data.chr.isChr ? 1 : 0;
+    if (pDataWrite->data.chr.type == RW_DATA_TYPE_CHR_BREAK)
+      isBreak = TRUE;
   }
 
   pBuf = &pReadIoPort->readBuf;
@@ -241,6 +273,10 @@ VOID WriteBuffer(
       *pWriteLimit -= writeDone;
 
     OnRxChars(pReadIoPort, writeDone, &flowFilter, pQueueToComplete);
+    if (isBreak)
+      OnRxBreak(pReadIoPort, pQueueToComplete);
+    else
+      pReadIoPort->pDevExt->pIoPortRemote->perfStats.TransmittedCount += (ULONG)writeDone;
   }
 
   if (information == writeLength) {
@@ -279,6 +315,9 @@ VOID WriteOverrun(
   C0C_FLOW_FILTER flowFilter;
   PVOID pWriteBuf;
   SIZE_T length;
+  BOOLEAN isBreak;
+
+  isBreak = FALSE;
 
   if (pDataWrite->type == RW_DATA_TYPE_IRP) {
     PIRP pIrp = pDataWrite->data.irp.pIrp;
@@ -292,6 +331,8 @@ VOID WriteOverrun(
     information = 0;
     pWriteBuf = &pDataWrite->data.chr.chr;
     writeLength = pDataWrite->data.chr.isChr ? 1 : 0;
+    if (pDataWrite->data.chr.type == RW_DATA_TYPE_CHR_BREAK)
+      isBreak = TRUE;
   }
 
   length = writeLength - information;
@@ -325,6 +366,10 @@ VOID WriteOverrun(
     }
 
     OnRxChars(pReadIoPort, writeDone, &flowFilter, pQueueToComplete);
+    if (isBreak)
+      OnRxBreak(pReadIoPort, pQueueToComplete);
+    else
+      pReadIoPort->pDevExt->pIoPortRemote->perfStats.TransmittedCount += (ULONG)writeDone;
   }
 
   if (information == writeLength) {
@@ -352,6 +397,9 @@ VOID ReadWriteDirect(
   SIZE_T writeLength, readLength;
   C0C_FLOW_FILTER flowFilter;
   PVOID pWriteBuf, pReadBuf;
+  BOOLEAN isBreak;
+
+  isBreak = FALSE;
 
   pReadBuf = GET_REST_BUFFER(pIrpRead, pIrpRead->IoStatus.Information);
   readLength = IoGetCurrentIrpStackLocation(pIrpRead)->Parameters.Read.Length
@@ -367,6 +415,8 @@ VOID ReadWriteDirect(
 
     pWriteBuf = &pDataWrite->data.chr.chr;
     writeLength = pDataWrite->data.chr.isChr ? 1 : 0;
+    if (pDataWrite->data.chr.type == RW_DATA_TYPE_CHR_BREAK)
+      isBreak = TRUE;
   }
 
   FlowFilterInit(pReadIoPort, &flowFilter);
@@ -400,8 +450,13 @@ VOID ReadWriteDirect(
     }
   }
 
-  if (writeDone)
+  if (writeDone) {
     OnRxChars(pReadIoPort, writeDone, &flowFilter, pQueueToComplete);
+    if (isBreak)
+      OnRxBreak(pReadIoPort, pQueueToComplete);
+    else
+      pReadIoPort->pDevExt->pIoPortRemote->perfStats.TransmittedCount += (ULONG)writeDone;
+  }
 
   *pReadDone += readDone;
   *pWriteDone += writeDone;
@@ -576,6 +631,32 @@ NTSTATUS FdoPortIo(
   return status;
 }
 
+VOID InsertLsrMst(
+    PC0C_IO_PORT pIoPortRead,
+    BOOLEAN isMST,
+    UCHAR value,
+    PLIST_ENTRY pQueueToComplete)
+{
+  C0C_RAW_DATA insertData;
+
+  insertData.size = 3;
+  insertData.data[0] = pIoPortRead->escapeChar;
+  insertData.data[1] = (UCHAR)(isMST ? SERIAL_LSRMST_MST : SERIAL_LSRMST_LSR_NODATA);
+  insertData.data[2] = value;
+
+  if (FdoPortIo(
+      C0C_IO_TYPE_INSERT,
+      &insertData,
+      pIoPortRead,
+      &pIoPortRead->irpQueues[C0C_QUEUE_READ],
+      pQueueToComplete) == STATUS_PENDING)
+  {
+    AlertOverrun(pIoPortRead, pQueueToComplete);
+    Trace00((PC0C_COMMON_EXTENSION)pIoPortRead->pDevExt,
+        L"WARNING: Lost SERIAL_LSRMST_", isMST ? L"MST" : L"LSR_NODATA");
+  }
+}
+
 NTSTATUS TryReadWrite(
     PC0C_IO_PORT pIoPortRead,
     BOOLEAN startRead,
@@ -592,7 +673,7 @@ NTSTATUS TryReadWrite(
   PDRIVER_CANCEL pCancelRoutineRead;
   SIZE_T doneRead;
 
-  RW_DATA dataCharX;
+  RW_DATA dataChar;
 
   RW_DATA dataIrpWrite;
   PC0C_IRP_QUEUE pQueueWrite;
@@ -606,7 +687,7 @@ NTSTATUS TryReadWrite(
   PSIZE_T pWriteLimit;
 
   dataIrpRead.type = RW_DATA_TYPE_IRP;
-  dataCharX.type = RW_DATA_TYPE_CHR;
+  dataChar.type = RW_DATA_TYPE_CHR;
   dataIrpWrite.type = RW_DATA_TYPE_IRP;
 
   pQueueRead = &pIoPortRead->irpQueues[C0C_QUEUE_READ];
@@ -676,19 +757,32 @@ NTSTATUS TryReadWrite(
     readBufBusyBeg = readBufBusyEnd;
   }
 
-  /* get XON or XOFF char */
+  /* get char */
 
-  switch (pIoPortWrite->sendXonXoff) {
-  case C0C_XCHAR_ON:
-    dataCharX.data.chr.chr = pIoPortWrite->pDevExt->specialChars.XonChar;
-    dataCharX.data.chr.isChr = TRUE;
-    break;
-  case C0C_XCHAR_OFF:
-    dataCharX.data.chr.chr = pIoPortWrite->pDevExt->specialChars.XoffChar;
-    dataCharX.data.chr.isChr = TRUE;
-    break;
-  default:
-    dataCharX.data.chr.isChr = FALSE;
+  if (pIoPortWrite->sendBreak) {
+    /* get BREAK char */
+
+    dataChar.data.chr.type = RW_DATA_TYPE_CHR_BREAK;
+    dataChar.data.chr.chr = 0;
+    dataChar.data.chr.isChr = TRUE;
+  } else {
+    /* get XON or XOFF char */
+
+    switch (pIoPortWrite->sendXonXoff) {
+    case C0C_XCHAR_ON:
+      dataChar.data.chr.type = RW_DATA_TYPE_CHR_XCHR;
+      dataChar.data.chr.chr = pIoPortWrite->pDevExt->specialChars.XonChar;
+      dataChar.data.chr.isChr = TRUE;
+      break;
+    case C0C_XCHAR_OFF:
+      dataChar.data.chr.type = RW_DATA_TYPE_CHR_XCHR;
+      dataChar.data.chr.chr = pIoPortWrite->pDevExt->specialChars.XoffChar;
+      dataChar.data.chr.isChr = TRUE;
+      break;
+    default:
+      dataChar.data.chr.type = RW_DATA_TYPE_CHR_NONE;
+      dataChar.data.chr.isChr = FALSE;
+    }
   }
 
   /* get first pIrpWrite */
@@ -708,14 +802,14 @@ NTSTATUS TryReadWrite(
   /* read/write direct */
 
   while (dataIrpRead.data.irp.pIrp) {
-    if (dataCharX.data.chr.isChr) {
+    if (dataChar.data.chr.isChr) {
       if (!pWriteLimit || *pWriteLimit) {
-        if ((pIoPortWrite->writeHolding & ~SERIAL_TX_WAITING_FOR_XON) == 0) {
+        if (CAN_WRITE_RW_DATA_CHR(pIoPortWrite, dataChar)) {
           if (dataIrpRead.data.irp.status == STATUS_PENDING) {
             SIZE_T done = 0;
 
             ReadWriteDirect(dataIrpRead.data.irp.pIrp,
-                            &dataCharX,
+                            &dataChar,
                             &dataIrpRead.data.irp.status,
                             pIoPortRead,
                             pQueueToComplete,
@@ -823,12 +917,12 @@ NTSTATUS TryReadWrite(
 
   /* write to buffer */
 
-  if (dataCharX.data.chr.isChr) {
+  if (dataChar.data.chr.isChr) {
     if (!pWriteLimit || *pWriteLimit) {
-      if ((pIoPortWrite->writeHolding & ~SERIAL_TX_WAITING_FOR_XON) == 0) {
+      if (CAN_WRITE_RW_DATA_CHR(pIoPortWrite, dataChar)) {
         SIZE_T done = 0;
 
-        WriteBuffer(&dataCharX, pIoPortRead,
+        WriteBuffer(&dataChar, pIoPortRead,
                     pQueueToComplete, pWriteLimit, &done);
 
         readBufBusyEnd = C0C_BUFFER_BUSY(&pIoPortRead->readBuf);
@@ -847,11 +941,11 @@ NTSTATUS TryReadWrite(
         }
 
         if (pIoPortRead->emuOverrun &&
-            dataCharX.data.chr.isChr &&
-            (pIoPortWrite->writeHolding & ~SERIAL_TX_WAITING_FOR_XON) == 0 &&
+            dataChar.data.chr.isChr &&
+            CAN_WRITE_RW_DATA_CHR(pIoPortWrite, dataChar) &&
             C0C_BUFFER_BUSY(&pIoPortRead->readBuf) >= C0C_BUFFER_SIZE(&pIoPortRead->readBuf))
         {
-          WriteOverrun(&dataCharX, pIoPortRead,
+          WriteOverrun(&dataChar, pIoPortRead,
                        pQueueToComplete, pWriteLimit, &done);
         }
 
@@ -868,8 +962,26 @@ NTSTATUS TryReadWrite(
     }
   }
 
-  if (!dataCharX.data.chr.isChr)
-    pIoPortWrite->sendXonXoff = 0;
+  if (!dataChar.data.chr.isChr) {
+    switch (dataChar.data.chr.type) {
+    case RW_DATA_TYPE_CHR_XCHR:
+      pIoPortWrite->sendXonXoff = 0;
+      break;
+    case RW_DATA_TYPE_CHR_BREAK:
+      if (pIoPortWrite->sendBreak) {
+        pIoPortWrite->sendBreak = FALSE;
+        if (pIoPortRead->escapeChar) {
+          UCHAR lsr = 0x10;  /* break interrupt indicator */
+
+          if (!pIoPortRead->amountInWriteQueue || pIoPortRead->writeHolding)
+            lsr |= 0x60;  /* transmit holding register empty and transmitter empty indicators */
+
+          InsertLsrMst(pIoPortRead, FALSE,  lsr, pQueueToComplete);
+        }
+      }
+      break;
+    }
+  }
 
   while (dataIrpWrite.data.irp.pIrp) {
     if (IoGetCurrentIrpStackLocation(dataIrpWrite.data.irp.pIrp)->MajorFunction ==
@@ -1026,27 +1138,9 @@ VOID SetModemStatus(
 
     SetModemStatusHolding(pIoPort);
 
-    if (pIoPort->escapeChar) {
-      NTSTATUS status;
-      C0C_RAW_DATA insertData;
-
-      insertData.size = 3;
-      insertData.data[0] = pIoPort->escapeChar;
-      insertData.data[1] = SERIAL_LSRMST_MST;
-      insertData.data[2] = (UCHAR)(pIoPort->modemStatus | (modemStatusChanged >> 4));
-
-      status = FdoPortIo(
-          C0C_IO_TYPE_INSERT,
-          &insertData,
-          pIoPort,
-          &pIoPort->irpQueues[C0C_QUEUE_READ],
-          pQueueToComplete);
-
-      if (status == STATUS_PENDING) {
-        AlertOverrun(pIoPort, pQueueToComplete);
-        Trace0((PC0C_COMMON_EXTENSION)pIoPort->pDevExt, L"WARNING: Lost SERIAL_LSRMST_MST");
-      }
-    }
+    if (pIoPort->escapeChar)
+      InsertLsrMst(pIoPort, TRUE,
+          (UCHAR)(pIoPort->modemStatus | (modemStatusChanged >> 4)), pQueueToComplete);
 
     if (modemStatusChanged & C0C_MSB_CTS)
       pIoPort->eventMask |= pIoPort->waitMask & SERIAL_EV_CTS;

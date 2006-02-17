@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.2  2006/02/17 07:55:13  vfrolov
+ * Implemented IOCTL_SERIAL_SET_BREAK_ON and IOCTL_SERIAL_SET_BREAK_OFF
+ *
  * Revision 1.1  2006/01/10 10:12:05  vfrolov
  * Initial revision
  *
@@ -41,5 +44,6 @@ VOID UpdateHandFlow(
 VOID SetLimit(PC0C_FDOPORT_EXTENSION pDevExt);
 VOID SetModemStatusHolding(PC0C_IO_PORT pIoPort);
 VOID SetXonXoffHolding(PC0C_IO_PORT pIoPort, short xonXoff);
+VOID SetBreakHolding(PC0C_IO_PORT pIoPort, BOOLEAN on);
 
 #endif /* _C0C_FLOW_H_ */
