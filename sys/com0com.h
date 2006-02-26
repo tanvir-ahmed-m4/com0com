@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.24  2006/02/26 08:35:55  vfrolov
+ * Added check for start/stop queue matching
+ *
  * Revision 1.23  2006/02/17 07:55:13  vfrolov
  * Implemented IOCTL_SERIAL_SET_BREAK_ON and IOCTL_SERIAL_SET_BREAK_OFF
  *
@@ -138,6 +141,9 @@ typedef struct _C0C_COMMON_FDO_EXTENSION {
 typedef struct _C0C_IRP_QUEUE {
   PIRP                    pCurrent;
   LIST_ENTRY              queue;
+#if DBG
+  BOOLEAN                 started;
+#endif /* DBG */
 } C0C_IRP_QUEUE, *PC0C_IRP_QUEUE;
 
 typedef struct _C0C_RAW_DATA {

@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.12  2006/02/26 08:35:55  vfrolov
+ * Added check for start/stop queue matching
+ *
  * Revision 1.11  2006/01/10 10:17:23  vfrolov
  * Implemented flow control and handshaking
  * Implemented IOCTL_SERIAL_SET_XON and IOCTL_SERIAL_SET_XOFF
@@ -400,6 +403,9 @@ NTSTATUS AddPdoPort(
   for (i = 0 ; i < C0C_QUEUE_SIZE ; i++) {
     InitializeListHead(&pIoPortLocal->irpQueues[i].queue);
     pIoPortLocal->irpQueues[i].pCurrent = NULL;
+#if DBG
+    pIoPortLocal->irpQueues[i].started = FALSE;
+#endif /* DBG */
   }
 
   Trace0((PC0C_COMMON_EXTENSION)pDevExt, L"AddPdoPort OK");
