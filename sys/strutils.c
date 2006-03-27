@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2004-2005 Vyacheslav Frolov
+ * Copyright (c) 2004-2006 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,9 +19,11 @@
  *
  *
  * $Log$
+ * Revision 1.2  2006/03/27 09:37:28  vfrolov
+ * Added StrAppendDeviceProperty()
+ *
  * Revision 1.1  2005/01/26 12:18:54  vfrolov
  * Initial revision
- *
  *
  */
 
@@ -74,7 +76,7 @@ NTSTATUS DupStrW(OUT PWCHAR *ppDestStr, IN PWCHAR pStr, IN BOOLEAN multiStr)
 
   len = (ULONG)(pStrTmp - pStr) * sizeof(WCHAR);
   pStrTmp = (PWCHAR)ExAllocatePool(PagedPool, len);
-  
+
   if (!pStrTmp)
     return STATUS_INSUFFICIENT_RESOURCES;
 
@@ -179,4 +181,50 @@ VOID StrAppendNum(
 	  return;
 
   StrAppendStr(pStatus, pDest, numStr.Buffer, numStr.Length);
+}
+
+VOID StrAppendDeviceProperty(
+    IN OUT PNTSTATUS pStatus,
+    IN OUT PUNICODE_STRING pDest,
+    IN PDEVICE_OBJECT pDevObj,
+    IN DEVICE_REGISTRY_PROPERTY deviceProperty)
+{
+  NTSTATUS status;
+  ULONG len;
+
+  status = *pStatus;
+
+  if (!NT_SUCCESS(status))
+	  return;
+
+  status = IoGetDeviceProperty(pDevObj,
+                               deviceProperty,
+	                             0,
+                               NULL,
+                               &len);
+
+  if (status == STATUS_BUFFER_TOO_SMALL && len) {
+    PWCHAR pStrTmp;
+
+    pStrTmp = (PWCHAR)ExAllocatePool(PagedPool, len);
+
+    if (pStrTmp) {
+      status = IoGetDeviceProperty(pDevObj,
+                                   deviceProperty,
+	                                 len,
+                                   pStrTmp,
+                                   &len);
+
+      if (NT_SUCCESS(status))
+        StrAppendStr0(&status, pDest, pStrTmp);
+
+      ExFreePool(pStrTmp);
+    } else {
+      status = STATUS_INSUFFICIENT_RESOURCES;
+    }
+  }
+
+  StrFreeBad(status, pDest);
+
+  *pStatus = status;
 }

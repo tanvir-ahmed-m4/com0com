@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2004-2005 Vyacheslav Frolov
+ * Copyright (c) 2004-2006 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,12 +19,14 @@
  *
  *
  * $Log$
+ * Revision 1.3  2006/03/27 09:37:28  vfrolov
+ * Added StrAppendDeviceProperty()
+ *
  * Revision 1.2  2005/05/17 15:07:36  vfrolov
  * Fixed parameter type typo
  *
  * Revision 1.1  2005/01/26 12:18:54  vfrolov
  * Initial revision
- *
  *
  */
 
@@ -47,5 +49,10 @@ VOID StrAppendNum(
     IN OUT PUNICODE_STRING pDest,
     IN ULONG num,
     IN ULONG base);
+VOID StrAppendDeviceProperty(
+    IN OUT PNTSTATUS pStatus,
+    IN OUT PUNICODE_STRING pDest,
+    IN PDEVICE_OBJECT pDevObj,
+    IN DEVICE_REGISTRY_PROPERTY deviceProperty);
 
 #endif /* _C0C_STRUTILS_H_ */
