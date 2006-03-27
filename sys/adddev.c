@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.13  2006/03/27 09:38:23  vfrolov
+ * Utilized StrAppendDeviceProperty()
+ *
  * Revision 1.12  2006/02/26 08:35:55  vfrolov
  * Added check for start/stop queue matching
  *
@@ -115,28 +118,25 @@ NTSTATUS AddFdoPort(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
   PDEVICE_OBJECT pNewDevObj;
   PC0C_FDOPORT_EXTENSION pDevExt = NULL;
   ULONG emuBR, emuOverrun;
-  WCHAR propertyBuffer[255];
+  UNICODE_STRING property;
   PWCHAR pPortName;
-  ULONG len;
   int i;
 
-  status = IoGetDeviceProperty(
-      pPhDevObj,
-      DevicePropertyPhysicalDeviceObjectName,
-	    sizeof propertyBuffer,
-      propertyBuffer,
-      &len);
+  status = STATUS_SUCCESS;
+  RtlInitUnicodeString(&property, NULL);
+
+  StrAppendDeviceProperty(&status, &property, pPhDevObj, DevicePropertyPhysicalDeviceObjectName);
 
   if (!NT_SUCCESS(status)) {
     SysLog(pPhDevObj, status, L"AddFdoPort IoGetDeviceProperty FAIL");
     goto clean;
   }
 
-  Trace00((PC0C_COMMON_EXTENSION)pPhDevObj->DeviceExtension, L"AddFdoPort for ", propertyBuffer);
+  Trace00((PC0C_COMMON_EXTENSION)pPhDevObj->DeviceExtension, L"AddFdoPort for ", property.Buffer);
 
-  for (pPortName = NULL, i = 0 ; propertyBuffer[i] ; i++)
-    if (propertyBuffer[i] == L'\\')
-      pPortName = &propertyBuffer[i + 1];
+  for (pPortName = NULL, i = 0 ; property.Buffer[i] ; i++)
+    if (property.Buffer[i] == L'\\')
+      pPortName = &property.Buffer[i + 1];
 
   if (!pPortName || !*pPortName) {
     status = STATUS_UNSUCCESSFUL;
@@ -242,7 +242,7 @@ NTSTATUS AddFdoPort(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
   status = InitCommonExt((PC0C_COMMON_EXTENSION)pDevExt, pNewDevObj, C0C_DOTYPE_FP, portName.Buffer);
 
   RtlInitUnicodeString(&pDevExt->ntDeviceName, NULL);
-  StrAppendStr0(&status, &pDevExt->ntDeviceName, propertyBuffer);
+  StrAppendStr0(&status, &pDevExt->ntDeviceName, property.Buffer);
 
   RtlInitUnicodeString(&pDevExt->win32DeviceName, NULL);
   StrAppendStr0(&status, &pDevExt->win32DeviceName, C0C_PREF_WIN32_DEVICE_NAME);
@@ -329,6 +329,7 @@ clean:
   if (!NT_SUCCESS(status) && pDevExt)
     RemoveFdoPort(pDevExt);
 
+  StrFree(&property);
   StrFree(&portName);
 
   return status;
@@ -578,27 +579,33 @@ clean:
 NTSTATUS c0cAddDevice(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
 {
   NTSTATUS status;
-  WCHAR propertyBuffer[255];
-  ULONG len;
+  UNICODE_STRING property;
 
-  status = IoGetDeviceProperty(pPhDevObj, DevicePropertyHardwareID,
-	  sizeof propertyBuffer, propertyBuffer, &len);
+  status = STATUS_SUCCESS;
+  RtlInitUnicodeString(&property, NULL);
+
+  StrAppendDeviceProperty(&status, &property, pPhDevObj, DevicePropertyHardwareID);
 
   if (NT_SUCCESS(status))
-	  Trace00(NULL, L"c0cAddDevice for ", propertyBuffer);
+	  Trace00(NULL, L"c0cAddDevice for ", property.Buffer);
   else {
     SysLog(pDrvObj, status, L"c0cAddDevice IoGetDeviceProperty FAIL");
     return status;
   }
 
-  if (!_wcsicmp(C0C_PORT_DEVICE_ID, propertyBuffer))
+  if (!_wcsicmp(C0C_PORT_DEVICE_ID, property.Buffer)) {
+    StrFree(&property);
     status = AddFdoPort(pDrvObj, pPhDevObj);
+  }
   else
-  if (!_wcsicmp(C0C_BUS_DEVICE_ID, propertyBuffer))
+  if (!_wcsicmp(C0C_BUS_DEVICE_ID, property.Buffer)) {
+    StrFree(&property);
     status = AddFdoBus(pDrvObj, pPhDevObj);
+  }
   else {
+    StrFree(&property);
     status = STATUS_UNSUCCESSFUL;
-    SysLog(pDrvObj, status, L"c0cAddDevice unknown property");
+    SysLog(pDrvObj, status, L"c0cAddDevice unknown HardwareID");
   }
 
   return status;
