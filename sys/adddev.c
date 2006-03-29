@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.14  2006/03/29 09:39:28  vfrolov
+ * Fixed possible usage uninitialized portName
+ *
  * Revision 1.13  2006/03/27 09:38:23  vfrolov
  * Utilized StrAppendDeviceProperty()
  *
@@ -123,6 +126,7 @@ NTSTATUS AddFdoPort(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
   int i;
 
   status = STATUS_SUCCESS;
+  RtlInitUnicodeString(&portName, NULL);
   RtlInitUnicodeString(&property, NULL);
 
   StrAppendDeviceProperty(&status, &property, pPhDevObj, DevicePropertyPhysicalDeviceObjectName);
@@ -143,8 +147,6 @@ NTSTATUS AddFdoPort(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
     SysLog(pPhDevObj, status, L"AddFdoPort no port name in the property");
     goto clean;
   }
-
-  RtlInitUnicodeString(&portName, NULL);
 
   {
     UNICODE_STRING portRegistryPath;
