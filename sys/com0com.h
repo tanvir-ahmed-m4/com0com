@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.25  2006/04/05 07:22:15  vfrolov
+ * Replaced flipXoffLimit flag by writeHoldingRemote to correct handFlow changing
+ *
  * Revision 1.24  2006/02/26 08:35:55  vfrolov
  * Added check for start/stop queue matching
  *
@@ -214,9 +217,9 @@ typedef struct _C0C_IO_PORT {
 
   short                   sendXonXoff;
   ULONG                   writeHolding;
+  ULONG                   writeHoldingRemote;
   BOOLEAN                 sendBreak;
   BOOLEAN                 tryWrite;
-  BOOLEAN                 flipXoffLimit;
 
   BOOLEAN                 emuOverrun;
 } C0C_IO_PORT, *PC0C_IO_PORT;

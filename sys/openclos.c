@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.12  2006/04/05 07:22:15  vfrolov
+ * Replaced flipXoffLimit flag by writeHoldingRemote to correct handFlow changing
+ *
  * Revision 1.11  2006/02/17 07:55:13  vfrolov
  * Implemented IOCTL_SERIAL_SET_BREAK_ON and IOCTL_SERIAL_SET_BREAK_OFF
  *
@@ -138,7 +141,8 @@ NTSTATUS FdoPortClose(IN PC0C_FDOPORT_EXTENSION pDevExt)
 
   KeAcquireSpinLock(pDevExt->pIoLock, &oldIrql);
 
-  pDevExt->pIoPortLocal->flipXoffLimit = FALSE;
+  pDevExt->pIoPortLocal->writeHoldingRemote = 0;
+  pDevExt->pIoPortLocal->sendXonXoff = 0;
   SetModemStatus(pDevExt->pIoPortRemote, 0, C0C_MSB_CTS | C0C_MSB_DSR, &queueToComplete);
   FreeBuffer(&pDevExt->pIoPortLocal->readBuf);
   SetBreakHolding(pDevExt->pIoPortLocal, FALSE);
