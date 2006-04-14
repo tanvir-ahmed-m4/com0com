@@ -19,6 +19,10 @@
  *
  *
  * $Log$
+ * Revision 1.18  2006/04/14 15:57:51  vfrolov
+ * Fixed XON char sending delay after SERIAL_PURGE_RXCLEAR
+ *   and IOCTL_SERIAL_SET_QUEUE_SIZE
+ *
  * Revision 1.17  2006/02/17 07:55:13  vfrolov
  * Implemented IOCTL_SERIAL_SET_BREAK_ON and IOCTL_SERIAL_SET_BREAK_OFF
  *
@@ -301,7 +305,7 @@ NTSTATUS FdoPortIoCtl(
       if (*pSysBuf & SERIAL_PURGE_RXCLEAR) {
         PurgeBuffer(&pDevExt->pIoPortLocal->readBuf);
         UpdateHandFlow(pDevExt, TRUE, &queueToComplete);
-        if (pDevExt->pIoPortRemote->tryWrite) {
+        if (pDevExt->pIoPortLocal->tryWrite || pDevExt->pIoPortRemote->tryWrite) {
           ReadWrite(
               pDevExt->pIoPortLocal, FALSE,
               pDevExt->pIoPortRemote, FALSE,
@@ -651,7 +655,7 @@ NTSTATUS FdoPortIoCtl(
         pDevExt->handFlow.XonLimit = pSysBuf->InSize >> 1;
         SetLimit(pDevExt);
         UpdateHandFlow(pDevExt, TRUE, &queueToComplete);
-        if (pDevExt->pIoPortRemote->tryWrite) {
+        if (pDevExt->pIoPortLocal->tryWrite || pDevExt->pIoPortRemote->tryWrite) {
           ReadWrite(
               pDevExt->pIoPortLocal, FALSE,
               pDevExt->pIoPortRemote, FALSE,
