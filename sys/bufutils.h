@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.5  2006/05/17 15:28:03  vfrolov
+ * Implemented SERIAL_DSR_SENSITIVITY
+ *
  * Revision 1.4  2006/01/10 10:17:23  vfrolov
  * Implemented flow control and handshaking
  * Implemented IOCTL_SERIAL_SET_XON and IOCTL_SERIAL_SET_XOFF
@@ -44,6 +47,7 @@ typedef struct _C0C_FLOW_FILTER {
   #define C0C_FLOW_FILTER_EV_RXCHAR          0x02
   #define C0C_FLOW_FILTER_EV_RXFLAG          0x04
   #define C0C_FLOW_FILTER_NULL_STRIPPING     0x08
+  #define C0C_FLOW_FILTER_IGNORE_RECEIVED    0x10
 
   UCHAR flags;
   UCHAR xonChar;
