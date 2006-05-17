@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.5  2006/05/17 15:31:14  vfrolov
+ * Implemented SERIAL_TRANSMIT_TOGGLE
+ *
  * Revision 1.4  2006/04/05 07:22:15  vfrolov
  * Replaced flipXoffLimit flag by writeHoldingRemote to correct handFlow changing
  *
@@ -189,6 +192,8 @@ NTSTATUS SetHandFlow(
   if (mask)
     SetModemStatus(pDevExt->pIoPortRemote, bits, mask, pQueueToComplete);
 
+  UpdateTransmitToggle(pDevExt, pQueueToComplete);
+
   SetLimit(pDevExt->pIoPortRemote->pDevExt);
   SetLimit(pDevExt);
 
@@ -270,6 +275,28 @@ VOID UpdateHandFlow(
     SetModemStatus(pDevExt->pIoPortRemote, bits, mask, pQueueToComplete);
 }
 
+VOID UpdateTransmitToggle(
+    PC0C_FDOPORT_EXTENSION pDevExt,
+    PLIST_ENTRY pQueueToComplete)
+{
+  if ((pDevExt->handFlow.FlowReplace & SERIAL_RTS_MASK) == SERIAL_TRANSMIT_TOGGLE) {
+    ULONG bits;
+    PC0C_IO_PORT pIoPortLocal;
+
+    pIoPortLocal = pDevExt->pIoPortLocal;
+
+    if ((pIoPortLocal->writeHolding & SERIAL_TX_WAITING_ON_BREAK) == 0 &&
+        (pIoPortLocal->sendXonXoff || pIoPortLocal->irpQueues[C0C_QUEUE_WRITE].pCurrent))
+    {
+      bits = C0C_MSB_CTS;
+    } else {
+      bits = 0;
+    }
+
+    SetModemStatus(pDevExt->pIoPortRemote, bits, C0C_MSB_CTS, pQueueToComplete);
+  }
+}
+
 VOID SetLimit(PC0C_FDOPORT_EXTENSION pDevExt)
 {
   PC0C_BUFFER pReadBuf;
@@ -280,10 +307,13 @@ VOID SetLimit(PC0C_FDOPORT_EXTENSION pDevExt)
   pHandFlowRemote = &pDevExt->pIoPortRemote->pDevExt->handFlow;
   pReadBuf = &pDevExt->pIoPortLocal->readBuf;
 
+  /* DCD = DSR */
+  #define C0C_DSR_HANDSHAKE (SERIAL_DSR_HANDSHAKE|SERIAL_DCD_HANDSHAKE)
+
   if ((((pHandFlowLocal->FlowReplace & SERIAL_RTS_MASK) == SERIAL_RTS_HANDSHAKE) &&
                              (pHandFlowRemote->ControlHandShake & SERIAL_CTS_HANDSHAKE)) ||
       (((pHandFlowLocal->ControlHandShake & SERIAL_DTR_MASK) == SERIAL_DTR_HANDSHAKE) &&
-                             (pHandFlowRemote->ControlHandShake & SERIAL_DSR_HANDSHAKE)))
+                             (pHandFlowRemote->ControlHandShake & C0C_DSR_HANDSHAKE)))
   {
     limit = C0C_BUFFER_SIZE(pReadBuf) - pHandFlowLocal->XoffLimit + 1;
   } else {
@@ -353,9 +383,13 @@ VOID SetBreakHolding(PC0C_IO_PORT pIoPort, BOOLEAN on)
   } else {
     if (pIoPort->writeHolding & SERIAL_TX_WAITING_ON_BREAK) {
       pIoPort->writeHolding &= ~SERIAL_TX_WAITING_ON_BREAK;
+      pIoPort->sendBreak = FALSE;
 
-      if (!pIoPort->writeHolding && pIoPort->irpQueues[C0C_QUEUE_WRITE].pCurrent)
+      if ((!(pIoPort->writeHolding & ~SERIAL_TX_WAITING_FOR_XON) && pIoPort->sendXonXoff) ||
+          !pIoPort->writeHolding && pIoPort->irpQueues[C0C_QUEUE_WRITE].pCurrent)
+      {
         pIoPort->tryWrite = TRUE;
+      }
     }
   }
 }

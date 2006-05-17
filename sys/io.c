@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.27  2006/05/17 15:31:14  vfrolov
+ * Implemented SERIAL_TRANSMIT_TOGGLE
+ *
  * Revision 1.26  2006/02/26 08:39:19  vfrolov
  * Added check for start/stop queue matching
  * Fixed delayed BREAK losts
@@ -1112,6 +1115,8 @@ NTSTATUS TryReadWrite(
     WaitComplete(pIoPortWrite, pQueueToComplete);
   }
 
+  UpdateTransmitToggle(pIoPortWrite->pDevExt, pQueueToComplete);
+
   return status;
 }
 
@@ -1166,7 +1171,7 @@ VOID SetModemStatus(
   pIoPort->modemStatus |= bits & mask;
   pIoPort->modemStatus &= ~(~bits & mask);
 
-  /* CD = DSR */
+  /* DCD = DSR */
   if (pIoPort->modemStatus & C0C_MSB_DSR)
     pIoPort->modemStatus |= C0C_MSB_RLSD;
   else

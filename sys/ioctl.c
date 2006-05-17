@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.19  2006/05/17 15:31:14  vfrolov
+ * Implemented SERIAL_TRANSMIT_TOGGLE
+ *
  * Revision 1.18  2006/04/14 15:57:51  vfrolov
  * Fixed XON char sending delay after SERIAL_PURGE_RXCLEAR
  *   and IOCTL_SERIAL_SET_QUEUE_SIZE
@@ -196,7 +199,7 @@ NTSTATUS FdoPortIoCtl(
       KeAcquireSpinLock(pDevExt->pIoLock, &oldIrql);
       SetXonXoffHolding(pDevExt->pIoPortLocal, C0C_XCHAR_ON);
 
-      if (pDevExt->pIoPortRemote->tryWrite) {
+      if (pDevExt->pIoPortLocal->tryWrite) {
         ReadWrite(
             pDevExt->pIoPortLocal, FALSE,
             pDevExt->pIoPortRemote, FALSE,
@@ -217,9 +220,10 @@ NTSTATUS FdoPortIoCtl(
       InitializeListHead(&queueToComplete);
 
       KeAcquireSpinLock(pDevExt->pIoLock, &oldIrql);
-      SetBreakHolding(pDevExt->pIoPortLocal, TRUE);
 
-      pDevExt->pIoPortLocal->sendBreak = TRUE;
+      SetBreakHolding(pDevExt->pIoPortLocal, TRUE);
+      UpdateTransmitToggle(pDevExt, &queueToComplete);
+
       ReadWrite(
           pDevExt->pIoPortLocal, FALSE,
           pDevExt->pIoPortRemote, FALSE,
@@ -235,9 +239,11 @@ NTSTATUS FdoPortIoCtl(
       InitializeListHead(&queueToComplete);
 
       KeAcquireSpinLock(pDevExt->pIoLock, &oldIrql);
-      SetBreakHolding(pDevExt->pIoPortLocal, FALSE);
 
-      if (pDevExt->pIoPortRemote->tryWrite) {
+      SetBreakHolding(pDevExt->pIoPortLocal, FALSE);
+      UpdateTransmitToggle(pDevExt, &queueToComplete);
+
+      if (pDevExt->pIoPortLocal->tryWrite || pDevExt->pIoPortRemote->tryWrite) {
         ReadWrite(
             pDevExt->pIoPortLocal, FALSE,
             pDevExt->pIoPortRemote, FALSE,
