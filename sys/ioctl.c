@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.20  2006/05/18 08:00:30  vfrolov
+ * Implemented SERIAL_RX_WAITING_FOR_DSR
+ *
  * Revision 1.19  2006/05/17 15:31:14  vfrolov
  * Implemented SERIAL_TRANSMIT_TOGGLE
  *
@@ -336,10 +339,11 @@ NTSTATUS FdoPortIoCtl(
       }
 
       pSysBuf = (PSERIAL_STATUS)pIrp->AssociatedIrp.SystemBuffer;
+      RtlZeroMemory(pSysBuf, sizeof(*pSysBuf));
       pIoPort = pDevExt->pIoPortLocal;
 
       KeAcquireSpinLock(pDevExt->pIoLock, &oldIrql);
-      RtlZeroMemory(pSysBuf, sizeof(*pSysBuf));
+
       pSysBuf->AmountInInQueue = (ULONG)C0C_BUFFER_BUSY(&pIoPort->readBuf);
 
       pIrpWrite = pIoPort->irpQueues[C0C_QUEUE_WRITE].pCurrent;
@@ -356,9 +360,18 @@ NTSTATUS FdoPortIoCtl(
 
       pSysBuf->AmountInOutQueue = pIoPort->amountInWriteQueue;
       pSysBuf->HoldReasons = pIoPort->writeHolding;
+
+      if ((pIoPort->pDevExt->handFlow.ControlHandShake & SERIAL_DSR_SENSITIVITY) &&
+          (pIoPort->modemStatus & C0C_MSB_DSR) == 0)
+      {
+        pSysBuf->HoldReasons |= SERIAL_RX_WAITING_FOR_DSR;
+      }
+
       pSysBuf->Errors = pIoPort->errors;
       pIoPort->errors = 0;
+
       KeReleaseSpinLock(pDevExt->pIoLock, oldIrql);
+
       pIrp->IoStatus.Information = sizeof(SERIAL_STATUS);
 
       TraceIrp("FdoPortIoCtl", pIrp, &status, TRACE_FLAG_RESULTS);
