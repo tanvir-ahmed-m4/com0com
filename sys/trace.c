@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.19  2006/05/19 15:02:03  vfrolov
+ * Implemented IOCTL_SERIAL_GET_MODEM_CONTROL
+ *
  * Revision 1.18  2006/01/10 09:44:04  vfrolov
  * Added ability to enable/disable dump
  * Added tracing of HoldReasons, WaitForImmediate, AmountInOutQueue for SERIAL_STATUS
@@ -1294,11 +1297,12 @@ VOID TraceIrp(
                 codeNameTableModemStatus, *((PULONG)pSysBuf));
           }
           break;
+        case IOCTL_SERIAL_GET_MODEM_CONTROL:
         case IOCTL_SERIAL_GET_DTRRTS:
           if ((flags & TRACE_FLAG_RESULTS) && inform >= sizeof(ULONG)) {
             pDestStr = AnsiStrCopyStr(pDestStr, &size, " ");
             pDestStr = AnsiStrCopyMask(pDestStr, &size,
-                codeNameTableDTRRTS, *((PULONG)pSysBuf));
+                codeNameTableModemControl, *((PULONG)pSysBuf));
           }
           break;
         case IOCTL_SERIAL_SET_WAIT_MASK:
