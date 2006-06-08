@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.20  2006/06/08 11:30:52  vfrolov
+ * Added params check to Trace0() and Trace00()
+ *
  * Revision 1.19  2006/05/19 15:02:03  vfrolov
  * Implemented IOCTL_SERIAL_GET_MODEM_CONTROL
  *
@@ -1095,7 +1098,7 @@ VOID Trace0(
     IN PC0C_COMMON_EXTENSION pDevExt,
     IN PWCHAR pStr)
 {
-  if (!TRACE_FILE_OK)
+  if (!TRACE_FILE_OK || !pStr)
     return;
 
   TraceF(pDevExt, "%S", pStr);
@@ -1106,7 +1109,7 @@ VOID Trace00(
     IN PWCHAR pStr1,
     IN PWCHAR pStr2)
 {
-  if (!TRACE_FILE_OK)
+  if (!TRACE_FILE_OK || !pStr1 || !pStr2)
     return;
 
   TraceF(pDevExt, "%S%S", pStr1, pStr2);
