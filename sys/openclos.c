@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.13  2006/06/08 11:33:35  vfrolov
+ * Fixed bugs with amountInWriteQueue
+ *
  * Revision 1.12  2006/04/05 07:22:15  vfrolov
  * Replaced flipXoffLimit flag by writeHoldingRemote to correct handFlow changing
  *
@@ -63,6 +66,7 @@
 #include "precomp.h"
 #include "handflow.h"
 #include "bufutils.h"
+#include "strutils.h"
 
 NTSTATUS FdoPortOpen(IN PC0C_FDOPORT_EXTENSION pDevExt)
 {
@@ -106,7 +110,17 @@ NTSTATUS FdoPortOpen(IN PC0C_FDOPORT_EXTENSION pDevExt)
 
 #if DBG
   if (pDevExt->pIoPortLocal->amountInWriteQueue) {
-    Trace0((PC0C_COMMON_EXTENSION)pDevExt, L"!!!WARNING!!! amountInWriteQueue != 0");
+    NTSTATUS status;
+    UNICODE_STRING msg;
+
+    status = STATUS_SUCCESS;
+    RtlInitUnicodeString(&msg, NULL);
+    StrAppendStr0(&status, &msg, L"!!!WARNING!!! amountInWriteQueue = ");
+    StrAppendNum(&status, &msg, pDevExt->pIoPortLocal->amountInWriteQueue, 10);
+
+    Trace0((PC0C_COMMON_EXTENSION)pDevExt, msg.Buffer);
+
+    StrFree(&msg);
   }
 #endif /* DBG */
 
@@ -114,6 +128,7 @@ NTSTATUS FdoPortOpen(IN PC0C_FDOPORT_EXTENSION pDevExt)
 
   InitBuffer(&pDevExt->pIoPortLocal->readBuf, pBase, size);
 
+  pDevExt->pIoPortLocal->amountInWriteQueue = 0;
   pDevExt->pIoPortLocal->tryWrite = FALSE;
   pDevExt->pIoPortLocal->errors = 0;
   pDevExt->pIoPortLocal->waitMask = 0;

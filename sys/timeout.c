@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.6  2006/06/08 11:33:35  vfrolov
+ * Fixed bugs with amountInWriteQueue
+ *
  * Revision 1.5  2005/12/05 10:54:55  vfrolov
  * Implemented IOCTL_SERIAL_IMMEDIATE_CHAR
  *
@@ -64,6 +67,20 @@ VOID TimeoutRoutine(
     #pragma warning(pop)
 
     if (pCancelRoutine) {
+      PC0C_IRP_STATE pState;
+
+      pState = GetIrpState(pIrp);
+      HALT_UNLESS(pState);
+
+      if (pState->iQueue == C0C_QUEUE_WRITE) {
+        PC0C_FDOPORT_EXTENSION pDevExt;
+
+        pDevExt = IoGetCurrentIrpStackLocation(pIrp)->DeviceObject->DeviceExtension;
+
+        pDevExt->pIoPortLocal->amountInWriteQueue -=
+            GetWriteLength(pIrp) - (ULONG)pIrp->IoStatus.Information;
+      }
+
       ShiftQueue(pQueue);
       if (pQueue->pCurrent)
         FdoPortSetIrpTimeout(pDevExt, pQueue->pCurrent);

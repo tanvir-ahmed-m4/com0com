@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.10  2006/06/08 11:33:35  vfrolov
+ * Fixed bugs with amountInWriteQueue
+ *
  * Revision 1.9  2006/05/17 15:31:14  vfrolov
  * Implemented SERIAL_TRANSMIT_TOGGLE
  *
@@ -205,12 +208,15 @@ VOID FdoPortCompleteQueue(IN PLIST_ENTRY pQueueToComplete)
     HALT_UNLESS(pState);
 
     if (pState->iQueue == C0C_QUEUE_WRITE) {
+      KIRQL oldIrql;
       PC0C_FDOPORT_EXTENSION pDevExt;
 
       pDevExt = IoGetCurrentIrpStackLocation(pIrp)->DeviceObject->DeviceExtension;
 
+      KeAcquireSpinLock(pDevExt->pIoLock, &oldIrql);
       pDevExt->pIoPortLocal->amountInWriteQueue -=
           GetWriteLength(pIrp) - (ULONG)pIrp->IoStatus.Information;
+      KeReleaseSpinLock(pDevExt->pIoLock, oldIrql);
     }
 
     if (pIrp->IoStatus.Status == STATUS_CANCELLED)
