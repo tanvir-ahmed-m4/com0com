@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2004-2005 Vyacheslav Frolov
+ * Copyright (c) 2004-2006 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.7  2006/06/21 16:23:57  vfrolov
+ * Fixed possible BSOD after one port of pair removal
+ *
  * Revision 1.6  2006/06/08 11:33:35  vfrolov
  * Fixed bugs with amountInWriteQueue
  *
@@ -49,13 +52,13 @@
 #define FILE_ID 3
 
 VOID TimeoutRoutine(
-    IN PC0C_FDOPORT_EXTENSION pDevExt,
+    PC0C_IO_PORT pIoPort,
     IN PC0C_IRP_QUEUE pQueue)
 {
   KIRQL oldIrql;
   PIRP pIrp;
 
-  KeAcquireSpinLock(pDevExt->pIoLock, &oldIrql);
+  KeAcquireSpinLock(pIoPort->pIoLock, &oldIrql);
 
   pIrp = pQueue->pCurrent;
 
@@ -73,23 +76,19 @@ VOID TimeoutRoutine(
       HALT_UNLESS(pState);
 
       if (pState->iQueue == C0C_QUEUE_WRITE) {
-        PC0C_FDOPORT_EXTENSION pDevExt;
-
-        pDevExt = IoGetCurrentIrpStackLocation(pIrp)->DeviceObject->DeviceExtension;
-
-        pDevExt->pIoPortLocal->amountInWriteQueue -=
+        pIoPort->amountInWriteQueue -=
             GetWriteLength(pIrp) - (ULONG)pIrp->IoStatus.Information;
       }
 
       ShiftQueue(pQueue);
       if (pQueue->pCurrent)
-        FdoPortSetIrpTimeout(pDevExt, pQueue->pCurrent);
+        SetIrpTimeout(pIoPort, pQueue->pCurrent);
     } else {
       pIrp = NULL;
     }
   }
 
-  KeReleaseSpinLock(pDevExt->pIoLock, oldIrql);
+  KeReleaseSpinLock(pIoPort->pIoLock, oldIrql);
 
   if (pIrp) {
     TraceIrp("timeout", pIrp, NULL, TRACE_FLAG_RESULTS);
@@ -99,19 +98,23 @@ VOID TimeoutRoutine(
   }
 }
 
-NTSTATUS SetReadTimeout(IN PC0C_FDOPORT_EXTENSION pDevExt, PIRP pIrp)
+NTSTATUS SetReadTimeout(PC0C_IO_PORT pIoPort, PIRP pIrp)
 {
   SERIAL_TIMEOUTS timeouts;
   BOOLEAN setTotal;
   ULONG multiplier;
   ULONG constant;
   PC0C_IRP_STATE pState;
+  PC0C_FDOPORT_EXTENSION pDevExt;
 
-  KeCancelTimer(&pDevExt->pIoPortLocal->timerReadTotal);
-  KeCancelTimer(&pDevExt->pIoPortLocal->timerReadInterval);
+  KeCancelTimer(&pIoPort->timerReadTotal);
+  KeCancelTimer(&pIoPort->timerReadInterval);
 
   pState = GetIrpState(pIrp);
   HALT_UNLESS(pState);
+
+  pDevExt = pIoPort->pDevExt;
+  HALT_UNLESS(pDevExt);
 
   KeAcquireSpinLockAtDpcLevel(&pDevExt->controlLock);
   timeouts = pDevExt->timeouts;
@@ -151,11 +154,11 @@ NTSTATUS SetReadTimeout(IN PC0C_FDOPORT_EXTENSION pDevExt, PIRP pIrp)
     if (timeouts.ReadIntervalTimeout) {
       pState->flags |= C0C_IRP_FLAG_INTERVAL_TIMEOUT;
 
-      pDevExt->pIoPortLocal->timeoutInterval.QuadPart =
+      pIoPort->timeoutInterval.QuadPart =
           ((LONGLONG)timeouts.ReadIntervalTimeout) * -10000;
 
       if (pIrp->IoStatus.Information)
-        SetIntervalTimeout(pDevExt->pIoPortLocal);
+        SetIntervalTimeout(pIoPort);
     }
   }
 
@@ -168,22 +171,26 @@ NTSTATUS SetReadTimeout(IN PC0C_FDOPORT_EXTENSION pDevExt, PIRP pIrp)
     total.QuadPart = ((LONGLONG)(UInt32x32To64(length, multiplier) + constant)) * -10000;
 
     KeSetTimer(
-        &pDevExt->pIoPortLocal->timerReadTotal,
+        &pIoPort->timerReadTotal,
         total,
-        &pDevExt->pIoPortLocal->timerReadTotalDpc);
+        &pIoPort->timerReadTotalDpc);
   }
 
   return STATUS_PENDING;
 }
 
-NTSTATUS SetWriteTimeout(IN PC0C_FDOPORT_EXTENSION pDevExt, PIRP pIrp)
+NTSTATUS SetWriteTimeout(PC0C_IO_PORT pIoPort, PIRP pIrp)
 {
   SERIAL_TIMEOUTS timeouts;
   BOOLEAN setTotal;
   ULONG multiplier;
   ULONG constant;
+  PC0C_FDOPORT_EXTENSION pDevExt;
 
-  KeCancelTimer(&pDevExt->pIoPortLocal->timerWriteTotal);
+  KeCancelTimer(&pIoPort->timerWriteTotal);
+
+  pDevExt = pIoPort->pDevExt;
+  HALT_UNLESS(pDevExt);
 
   KeAcquireSpinLockAtDpcLevel(&pDevExt->controlLock);
   timeouts = pDevExt->timeouts;
@@ -208,9 +215,9 @@ NTSTATUS SetWriteTimeout(IN PC0C_FDOPORT_EXTENSION pDevExt, PIRP pIrp)
     total.QuadPart = ((LONGLONG)(UInt32x32To64(length, multiplier) + constant)) * -10000;
 
     KeSetTimer(
-        &pDevExt->pIoPortLocal->timerWriteTotal,
+        &pIoPort->timerWriteTotal,
         total,
-        &pDevExt->pIoPortLocal->timerWriteTotalDpc);
+        &pIoPort->timerWriteTotalDpc);
   }
 
   return STATUS_PENDING;
@@ -222,13 +229,13 @@ VOID TimeoutReadTotal(
     IN PVOID systemArgument1,
     IN PVOID systemArgument2)
 {
-  PC0C_FDOPORT_EXTENSION pDevExt = (PC0C_FDOPORT_EXTENSION)deferredContext;
+  PC0C_IO_PORT pIoPort = (PC0C_IO_PORT)deferredContext;
 
   UNREFERENCED_PARAMETER(pDpc);
   UNREFERENCED_PARAMETER(systemArgument1);
   UNREFERENCED_PARAMETER(systemArgument2);
 
-  TimeoutRoutine(pDevExt, &pDevExt->pIoPortLocal->irpQueues[C0C_QUEUE_READ]);
+  TimeoutRoutine(pIoPort, &pIoPort->irpQueues[C0C_QUEUE_READ]);
 }
 
 VOID TimeoutReadInterval(
@@ -237,13 +244,13 @@ VOID TimeoutReadInterval(
     IN PVOID systemArgument1,
     IN PVOID systemArgument2)
 {
-  PC0C_FDOPORT_EXTENSION pDevExt = (PC0C_FDOPORT_EXTENSION)deferredContext;
+  PC0C_IO_PORT pIoPort = (PC0C_IO_PORT)deferredContext;
 
   UNREFERENCED_PARAMETER(pDpc);
   UNREFERENCED_PARAMETER(systemArgument1);
   UNREFERENCED_PARAMETER(systemArgument2);
 
-  TimeoutRoutine(pDevExt, &pDevExt->pIoPortLocal->irpQueues[C0C_QUEUE_READ]);
+  TimeoutRoutine(pIoPort, &pIoPort->irpQueues[C0C_QUEUE_READ]);
 }
 
 VOID TimeoutWriteTotal(
@@ -252,35 +259,35 @@ VOID TimeoutWriteTotal(
     IN PVOID systemArgument1,
     IN PVOID systemArgument2)
 {
-  PC0C_FDOPORT_EXTENSION pDevExt = (PC0C_FDOPORT_EXTENSION)deferredContext;
+  PC0C_IO_PORT pIoPort = (PC0C_IO_PORT)deferredContext;
 
   UNREFERENCED_PARAMETER(pDpc);
   UNREFERENCED_PARAMETER(systemArgument1);
   UNREFERENCED_PARAMETER(systemArgument2);
 
-  TimeoutRoutine(pDevExt, &pDevExt->pIoPortLocal->irpQueues[C0C_QUEUE_WRITE]);
+  TimeoutRoutine(pIoPort, &pIoPort->irpQueues[C0C_QUEUE_WRITE]);
 }
 
-VOID AllocTimeouts(IN PC0C_FDOPORT_EXTENSION pDevExt)
+VOID AllocTimeouts(PC0C_IO_PORT pIoPort)
 {
-  KeInitializeTimer(&pDevExt->pIoPortLocal->timerReadTotal);
-  KeInitializeTimer(&pDevExt->pIoPortLocal->timerReadInterval);
-  KeInitializeTimer(&pDevExt->pIoPortLocal->timerWriteTotal);
+  KeInitializeTimer(&pIoPort->timerReadTotal);
+  KeInitializeTimer(&pIoPort->timerReadInterval);
+  KeInitializeTimer(&pIoPort->timerWriteTotal);
 
-  KeInitializeDpc(&pDevExt->pIoPortLocal->timerReadTotalDpc, TimeoutReadTotal, pDevExt);
-  KeInitializeDpc(&pDevExt->pIoPortLocal->timerReadIntervalDpc, TimeoutReadInterval, pDevExt);
-  KeInitializeDpc(&pDevExt->pIoPortLocal->timerWriteTotalDpc, TimeoutWriteTotal, pDevExt);
+  KeInitializeDpc(&pIoPort->timerReadTotalDpc, TimeoutReadTotal, pIoPort);
+  KeInitializeDpc(&pIoPort->timerReadIntervalDpc, TimeoutReadInterval, pIoPort);
+  KeInitializeDpc(&pIoPort->timerWriteTotalDpc, TimeoutWriteTotal, pIoPort);
 }
 
-VOID FreeTimeouts(IN PC0C_FDOPORT_EXTENSION pDevExt)
+VOID FreeTimeouts(PC0C_IO_PORT pIoPort)
 {
-    KeCancelTimer(&pDevExt->pIoPortLocal->timerReadTotal);
-    KeCancelTimer(&pDevExt->pIoPortLocal->timerReadInterval);
-    KeCancelTimer(&pDevExt->pIoPortLocal->timerWriteTotal);
+    KeCancelTimer(&pIoPort->timerReadTotal);
+    KeCancelTimer(&pIoPort->timerReadInterval);
+    KeCancelTimer(&pIoPort->timerWriteTotal);
 
-    KeRemoveQueueDpc(&pDevExt->pIoPortLocal->timerReadTotalDpc);
-    KeRemoveQueueDpc(&pDevExt->pIoPortLocal->timerReadIntervalDpc);
-    KeRemoveQueueDpc(&pDevExt->pIoPortLocal->timerWriteTotalDpc);
+    KeRemoveQueueDpc(&pIoPort->timerReadTotalDpc);
+    KeRemoveQueueDpc(&pIoPort->timerReadIntervalDpc);
+    KeRemoveQueueDpc(&pIoPort->timerWriteTotalDpc);
 }
 
 VOID SetIntervalTimeout(PC0C_IO_PORT pIoPort)
@@ -288,15 +295,15 @@ VOID SetIntervalTimeout(PC0C_IO_PORT pIoPort)
   KeSetTimer(&pIoPort->timerReadInterval, pIoPort->timeoutInterval, &pIoPort->timerReadIntervalDpc);
 }
 
-NTSTATUS FdoPortSetIrpTimeout(
-    IN PC0C_FDOPORT_EXTENSION pDevExt,
+NTSTATUS SetIrpTimeout(
+    PC0C_IO_PORT pIoPort,
     PIRP pIrp)
 {
   switch (IoGetCurrentIrpStackLocation(pIrp)->MajorFunction) {
   case IRP_MJ_WRITE:
-    return SetWriteTimeout(pDevExt, pIrp);
+    return SetWriteTimeout(pIoPort, pIrp);
   case IRP_MJ_READ:
-    return SetReadTimeout(pDevExt, pIrp);
+    return SetReadTimeout(pIoPort, pIrp);
   }
 
   return STATUS_PENDING;

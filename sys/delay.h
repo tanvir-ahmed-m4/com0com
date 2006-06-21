@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2005 Vyacheslav Frolov
+ * Copyright (c) 2005-2006 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.2  2006/06/21 16:23:57  vfrolov
+ * Fixed possible BSOD after one port of pair removal
+ *
  * Revision 1.1  2005/08/23 15:30:22  vfrolov
  * Initial revision
  *
@@ -44,8 +47,8 @@ typedef struct _C0C_ADAPTIVE_DELAY {
   BOOLEAN                 started;
 } C0C_ADAPTIVE_DELAY, *PC0C_ADAPTIVE_DELAY;
 
-NTSTATUS AllocWriteDelay(IN PC0C_FDOPORT_EXTENSION pDevExt);
-VOID FreeWriteDelay(IN PC0C_FDOPORT_EXTENSION pDevExt);
+NTSTATUS AllocWriteDelay(PC0C_IO_PORT pIoPort);
+VOID FreeWriteDelay(PC0C_IO_PORT pIoPort);
 SIZE_T GetWriteLimit(PC0C_ADAPTIVE_DELAY pWriteDelay);
 VOID SetWriteDelay(IN PC0C_FDOPORT_EXTENSION pDevExt);
 VOID StartWriteDelayTimer(PC0C_ADAPTIVE_DELAY pWriteDelay);

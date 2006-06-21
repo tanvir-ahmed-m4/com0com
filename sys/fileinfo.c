@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2005 Vyacheslav Frolov
+ * Copyright (c) 2005-2006 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.2  2006/06/21 16:23:57  vfrolov
+ * Fixed possible BSOD after one port of pair removal
+ *
  * Revision 1.1  2005/09/28 10:06:42  vfrolov
  * Implemented IRP_MJ_QUERY_INFORMATION and IRP_MJ_SET_INFORMATION
  *
@@ -32,11 +35,11 @@
  */
 #define FILE_ID 0xA
 
-NTSTATUS FdoPortQueryInformation(PC0C_FDOPORT_EXTENSION pDevExt, IN PIRP pIrp)
+NTSTATUS FdoPortQueryInformation(PC0C_IO_PORT pIoPortLocal, IN PIRP pIrp)
 {
   NTSTATUS status;
 
-  if ((pDevExt->handFlow.ControlHandShake & SERIAL_ERROR_ABORT) && pDevExt->pIoPortLocal->errors) {
+  if ((pIoPortLocal->handFlow.ControlHandShake & SERIAL_ERROR_ABORT) && pIoPortLocal->errors) {
     pIrp->IoStatus.Information = 0;
     status = STATUS_CANCELLED;
   } else {
@@ -69,11 +72,11 @@ NTSTATUS FdoPortQueryInformation(PC0C_FDOPORT_EXTENSION pDevExt, IN PIRP pIrp)
   return status;
 }
 
-NTSTATUS FdoPortSetInformation(PC0C_FDOPORT_EXTENSION pDevExt, IN PIRP pIrp)
+NTSTATUS FdoPortSetInformation(PC0C_IO_PORT pIoPortLocal, IN PIRP pIrp)
 {
   NTSTATUS status;
 
-  if ((pDevExt->handFlow.ControlHandShake & SERIAL_ERROR_ABORT) && pDevExt->pIoPortLocal->errors) {
+  if ((pIoPortLocal->handFlow.ControlHandShake & SERIAL_ERROR_ABORT) && pIoPortLocal->errors) {
     status = STATUS_CANCELLED;
   } else {
     PIO_STACK_LOCATION pIrpStack;
@@ -108,9 +111,9 @@ NTSTATUS c0cFileInformation(IN PDEVICE_OBJECT pDevObj, IN PIRP pIrp)
   switch (pDevExt->doType) {
   case C0C_DOTYPE_FP:
     if (code == IRP_MJ_QUERY_INFORMATION)
-      status = FdoPortQueryInformation((PC0C_FDOPORT_EXTENSION)pDevExt, pIrp);
+      status = FdoPortQueryInformation(((PC0C_FDOPORT_EXTENSION)pDevExt)->pIoPortLocal, pIrp);
     else
-      status = FdoPortSetInformation((PC0C_FDOPORT_EXTENSION)pDevExt, pIrp);
+      status = FdoPortSetInformation(((PC0C_FDOPORT_EXTENSION)pDevExt)->pIoPortLocal, pIrp);
     break;
   default:
     status = STATUS_INVALID_DEVICE_REQUEST;

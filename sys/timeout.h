@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2004-2005 Vyacheslav Frolov
+ * Copyright (c) 2004-2006 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.4  2006/06/21 16:23:57  vfrolov
+ * Fixed possible BSOD after one port of pair removal
+ *
  * Revision 1.3  2005/08/23 15:49:21  vfrolov
  * Implemented baudrate emulation
  *
@@ -34,13 +37,13 @@
 #ifndef _C0C_TIMEOUT_H_
 #define _C0C_TIMEOUT_H_
 
-VOID AllocTimeouts(IN PC0C_FDOPORT_EXTENSION pDevExt);
-VOID FreeTimeouts(IN PC0C_FDOPORT_EXTENSION pDevExt);
+VOID AllocTimeouts(PC0C_IO_PORT pIoPort);
+VOID FreeTimeouts(PC0C_IO_PORT pIoPort);
 
 VOID SetIntervalTimeout(PC0C_IO_PORT pIoPort);
 
-NTSTATUS FdoPortSetIrpTimeout(
-    IN PC0C_FDOPORT_EXTENSION pDevExt,
+NTSTATUS SetIrpTimeout(
+    PC0C_IO_PORT pIoPort,
     PIRP pIrp);
 
 NTSTATUS FdoPortSetTimeouts(

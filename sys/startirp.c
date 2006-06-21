@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.11  2006/06/21 16:23:57  vfrolov
+ * Fixed possible BSOD after one port of pair removal
+ *
  * Revision 1.10  2006/06/08 11:33:35  vfrolov
  * Fixed bugs with amountInWriteQueue
  *
@@ -261,7 +264,7 @@ NTSTATUS StartIrp(
 
     if (length) {
       pDevExt->pIoPortLocal->amountInWriteQueue += length;
-      UpdateTransmitToggle(pDevExt, &queueToComplete);
+      UpdateTransmitToggle(pDevExt->pIoPortLocal, &queueToComplete);
     }
   }
 

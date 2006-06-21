@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.4  2006/06/21 16:23:57  vfrolov
+ * Fixed possible BSOD after one port of pair removal
+ *
  * Revision 1.3  2006/05/17 15:31:14  vfrolov
  * Implemented SERIAL_TRANSMIT_TOGGLE
  *
@@ -35,20 +38,20 @@
 #define _C0C_FLOW_H_
 
 NTSTATUS SetHandFlow(
-    PC0C_FDOPORT_EXTENSION pDevExt,
+    PC0C_IO_PORT pIoPort,
     PSERIAL_HANDFLOW pHandFlow,
     PLIST_ENTRY pQueueToComplete);
 
 VOID UpdateHandFlow(
-    PC0C_FDOPORT_EXTENSION pDevExt,
+    PC0C_IO_PORT pIoPort,
     BOOLEAN freed,
     PLIST_ENTRY pQueueToComplete);
 
 VOID UpdateTransmitToggle(
-    PC0C_FDOPORT_EXTENSION pDevExt,
+    PC0C_IO_PORT pIoPort,
     PLIST_ENTRY pQueueToComplete);
 
-VOID SetLimit(PC0C_FDOPORT_EXTENSION pDevExt);
+VOID SetLimit(PC0C_IO_PORT pIoPort);
 VOID SetModemStatusHolding(PC0C_IO_PORT pIoPort);
 VOID SetXonXoffHolding(PC0C_IO_PORT pIoPort, short xonXoff);
 VOID SetBreakHolding(PC0C_IO_PORT pIoPort, BOOLEAN on);
