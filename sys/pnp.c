@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2004-2005 Vyacheslav Frolov
+ * Copyright (c) 2004-2006 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,10 @@
  *
  *
  * $Log$
+ * Revision 1.5  2006/06/23 07:37:24  vfrolov
+ * Disabled usage pDevExt after deleting device
+ * Added check of openCount to IRP_MN_QUERY_REMOVE_DEVICE
+ *
  * Revision 1.4  2005/07/14 13:51:07  vfrolov
  * Replaced ASSERT by HALT_UNLESS
  *
@@ -108,6 +112,7 @@ NTSTATUS FdoBusPnp(
     break;
   case IRP_MN_REMOVE_DEVICE:
     RemoveFdoBus(pDevExt);
+    pDevExt = NULL;
     break;
   }
 
@@ -299,16 +304,30 @@ NTSTATUS FdoPortPnp(
   ULONG minorFunction = pIrpStack->MinorFunction;
   PDEVICE_OBJECT pLowDevObj = pDevExt->pLowDevObj; // IRP_MN_REMOVE_DEVICE deletes *pDevExt!
 
+  status = STATUS_SUCCESS;
+
   switch (minorFunction) {
+  case IRP_MN_QUERY_REMOVE_DEVICE:
+    if (pDevExt->openCount)
+      status = STATUS_DEVICE_BUSY;
+    break;
   case IRP_MN_REMOVE_DEVICE:
     RemoveFdoPort(pDevExt);
+    pDevExt = NULL;
     break;
   }
 
-  IoSkipCurrentIrpStackLocation(pIrp);
-  status = IoCallDriver(pLowDevObj, pIrp);
+  if (status == STATUS_SUCCESS) {
+    IoSkipCurrentIrpStackLocation(pIrp);
+    status = IoCallDriver(pLowDevObj, pIrp);
 
-  TraceCode((PC0C_COMMON_EXTENSION)pDevExt, "PNP ", codeNameTablePnp, minorFunction, &status);
+    TraceCode((PC0C_COMMON_EXTENSION)pDevExt, "PNP ", codeNameTablePnp, minorFunction, &status);
+  } else {
+    TraceIrp("PNP", pIrp, &status, TRACE_FLAG_RESULTS);
+
+    pIrp->IoStatus.Status = status;
+    IoCompleteRequest(pIrp, IO_NO_INCREMENT);
+  }
 
   return status;
 }
