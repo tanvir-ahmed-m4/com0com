@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.27  2006/06/23 11:44:52  vfrolov
+ * Mass replacement pDevExt by pIoPort
+ *
  * Revision 1.26  2006/06/21 16:23:57  vfrolov
  * Fixed possible BSOD after one port of pair removal
  *
@@ -233,6 +236,9 @@ typedef struct _C0C_IO_PORT {
   BOOLEAN                 emuOverrun;
 } C0C_IO_PORT, *PC0C_IO_PORT;
 
+#define FDO_PORT_TO_IO_PORT(pDevObj) \
+    (((PC0C_FDOPORT_EXTENSION)((pDevObj)->DeviceExtension))->pIoPortLocal)
+
 typedef struct _C0C_PDOPORT_EXTENSION {
   COMMON_EXTENSION
 
@@ -244,7 +250,6 @@ typedef struct _C0C_PDOPORT_EXTENSION {
 typedef struct _C0C_FDOPORT_EXTENSION {
   FDO_EXTENSION
 
-  PKSPIN_LOCK             pIoLock;
   PC0C_IO_PORT            pIoPortLocal;
 
   UNICODE_STRING          ntDeviceName;
@@ -307,38 +312,38 @@ VOID RemoveFdoPort(IN PC0C_FDOPORT_EXTENSION pDevExt);
 VOID RemoveFdoBus(IN PC0C_FDOBUS_EXTENSION pDevExt);
 
 typedef NTSTATUS (*PC0C_FDOPORT_START_ROUTINE)(
-    IN PC0C_FDOPORT_EXTENSION pDevExt,
+    IN PC0C_IO_PORT pIoPort,
     IN PLIST_ENTRY pQueueToComplete);
 
 VOID ShiftQueue(PC0C_IRP_QUEUE pQueue);
 
 NTSTATUS FdoPortStartIrp(
-    IN PC0C_FDOPORT_EXTENSION pDevExt,
+    IN PC0C_IO_PORT pIoPort,
     IN PIRP pIrp,
     IN UCHAR iQueue,
     IN PC0C_FDOPORT_START_ROUTINE pStartRoutine);
 
 VOID CancelQueue(PC0C_IRP_QUEUE pQueue, PLIST_ENTRY pQueueToComplete);
-VOID FdoPortCancelQueues(IN PC0C_FDOPORT_EXTENSION pDevExt);
+VOID FdoPortCancelQueues(IN PC0C_IO_PORT pIoPort);
 VOID FdoPortCompleteQueue(IN PLIST_ENTRY pQueueToComplete);
 
 NTSTATUS FdoPortImmediateChar(
-    IN PC0C_FDOPORT_EXTENSION pDevExt,
+    IN PC0C_IO_PORT pIoPort,
     IN PIRP pIrp,
     IN PIO_STACK_LOCATION pIrpStack);
 
 NTSTATUS FdoPortWaitOnMask(
-    IN PC0C_FDOPORT_EXTENSION pDevExt,
+    IN PC0C_IO_PORT pIoPort,
     IN PIRP pIrp,
     IN PIO_STACK_LOCATION pIrpStack);
 
 NTSTATUS FdoPortSetWaitMask(
-    IN PC0C_FDOPORT_EXTENSION pDevExt,
+    IN PC0C_IO_PORT pIoPort,
     IN PIRP pIrp,
     IN PIO_STACK_LOCATION pIrpStack);
 
 NTSTATUS FdoPortGetWaitMask(
-    IN PC0C_FDOPORT_EXTENSION pDevExt,
+    IN PC0C_IO_PORT pIoPort,
     IN PIRP pIrp,
     IN PIO_STACK_LOCATION pIrpStack);
 

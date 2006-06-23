@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.6  2006/06/23 11:44:52  vfrolov
+ * Mass replacement pDevExt by pIoPort
+ *
  * Revision 1.5  2006/06/21 16:23:57  vfrolov
  * Fixed possible BSOD after one port of pair removal
  *
@@ -42,26 +45,26 @@
 #include "precomp.h"
 
 NTSTATUS StartIrpRead(
-    IN PC0C_FDOPORT_EXTENSION pDevExt,
+    IN PC0C_IO_PORT pIoPort,
     IN PLIST_ENTRY pQueueToComplete)
 {
   return ReadWrite(
-      pDevExt->pIoPortLocal, TRUE,
-      pDevExt->pIoPortLocal->pIoPortRemote, FALSE,
+      pIoPort, TRUE,
+      pIoPort->pIoPortRemote, FALSE,
       pQueueToComplete);
 }
 
-NTSTATUS FdoPortRead(IN PC0C_FDOPORT_EXTENSION pDevExt, IN PIRP pIrp)
+NTSTATUS FdoPortRead(IN PC0C_IO_PORT pIoPort, IN PIRP pIrp)
 {
   NTSTATUS status;
 
   pIrp->IoStatus.Information = 0;
 
-  if ((pDevExt->pIoPortLocal->handFlow.ControlHandShake & SERIAL_ERROR_ABORT) && pDevExt->pIoPortLocal->errors) {
+  if ((pIoPort->handFlow.ControlHandShake & SERIAL_ERROR_ABORT) && pIoPort->errors) {
     status = STATUS_CANCELLED;
   } else {
     if (IoGetCurrentIrpStackLocation(pIrp)->Parameters.Read.Length)
-      status = FdoPortStartIrp(pDevExt, pIrp, C0C_QUEUE_READ, StartIrpRead);
+      status = FdoPortStartIrp(pIoPort, pIrp, C0C_QUEUE_READ, StartIrpRead);
     else
       status = STATUS_SUCCESS;
   }
@@ -88,7 +91,7 @@ NTSTATUS c0cRead(IN PDEVICE_OBJECT pDevObj, IN PIRP pIrp)
 
   switch (pDevExt->doType) {
   case C0C_DOTYPE_FP:
-    status = FdoPortRead((PC0C_FDOPORT_EXTENSION)pDevExt, pIrp);
+    status = FdoPortRead(((PC0C_FDOPORT_EXTENSION)pDevExt)->pIoPortLocal, pIrp);
     break;
   default:
     status = STATUS_INVALID_DEVICE_REQUEST;

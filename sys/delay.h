@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.3  2006/06/23 11:44:52  vfrolov
+ * Mass replacement pDevExt by pIoPort
+ *
  * Revision 1.2  2006/06/21 16:23:57  vfrolov
  * Fixed possible BSOD after one port of pair removal
  *
@@ -50,7 +53,7 @@ typedef struct _C0C_ADAPTIVE_DELAY {
 NTSTATUS AllocWriteDelay(PC0C_IO_PORT pIoPort);
 VOID FreeWriteDelay(PC0C_IO_PORT pIoPort);
 SIZE_T GetWriteLimit(PC0C_ADAPTIVE_DELAY pWriteDelay);
-VOID SetWriteDelay(IN PC0C_FDOPORT_EXTENSION pDevExt);
+VOID SetWriteDelay(PC0C_IO_PORT pIoPort);
 VOID StartWriteDelayTimer(PC0C_ADAPTIVE_DELAY pWriteDelay);
 VOID StopWriteDelayTimer(PC0C_ADAPTIVE_DELAY pWriteDelay);
 

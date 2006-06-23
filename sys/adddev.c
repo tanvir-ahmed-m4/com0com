@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.16  2006/06/23 11:44:52  vfrolov
+ * Mass replacement pDevExt by pIoPort
+ *
  * Revision 1.15  2006/06/21 16:23:57  vfrolov
  * Fixed possible BSOD after one port of pair removal
  *
@@ -258,7 +261,7 @@ NTSTATUS AddFdoPort(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
   }
 
   pDevExt->pIoPortLocal = ((PC0C_PDOPORT_EXTENSION)pPhDevObj->DeviceExtension)->pIoPortLocal;
-  pDevExt->pIoLock = pDevExt->pIoPortLocal->pIoLock;
+  pDevExt->pIoPortLocal->pDevExt = pDevExt;
 
   if (emuBR) {
     if (NT_SUCCESS(AllocWriteDelay(pDevExt->pIoPortLocal)))
@@ -294,7 +297,7 @@ NTSTATUS AddFdoPort(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
   pDevExt->lineControl.StopBits      = STOP_BIT_1;
   pDevExt->baudRate.BaudRate         = 1200;
 
-  SetWriteDelay(pDevExt);
+  SetWriteDelay(pDevExt->pIoPortLocal);
 
   status = IoCreateSymbolicLink(&pDevExt->win32DeviceName, &pDevExt->ntDeviceName);
 
@@ -327,8 +330,6 @@ NTSTATUS AddFdoPort(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
 
   pNewDevObj->Flags &= ~DO_DEVICE_INITIALIZING;
   pNewDevObj->Flags |= DO_BUFFERED_IO;
-
-  pDevExt->pIoPortLocal->pDevExt = pDevExt;
 
   Trace0((PC0C_COMMON_EXTENSION)pDevExt, L"AddFdoPort OK");
 

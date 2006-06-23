@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2004-2005 Vyacheslav Frolov
+ * Copyright (c) 2004-2006 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.2  2006/06/23 11:44:52  vfrolov
+ * Mass replacement pDevExt by pIoPort
+ *
  * Revision 1.1  2005/01/26 12:18:54  vfrolov
  * Initial revision
  *
@@ -28,21 +31,21 @@
 #include "precomp.h"
 
 NTSTATUS StartIrpWaitOnMask(
-    IN PC0C_FDOPORT_EXTENSION pDevExt,
+    IN PC0C_IO_PORT pIoPort,
     IN PLIST_ENTRY pQueueToComplete)
 {
   UNREFERENCED_PARAMETER(pQueueToComplete);
 
-  if (!pDevExt->pIoPortLocal->waitMask)
+  if (!pIoPort->waitMask)
     return STATUS_INVALID_PARAMETER;
 
-  if (pDevExt->pIoPortLocal->eventMask) {
+  if (pIoPort->eventMask) {
     PIRP pIrp;
 
-    pIrp = pDevExt->pIoPortLocal->irpQueues[C0C_QUEUE_WAIT].pCurrent;
+    pIrp = pIoPort->irpQueues[C0C_QUEUE_WAIT].pCurrent;
 
-    *((PULONG)pIrp->AssociatedIrp.SystemBuffer) = pDevExt->pIoPortLocal->eventMask;
-    pDevExt->pIoPortLocal->eventMask = 0;
+    *((PULONG)pIrp->AssociatedIrp.SystemBuffer) = pIoPort->eventMask;
+    pIoPort->eventMask = 0;
     pIrp->IoStatus.Information = sizeof(ULONG);
     return STATUS_SUCCESS;
   }
@@ -51,18 +54,18 @@ NTSTATUS StartIrpWaitOnMask(
 }
 
 NTSTATUS FdoPortWaitOnMask(
-    IN PC0C_FDOPORT_EXTENSION pDevExt,
+    IN PC0C_IO_PORT pIoPort,
     IN PIRP pIrp,
     IN PIO_STACK_LOCATION pIrpStack)
 {
   if (pIrpStack->Parameters.DeviceIoControl.OutputBufferLength < sizeof(ULONG))
     return STATUS_BUFFER_TOO_SMALL;
 
-  return FdoPortStartIrp(pDevExt, pIrp, C0C_QUEUE_WAIT, StartIrpWaitOnMask);
+  return FdoPortStartIrp(pIoPort, pIrp, C0C_QUEUE_WAIT, StartIrpWaitOnMask);
 }
 
 NTSTATUS FdoPortSetWaitMask(
-    IN PC0C_FDOPORT_EXTENSION pDevExt,
+    IN PC0C_IO_PORT pIoPort,
     IN PIRP pIrp,
     IN PIO_STACK_LOCATION pIrpStack)
 {
@@ -94,25 +97,25 @@ NTSTATUS FdoPortSetWaitMask(
 
   InitializeListHead(&queueToComplete);
 
-  KeAcquireSpinLock(pDevExt->pIoLock, &oldIrql);
+  KeAcquireSpinLock(pIoPort->pIoLock, &oldIrql);
   FdoPortIo(
       C0C_IO_TYPE_WAIT_COMPLETE,
-      &pDevExt->pIoPortLocal->eventMask,
-      pDevExt->pIoPortLocal,
-      &pDevExt->pIoPortLocal->irpQueues[C0C_QUEUE_WAIT],
+      &pIoPort->eventMask,
+      pIoPort,
+      &pIoPort->irpQueues[C0C_QUEUE_WAIT],
       &queueToComplete);
 
-  pDevExt->pIoPortLocal->waitMask = *pSysBuf;
-  pDevExt->pIoPortLocal->eventMask = 0;
+  pIoPort->waitMask = *pSysBuf;
+  pIoPort->eventMask = 0;
 
-  KeReleaseSpinLock(pDevExt->pIoLock, oldIrql);
+  KeReleaseSpinLock(pIoPort->pIoLock, oldIrql);
   FdoPortCompleteQueue(&queueToComplete);
 
   return STATUS_SUCCESS;
 }
 
 NTSTATUS FdoPortGetWaitMask(
-    IN PC0C_FDOPORT_EXTENSION pDevExt,
+    IN PC0C_IO_PORT pIoPort,
     IN PIRP pIrp,
     IN PIO_STACK_LOCATION pIrpStack)
 {
@@ -124,9 +127,9 @@ NTSTATUS FdoPortGetWaitMask(
 
   pSysBuf = (PULONG)pIrp->AssociatedIrp.SystemBuffer;
 
-  KeAcquireSpinLock(pDevExt->pIoLock, &oldIrql);
-  *pSysBuf = pDevExt->pIoPortLocal->waitMask;
-  KeReleaseSpinLock(pDevExt->pIoLock, oldIrql);
+  KeAcquireSpinLock(pIoPort->pIoLock, &oldIrql);
+  *pSysBuf = pIoPort->waitMask;
+  KeReleaseSpinLock(pIoPort->pIoLock, oldIrql);
 
   pIrp->IoStatus.Information = sizeof(ULONG);
 

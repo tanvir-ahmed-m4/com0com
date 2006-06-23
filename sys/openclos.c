@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.15  2006/06/23 11:44:52  vfrolov
+ * Mass replacement pDevExt by pIoPort
+ *
  * Revision 1.14  2006/06/21 16:23:57  vfrolov
  * Fixed possible BSOD after one port of pair removal
  *
@@ -77,11 +80,14 @@ NTSTATUS FdoPortOpen(IN PC0C_FDOPORT_EXTENSION pDevExt)
   PUCHAR pBase;
   ULONG size;
   KIRQL oldIrql;
+  PC0C_IO_PORT pIoPort;
 
   if (InterlockedIncrement(&pDevExt->openCount) != 1) {
     InterlockedDecrement(&pDevExt->openCount);
     return STATUS_ACCESS_DENIED;
   }
+
+  pIoPort = pDevExt->pIoPortLocal;
 
   switch (MmQuerySystemSize()) {
   case MmLargeSystem:
@@ -107,14 +113,14 @@ NTSTATUS FdoPortOpen(IN PC0C_FDOPORT_EXTENSION pDevExt)
   InitializeListHead(&queueToComplete);
 
 #if DBG
-  if (pDevExt->pIoPortLocal->amountInWriteQueue) {
+  if (pIoPort->amountInWriteQueue) {
     NTSTATUS status;
     UNICODE_STRING msg;
 
     status = STATUS_SUCCESS;
     RtlInitUnicodeString(&msg, NULL);
     StrAppendStr0(&status, &msg, L"!!!WARNING!!! amountInWriteQueue = ");
-    StrAppendNum(&status, &msg, pDevExt->pIoPortLocal->amountInWriteQueue, 10);
+    StrAppendNum(&status, &msg, pIoPort->amountInWriteQueue, 10);
 
     Trace0((PC0C_COMMON_EXTENSION)pDevExt, msg.Buffer);
 
@@ -122,23 +128,23 @@ NTSTATUS FdoPortOpen(IN PC0C_FDOPORT_EXTENSION pDevExt)
   }
 #endif /* DBG */
 
-  KeAcquireSpinLock(pDevExt->pIoLock, &oldIrql);
+  KeAcquireSpinLock(pIoPort->pIoLock, &oldIrql);
 
-  InitBuffer(&pDevExt->pIoPortLocal->readBuf, pBase, size);
+  InitBuffer(&pIoPort->readBuf, pBase, size);
 
-  pDevExt->pIoPortLocal->amountInWriteQueue = 0;
-  pDevExt->pIoPortLocal->tryWrite = FALSE;
-  pDevExt->pIoPortLocal->errors = 0;
-  pDevExt->pIoPortLocal->waitMask = 0;
-  pDevExt->pIoPortLocal->eventMask = 0;
-  pDevExt->pIoPortLocal->escapeChar = 0;
-  RtlZeroMemory(&pDevExt->pIoPortLocal->perfStats, sizeof(pDevExt->pIoPortLocal->perfStats));
-  pDevExt->pIoPortLocal->handFlow.XoffLimit = size >> 3;
-  pDevExt->pIoPortLocal->handFlow.XonLimit = size >> 1;
+  pIoPort->amountInWriteQueue = 0;
+  pIoPort->tryWrite = FALSE;
+  pIoPort->errors = 0;
+  pIoPort->waitMask = 0;
+  pIoPort->eventMask = 0;
+  pIoPort->escapeChar = 0;
+  RtlZeroMemory(&pIoPort->perfStats, sizeof(pIoPort->perfStats));
+  pIoPort->handFlow.XoffLimit = size >> 3;
+  pIoPort->handFlow.XonLimit = size >> 1;
 
-  SetHandFlow(pDevExt->pIoPortLocal, NULL, &queueToComplete);
+  SetHandFlow(pIoPort, NULL, &queueToComplete);
 
-  KeReleaseSpinLock(pDevExt->pIoLock, oldIrql);
+  KeReleaseSpinLock(pIoPort->pIoLock, oldIrql);
 
   FdoPortCompleteQueue(&queueToComplete);
 
@@ -149,18 +155,21 @@ NTSTATUS FdoPortClose(IN PC0C_FDOPORT_EXTENSION pDevExt)
 {
   LIST_ENTRY queueToComplete;
   KIRQL oldIrql;
+  PC0C_IO_PORT pIoPort;
+
+  pIoPort = pDevExt->pIoPortLocal;
 
   InitializeListHead(&queueToComplete);
 
-  KeAcquireSpinLock(pDevExt->pIoLock, &oldIrql);
+  KeAcquireSpinLock(pIoPort->pIoLock, &oldIrql);
 
-  pDevExt->pIoPortLocal->writeHoldingRemote = 0;
-  pDevExt->pIoPortLocal->sendXonXoff = 0;
-  SetModemStatus(pDevExt->pIoPortLocal->pIoPortRemote, 0, C0C_MSB_CTS | C0C_MSB_DSR, &queueToComplete);
-  FreeBuffer(&pDevExt->pIoPortLocal->readBuf);
-  SetBreakHolding(pDevExt->pIoPortLocal, FALSE);
+  pIoPort->writeHoldingRemote = 0;
+  pIoPort->sendXonXoff = 0;
+  SetModemStatus(pIoPort->pIoPortRemote, 0, C0C_MSB_CTS | C0C_MSB_DSR, &queueToComplete);
+  FreeBuffer(&pIoPort->readBuf);
+  SetBreakHolding(pIoPort, FALSE);
 
-  KeReleaseSpinLock(pDevExt->pIoLock, oldIrql);
+  KeReleaseSpinLock(pIoPort->pIoLock, oldIrql);
 
   FdoPortCompleteQueue(&queueToComplete);
 
@@ -230,7 +239,7 @@ NTSTATUS c0cCleanup(IN PDEVICE_OBJECT pDevObj, IN PIRP pIrp)
 
   switch (pDevExt->doType) {
   case C0C_DOTYPE_FP:
-    FdoPortCancelQueues((PC0C_FDOPORT_EXTENSION)pDevExt);
+    FdoPortCancelQueues(((PC0C_FDOPORT_EXTENSION)pDevExt)->pIoPortLocal);
 
     status = STATUS_SUCCESS;
     break;
