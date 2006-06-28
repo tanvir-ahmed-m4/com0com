@@ -8,7 +8,7 @@ INTRODUCTION
 The null-modem emulator is a kernel-mode virtual serial port driver for
 Windows. You can create an unlimited number of virtual COM port
 pairs and use any pair to connect one application to another.
-Each COM port pair provides two COM ports with names starting
+Each COM port pair provides two COM ports with default names starting
 at CNCA0 and CNCB0. The output to one port is the input from other
 port and vice versa.
 
@@ -110,3 +110,18 @@ Q. The HyperTerminal test succeeds, but I get a failure when trying to open the
    port with CreateFile("CNCA0", ...). GetLastError() returns ERROR_FILE_NOT_FOUND.
 A. You must prefix name with the special characters "\\.\". Try to open the port
    with CreateFile("\\\\.\\CNCA0", ...).
+
+Q. My application hangs during its startup when it sends anything to one paired
+   COM port. The only way to unhang it is to start HyperTerminal, which is connected
+   to the other paired COM port. I didn't have this problem with physical serial
+   ports.
+A. Your application can hang because receive buffer overrun is disabled by
+   default. You can fix the problem by enabling receive buffer overrun for the
+   receiving port. Also, to prevent some flow control issues you need to enable
+   baud rate emulation for the sending port. So, if your application use port CNCA0
+   and other paired port is CNCB0, then add the following to the registry:
+
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\com0com\Parameters\CNCB0]
+"EmuOverrun"=dword:FFFFFFFF
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\com0com\Parameters\CNCA0]
+"EmuBR"=dword:FFFFFFFF
