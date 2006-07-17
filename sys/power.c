@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2004-2005 Vyacheslav Frolov
+ * Copyright (c) 2004-2006 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.2  2006/07/17 10:03:54  vfrolov
+ * Moved pIrpStack
+ *
  * Revision 1.1  2005/01/26 12:18:54  vfrolov
  * Initial revision
  *
@@ -29,10 +32,10 @@
 
 NTSTATUS PdoPortPower(
     IN PC0C_PDOPORT_EXTENSION pDevExt,
-    IN PIRP                   pIrp,
-    IN PIO_STACK_LOCATION     pIrpStack)
+    IN PIRP                   pIrp)
 {
   NTSTATUS status;
+  PIO_STACK_LOCATION  pIrpStack = IoGetCurrentIrpStackLocation(pIrp);
   POWER_STATE_TYPE    powerType = pIrpStack->Parameters.Power.Type;
   POWER_STATE         powerState = pIrpStack->Parameters.Power.State;
 
@@ -75,7 +78,6 @@ NTSTATUS c0cPowerDispatch(IN PDEVICE_OBJECT pDevObj, IN PIRP pIrp)
 {
   NTSTATUS status;
   PC0C_COMMON_EXTENSION pDevExt = pDevObj->DeviceExtension;
-  PIO_STACK_LOCATION pIrpStack = IoGetCurrentIrpStackLocation(pIrp);
 
   TraceIrp("c0cPowerDispatch", pIrp, NULL, TRACE_FLAG_PARAMS);
 
@@ -89,7 +91,7 @@ NTSTATUS c0cPowerDispatch(IN PDEVICE_OBJECT pDevObj, IN PIRP pIrp)
     status = PoCallDriver(((PC0C_COMMON_FDO_EXTENSION)pDevExt)->pLowDevObj, pIrp);
     break;
   case C0C_DOTYPE_PP:
-    status = PdoPortPower((PC0C_PDOPORT_EXTENSION)pDevExt, pIrp, pIrpStack);
+    status = PdoPortPower((PC0C_PDOPORT_EXTENSION)pDevExt, pIrp);
     break;
   default:
     pIrp->IoStatus.Status = status;
