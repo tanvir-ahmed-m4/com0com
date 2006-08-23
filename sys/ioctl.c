@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.26  2006/08/23 13:16:50  vfrolov
+ * Moved code for IOCTL_SERIAL_GET_PROPERTIES to commprop.c
+ *
  * Revision 1.25  2006/07/17 09:58:21  vfrolov
  * Added #if DBG
  *
@@ -105,6 +108,7 @@
 #include "delay.h"
 #include "bufutils.h"
 #include "handflow.h"
+#include "commprop.h"
 
 NTSTATUS FdoPortIoCtl(
     IN PC0C_FDOPORT_EXTENSION pDevExt,
@@ -567,87 +571,16 @@ NTSTATUS FdoPortIoCtl(
       TraceIrp("FdoPortIoCtl", pIrp, &status, TRACE_FLAG_RESULTS);
       break;
     case IOCTL_SERIAL_GET_PROPERTIES: {
-      PSERIAL_COMMPROP pSysBuf;
+      ULONG size;
 
-      if (pIrpStack->Parameters.DeviceIoControl.OutputBufferLength < sizeof(SERIAL_COMMPROP)) {
-        status = STATUS_BUFFER_TOO_SMALL;
-        break;
-      }
+      status = GetCommProp(pDevExt,
+                           pIrp->AssociatedIrp.SystemBuffer,
+                           pIrpStack->Parameters.DeviceIoControl.OutputBufferLength,
+                           &size);
 
-      pSysBuf = (PSERIAL_COMMPROP)pIrp->AssociatedIrp.SystemBuffer;
+      if (status == STATUS_SUCCESS)
+        pIrp->IoStatus.Information = size;
 
-      RtlZeroMemory(pSysBuf, sizeof(SERIAL_COMMPROP));
-
-      pSysBuf->PacketLength = sizeof(SERIAL_COMMPROP);
-      pSysBuf->PacketVersion = 2;
-      pSysBuf->ServiceMask = SERIAL_SP_SERIALCOMM;
-      pSysBuf->MaxTxQueue = 0;
-      pSysBuf->MaxRxQueue = 0;
-
-      pSysBuf->MaxBaud = SERIAL_BAUD_USER;
-
-      pSysBuf->SettableBaud =
-        SERIAL_BAUD_075          |
-        SERIAL_BAUD_110          |
-        SERIAL_BAUD_134_5        |
-        SERIAL_BAUD_150          |
-        SERIAL_BAUD_300          |
-        SERIAL_BAUD_600          |
-        SERIAL_BAUD_1200         |
-        SERIAL_BAUD_1800         |
-        SERIAL_BAUD_2400         |
-        SERIAL_BAUD_4800         |
-        SERIAL_BAUD_7200         |
-        SERIAL_BAUD_9600         |
-        SERIAL_BAUD_14400        |
-        SERIAL_BAUD_19200        |
-        SERIAL_BAUD_38400        |
-        SERIAL_BAUD_56K          |
-        SERIAL_BAUD_128K         |
-        SERIAL_BAUD_115200       |
-        SERIAL_BAUD_57600;
-
-      pSysBuf->ProvSubType = SERIAL_SP_RS232;
-
-      pSysBuf->ProvCapabilities =
-        SERIAL_PCF_DTRDSR        |
-        SERIAL_PCF_RTSCTS        |
-        SERIAL_PCF_CD            |
-        SERIAL_PCF_PARITY_CHECK  |
-        SERIAL_PCF_XONXOFF       |
-        SERIAL_PCF_SETXCHAR      |
-        SERIAL_PCF_TOTALTIMEOUTS |
-        SERIAL_PCF_INTTIMEOUTS;
-
-      pSysBuf->SettableParams =
-        SERIAL_SP_PARITY         |
-        SERIAL_SP_BAUD           |
-        SERIAL_SP_DATABITS       |
-        SERIAL_SP_STOPBITS       |
-        SERIAL_SP_HANDSHAKING    |
-        SERIAL_SP_PARITY_CHECK   |
-        SERIAL_SP_CARRIER_DETECT;
-
-      pSysBuf->SettableData =
-        SERIAL_DATABITS_5        |
-        SERIAL_DATABITS_6        |
-        SERIAL_DATABITS_7        |
-        SERIAL_DATABITS_8;
-
-      pSysBuf->SettableStopParity =
-        SERIAL_STOPBITS_10       |
-        SERIAL_STOPBITS_15       |
-        SERIAL_STOPBITS_20       |
-        SERIAL_PARITY_NONE       |
-        SERIAL_PARITY_ODD        |
-        SERIAL_PARITY_EVEN       |
-        SERIAL_PARITY_MARK       |
-        SERIAL_PARITY_SPACE;
-
-      pSysBuf->CurrentTxQueue = 0;
-      pSysBuf->CurrentRxQueue = (ULONG)C0C_BUFFER_SIZE(&pIoPortLocal->readBuf);
-
-      pIrp->IoStatus.Information = sizeof(SERIAL_COMMPROP);
       break;
     }
     case IOCTL_SERIAL_CONFIG_SIZE:
