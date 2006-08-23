@@ -19,6 +19,12 @@
  *
  *
  * $Log$
+ * Revision 1.21  2006/08/23 13:05:43  vfrolov
+ * Added ability to trace w/o table
+ * Added tracing IRP_MN_QUERY_ID result
+ * Added tracing GUID for IRP_MN_QUERY_INTERFACE
+ * Added tracing WMI
+ *
  * Revision 1.20  2006/06/08 11:30:52  vfrolov
  * Added params check to Trace0() and Trace00()
  *
@@ -524,6 +530,9 @@ PCHAR code2name(
     IN ULONG code,
     IN PCODE2NAME pTable)
 {
+  if (!pTable)
+    return NULL;
+
   while (pTable->name) {
     if (pTable->code == code)
       return pTable->name;
@@ -606,17 +615,19 @@ PCHAR AnsiStrCopyFields(
 
   pDestStr = AnsiStrCopyStr(pDestStr, pSize, "[");
 
-  while (pTable->name) {
-    ULONG m = (mask & pTable->mask);
+  if (pTable) {
+    while (pTable->name) {
+      ULONG m = (mask & pTable->mask);
 
-    if (m == pTable->code) {
-      mask &= ~pTable->mask;
-      if (count)
-        pDestStr = AnsiStrCopyStr(pDestStr, pSize, "|");
-      pDestStr = AnsiStrCopyStr(pDestStr, pSize, pTable->name);
-      count++;
+      if (m == pTable->code) {
+        mask &= ~pTable->mask;
+        if (count)
+          pDestStr = AnsiStrCopyStr(pDestStr, pSize, "|");
+        pDestStr = AnsiStrCopyStr(pDestStr, pSize, pTable->name);
+        count++;
+      }
+      pTable++;
     }
-    pTable++;
   }
 
   if (mask) {
@@ -1255,6 +1266,7 @@ VOID TraceIrp(
     case IRP_MJ_DEVICE_CONTROL:
     case IRP_MJ_PNP:
     case IRP_MJ_POWER:
+    case IRP_MJ_SYSTEM_CONTROL:
       break;
     default:
       pDestStr = AnsiStrCopyStr(pDestStr, &size, " ");
@@ -1418,6 +1430,11 @@ VOID TraceIrp(
           pDestStr = AnsiStrCopyCode(pDestStr, &size,
               pIrpStack->Parameters.QueryId.IdType,
               codeNameTableBusQuery, "BusQuery", 10);
+          if (flags & TRACE_FLAG_RESULTS && pIrp->IoStatus.Information) {
+            pDestStr = AnsiStrFormat(pDestStr, &size,
+                " Information: \"%S\"",
+                (PWCHAR)pIrp->IoStatus.Information);
+          }
           break;
         case IRP_MN_QUERY_DEVICE_TEXT:
           pDestStr = AnsiStrCopyStr(pDestStr, &size, " ");
@@ -1440,6 +1457,23 @@ VOID TraceIrp(
               pDestStr = AnsiStrFormat(pDestStr, &size, " Count=%u",
                   (unsigned)((PDEVICE_RELATIONS)pIrp->IoStatus.Information)->Count);
           }
+          break;
+        case IRP_MN_QUERY_INTERFACE:
+          pDestStr = AnsiStrCopyStr(pDestStr, &size, " ");
+          pDestStr = AnsiStrFormat(pDestStr, &size,
+              " GUID: %8lX-%4X-%4X-%2X%2X-%2X%2X%2X%2X%2X%2X",
+              (long)pIrpStack->Parameters.QueryInterface.InterfaceType->Data1,
+              (int)pIrpStack->Parameters.QueryInterface.InterfaceType->Data2,
+              (int)pIrpStack->Parameters.QueryInterface.InterfaceType->Data3,
+              (int)pIrpStack->Parameters.QueryInterface.InterfaceType->Data4[0],
+              (int)pIrpStack->Parameters.QueryInterface.InterfaceType->Data4[1],
+              (int)pIrpStack->Parameters.QueryInterface.InterfaceType->Data4[2],
+              (int)pIrpStack->Parameters.QueryInterface.InterfaceType->Data4[3],
+              (int)pIrpStack->Parameters.QueryInterface.InterfaceType->Data4[4],
+              (int)pIrpStack->Parameters.QueryInterface.InterfaceType->Data4[5],
+              (int)pIrpStack->Parameters.QueryInterface.InterfaceType->Data4[6],
+              (int)pIrpStack->Parameters.QueryInterface.InterfaceType->Data4[7]);
+          break;
       }
       break;
     }
@@ -1448,6 +1482,13 @@ VOID TraceIrp(
 
       pDestStr = AnsiStrCopyStr(pDestStr, &size, " ");
       pDestStr = AnsiStrCopyCode(pDestStr, &size, code, codeNameTablePower, "POWER_", 10);
+      break;
+    }
+    case IRP_MJ_SYSTEM_CONTROL: {
+      ULONG code = pIrpStack->MinorFunction;
+
+      pDestStr = AnsiStrCopyStr(pDestStr, &size, " ");
+      pDestStr = AnsiStrCopyCode(pDestStr, &size, code, codeNameTableWmi, "WMI_", 10);
       break;
     }
     case IRP_MJ_QUERY_INFORMATION: {
