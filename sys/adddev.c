@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.17  2006/08/23 13:48:12  vfrolov
+ * Implemented WMI functionality
+ *
  * Revision 1.16  2006/06/23 11:44:52  vfrolov
  * Mass replacement pDevExt by pIoPort
  *
@@ -100,6 +103,8 @@ VOID RemoveFdoPort(IN PC0C_FDOPORT_EXTENSION pDevExt)
     FreeWriteDelay(pDevExt->pIoPortLocal);
     pDevExt->pIoPortLocal->pDevExt = NULL;
   }
+
+  IoWMIRegistrationControl(pDevExt->pDevObj, WMIREG_ACTION_DEREGISTER);
 
   if (pDevExt->mappedSerialDevice)
     RtlDeleteRegistryValue(RTL_REGISTRY_DEVICEMAP, C0C_SERIAL_DEVICEMAP,
@@ -320,6 +325,7 @@ NTSTATUS AddFdoPort(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
 
   pDevExt->mappedSerialDevice = TRUE;
 
+  pDevExt->pPhDevObj = pPhDevObj;
   pDevExt->pLowDevObj = IoAttachDeviceToDeviceStack(pNewDevObj, pPhDevObj);
 
   if (!pDevExt->pLowDevObj) {
@@ -330,6 +336,8 @@ NTSTATUS AddFdoPort(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
 
   pNewDevObj->Flags &= ~DO_DEVICE_INITIALIZING;
   pNewDevObj->Flags |= DO_BUFFERED_IO;
+
+  IoWMIRegistrationControl(pNewDevObj, WMIREG_ACTION_REGISTER);
 
   Trace0((PC0C_COMMON_EXTENSION)pDevExt, L"AddFdoPort OK");
 
@@ -531,6 +539,7 @@ NTSTATUS AddFdoBus(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
   }
 
   pDevExt->portNum = num;
+  pDevExt->pPhDevObj = pPhDevObj;
   pDevExt->pLowDevObj = IoAttachDeviceToDeviceStack(pNewDevObj, pPhDevObj);
 
   if (!pDevExt->pLowDevObj) {

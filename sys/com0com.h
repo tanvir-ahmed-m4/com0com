@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.28  2006/08/23 13:48:12  vfrolov
+ * Implemented WMI functionality
+ *
  * Revision 1.27  2006/06/23 11:44:52  vfrolov
  * Mass replacement pDevExt by pIoPort
  *
@@ -134,6 +137,7 @@
 
 #define FDO_EXTENSION                   \
   COMMON_EXTENSION                      \
+  PDEVICE_OBJECT          pPhDevObj;   \
   PDEVICE_OBJECT          pLowDevObj;   \
 
 #define C0C_XCHAR_ON      1
