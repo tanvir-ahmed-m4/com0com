@@ -12,6 +12,8 @@ SOURCES= \
         pnp.c \
         power.c \
         ioctl.c \
+        wmi.c \
+        commprop.c \
         read.c \
         write.c \
         wait.c \
