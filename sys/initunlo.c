@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.6  2006/08/23 13:13:53  vfrolov
+ * Moved c0cSystemControlDispatch() to wmi.c
+ *
  * Revision 1.5  2005/09/28 10:06:42  vfrolov
  * Implemented IRP_MJ_QUERY_INFORMATION and IRP_MJ_SET_INFORMATION
  *
@@ -102,31 +105,6 @@ NTSTATUS c0cInternalIoControl(IN PDEVICE_OBJECT pDevObj, IN PIRP pIrp)
   pIrp->IoStatus.Information = 0;
   pIrp->IoStatus.Status = status;
   IoCompleteRequest(pIrp, IO_NO_INCREMENT);
-
-  return status;
-}
-
-NTSTATUS c0cSystemControlDispatch(IN PDEVICE_OBJECT pDevObj, IN PIRP pIrp)
-{
-  NTSTATUS status;
-  PC0C_COMMON_EXTENSION pDevExt = pDevObj->DeviceExtension;
-
-  status = STATUS_NO_SUCH_DEVICE;
-
-  switch (pDevExt->doType) {
-  case C0C_DOTYPE_FB:
-  case C0C_DOTYPE_FP:
-    TraceIrp("c0cSystemControlDispatch", pIrp, NULL, TRACE_FLAG_PARAMS);
-    IoSkipCurrentIrpStackLocation(pIrp);
-    status = IoCallDriver(((PC0C_COMMON_FDO_EXTENSION)pDevExt)->pLowDevObj, pIrp);
-    break;
-  case C0C_DOTYPE_PP:
-    status = STATUS_NOT_SUPPORTED;
-  default:
-    TraceIrp("c0cSystemControlDispatch", pIrp, &status, TRACE_FLAG_PARAMS);
-    pIrp->IoStatus.Status = status;
-    IoCompleteRequest(pIrp, IO_NO_INCREMENT);
-  }
 
   return status;
 }
