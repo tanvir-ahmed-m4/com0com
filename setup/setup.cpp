@@ -19,6 +19,10 @@
  *
  *
  * $Log$
+ * Revision 1.2  2006/08/25 10:36:48  vfrolov
+ * Added C0C_PREF_PORT_NAME_A and C0C_PREF_PORT_NAME_B defines
+ * Added deleting Class subkeys
+ *
  * Revision 1.1  2006/07/28 12:16:42  vfrolov
  * Initial revision
  *
@@ -32,9 +36,12 @@
 #include "msg.h"
 #include "utils.h"
 
-#define C0C_INF_NAME             "com0com.inf"
 #define C0C_BUS_DEVICE_ID        "root\\com0com"
 #define C0C_PORT_DEVICE_ID       "com0com\\port"
+#define C0C_PREF_PORT_NAME_A     "CNCA"
+#define C0C_PREF_PORT_NAME_B     "CNCB"
+
+#define C0C_INF_NAME             "com0com.inf"
 #define C0C_CLASS_GUID           "{df799e12-3c56-421b-b298-b6d3642bc878}"
 #define C0C_CLASS                "CNCPorts"
 #define C0C_PROVIDER             "Vyacheslav Frolov"
@@ -54,7 +61,7 @@ int Change(InfFile &infFile, const char *pPhPortName, const char *pParameters)
     for (int j = 0 ; j < 2 ; j++) {
       char phPortName[20];
 
-      SNPRINTF(phPortName, sizeof(phPortName), "CNC%c%d", j ? 'B' : 'A', i);
+      SNPRINTF(phPortName, sizeof(phPortName), "%s%d", j ? C0C_PREF_PORT_NAME_B : C0C_PREF_PORT_NAME_A, i);
 
       PortParameters portParameters(C0C_SERVICE, phPortName);
 
@@ -134,7 +141,7 @@ int Install(InfFile &infFile, const char *pParametersA, const char *pParametersB
 
     pParameters = j ? pParametersB : pParametersA;
 
-    SNPRINTF(phPortName, sizeof(phPortName), "CNC%c%d", j ? 'B' : 'A', i);
+    SNPRINTF(phPortName, sizeof(phPortName), "%s%d", j ? C0C_PREF_PORT_NAME_B : C0C_PREF_PORT_NAME_A, i);
 
     PortParameters portParameters(C0C_SERVICE, phPortName);
 
@@ -289,6 +296,40 @@ int Uninstall(InfFile &infFile)
 
         err = RegDeleteKey(hKey, infFile.ClassGUID());
 
+        if (err != ERROR_SUCCESS) {
+          HKEY hClassGuidKey;
+          err = RegOpenKeyEx(hKey, infFile.ClassGUID(), 0, KEY_READ, &hClassGuidKey);
+
+          if (err == ERROR_SUCCESS) {
+            for (;;) {
+              char subKey[MAX_PATH+1];
+              DWORD subKeySize = sizeof(subKey)/sizeof(subKey[0]);
+
+              err = RegEnumKeyEx(hClassGuidKey, 0, subKey, &subKeySize, NULL, NULL, NULL, NULL);
+
+              if (err != ERROR_SUCCESS)
+                break;
+
+              err = RegDeleteKey(hClassGuidKey, subKey);
+
+              if (err == ERROR_SUCCESS)
+                Trace("Deleted Class subkey %s\\%s\n", infFile.ClassGUID(), subKey);
+              else
+              if (err != ERROR_FILE_NOT_FOUND) {
+                ShowError(MB_OK|MB_ICONWARNING, err, "RegDeleteKey(%s\\%s)", infFile.ClassGUID(), subKey);
+                break;
+              }
+            }
+
+            err = RegCloseKey(hClassGuidKey);
+
+            if (err != ERROR_SUCCESS)
+              ShowError(MB_OK|MB_ICONWARNING, err, "RegCloseKey()");
+          }
+
+          err = RegDeleteKey(hKey, infFile.ClassGUID());
+        }
+
         if (err == ERROR_SUCCESS) {
           Trace("Deleted Class %s\n", infFile.ClassGUID());
           notDeleted = FALSE;
@@ -359,7 +400,7 @@ int Help(const char *pProgName)
     "  %s install PortName=COM2 PortName=COM4\n"
     , pProgName);
   Trace(
-    "  %s change CNCA0 EmuBR=yes,EmuOverrun=yes\n"
+    "  %s change " C0C_PREF_PORT_NAME_A "0 EmuBR=yes,EmuOverrun=yes\n"
     , pProgName);
 
   return 1;
