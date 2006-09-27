@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.10  2006/09/27 07:24:51  vfrolov
+ * Added IRP_MN_REGINFO_EX
+ *
  * Revision 1.9  2006/08/23 12:56:20  vfrolov
  * Added codeNameTableWmi
  *
@@ -184,6 +187,10 @@ CODE2NAME codeNameTableWmi[] = {
   TOCODE2NAME(IRP_MN_, DISABLE_COLLECTION),
   TOCODE2NAME(IRP_MN_, REGINFO),
   TOCODE2NAME(IRP_MN_, EXECUTE_METHOD),
+#ifndef IRP_MN_REGINFO_EX
+  #define IRP_MN_REGINFO_EX                   0x0b
+#endif
+  TOCODE2NAME(IRP_MN_, REGINFO_EX),
   {0, NULL}
 };
 
