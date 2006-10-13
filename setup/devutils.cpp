@@ -19,6 +19,10 @@
  *
  *
  * $Log$
+ * Revision 1.2  2006/10/13 10:26:35  vfrolov
+ * Some defines moved to ../include/com0com.h
+ * Changed name of device object (for WMI)
+ *
  * Revision 1.1  2006/07/28 12:16:42  vfrolov
  * Initial revision
  *
@@ -312,20 +316,13 @@ BOOL RestartDevices(
     const char *pPhDevName,
     BOOL *pRebootRequired)
 {
-  char phDevObjName[30];
-
-  if (SNPRINTF(phDevObjName, sizeof(phDevObjName), "\\Device\\%s", pPhDevName) < 0)
-    return FALSE;
-
-  phDevObjName[sizeof(phDevObjName) - 1] = 0;
-
   EnumParams enumParams;
 
   int res;
 
   enumParams.pRebootRequired = pRebootRequired;
   enumParams.pDevId = pDevId;
-  enumParams.pPhObjName = phDevObjName;
+  enumParams.pPhObjName = pPhDevName;
 
   do {
     res = EnumDevices(infFile, DIGCF_PRESENT, RestartDevice, &enumParams);
