@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.19  2006/10/13 10:22:22  vfrolov
+ * Changed name of device object (for WMI)
+ *
  * Revision 1.18  2006/10/10 15:18:15  vfrolov
  * Added PortName value setting for WMI
  *
@@ -132,13 +135,14 @@ NTSTATUS AddFdoPort(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
   NTSTATUS status;
   UNICODE_STRING portName;
   PDEVICE_OBJECT pNewDevObj;
-  PC0C_FDOPORT_EXTENSION pDevExt = NULL;
+  PC0C_FDOPORT_EXTENSION pDevExt;
+  PC0C_PDOPORT_EXTENSION pPhDevExt;
   ULONG emuBR, emuOverrun;
   UNICODE_STRING property;
   PWCHAR pPortName;
-  int i;
 
   status = STATUS_SUCCESS;
+  pDevExt = NULL;
   RtlInitUnicodeString(&portName, NULL);
   RtlInitUnicodeString(&property, NULL);
 
@@ -149,15 +153,21 @@ NTSTATUS AddFdoPort(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
     goto clean;
   }
 
-  Trace00((PC0C_COMMON_EXTENSION)pPhDevObj->DeviceExtension, L"AddFdoPort for ", property.Buffer);
+  pPhDevExt = (PC0C_PDOPORT_EXTENSION)pPhDevObj->DeviceExtension;
 
-  for (pPortName = NULL, i = 0 ; property.Buffer[i] ; i++)
-    if (property.Buffer[i] == L'\\')
-      pPortName = &property.Buffer[i + 1];
-
-  if (!pPortName || !*pPortName) {
+  if (pPhDevExt->doType != C0C_DOTYPE_PP) {
     status = STATUS_UNSUCCESSFUL;
-    SysLog(pPhDevObj, status, L"AddFdoPort no port name in the property");
+    SysLog(pPhDevObj, status, L"AddFdoPort FAIL. Type  of PDO is not PP");
+    goto clean;
+  }
+
+  Trace00((PC0C_COMMON_EXTENSION)pPhDevExt, L"AddFdoPort for ", property.Buffer);
+
+  pPortName = pPhDevExt->portName;
+
+  if (!*pPortName) {
+    status = STATUS_UNSUCCESSFUL;
+    SysLog(pPhDevObj, status, L"AddFdoPort FAIL. The PDO has invalid port name");
     goto clean;
   }
 
@@ -196,7 +206,7 @@ NTSTATUS AddFdoPort(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
         StrAppendStr0(&status, &portName, pPortName);
       } else {
         StrAppendStr(&status, &portName, portNameTmp.Buffer, portNameTmp.Length);
-        Trace00((PC0C_COMMON_EXTENSION)pPhDevObj->DeviceExtension, L"PortName set to ", portName.Buffer);
+        Trace00((PC0C_COMMON_EXTENSION)pPhDevExt, L"PortName set to ", portName.Buffer);
       }
     }
 
@@ -292,7 +302,7 @@ NTSTATUS AddFdoPort(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
     goto clean;
   }
 
-  pDevExt->pIoPortLocal = ((PC0C_PDOPORT_EXTENSION)pPhDevObj->DeviceExtension)->pIoPortLocal;
+  pDevExt->pIoPortLocal = pPhDevExt->pIoPortLocal;
   pDevExt->pIoPortLocal->pDevExt = pDevExt;
 
   if (emuBR) {
@@ -407,8 +417,8 @@ NTSTATUS AddPdoPort(
   StrAppendNum(&status, &portName, num, 10);
 
   RtlInitUnicodeString(&ntDeviceName, NULL);
-  StrAppendStr0(&status, &ntDeviceName, C0C_PREF_NT_DEVICE_NAME);
-  StrAppendStr(&status, &ntDeviceName, portName.Buffer, portName.Length);
+  StrAppendStr0(&status, &ntDeviceName, isA ? C0C_PREF_DEVICE_NAME_A : C0C_PREF_DEVICE_NAME_B);
+  StrAppendNum(&status, &ntDeviceName, num, 10);
 
   if (!NT_SUCCESS(status)) {
     SysLog(pBusExt->pDevObj, status, L"AddPdoPort FAIL");
@@ -441,7 +451,7 @@ NTSTATUS AddPdoPort(
   pDevExt->pBusExt = pBusExt;
   pDevExt->pIoPortLocal = pIoPortLocal;
 
-  Trace0((PC0C_COMMON_EXTENSION)pDevExt, L"AddPdoPort OK");
+  Trace00((PC0C_COMMON_EXTENSION)pDevExt, L"AddPdoPort OK - ", ntDeviceName.Buffer);
 
 clean:
 
