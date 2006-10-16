@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.20  2006/10/16 08:30:45  vfrolov
+ * Added the device interface registration
+ *
  * Revision 1.19  2006/10/13 10:22:22  vfrolov
  * Changed name of device object (for WMI)
  *
@@ -82,6 +85,8 @@
  */
 
 #include "precomp.h"
+#include <initguid.h>
+#include <ntddser.h>
 #include "timeout.h"
 #include "delay.h"
 #include "strutils.h"
@@ -112,18 +117,24 @@ VOID RemoveFdoPort(IN PC0C_FDOPORT_EXTENSION pDevExt)
 
   IoWMIRegistrationControl(pDevExt->pDevObj, WMIREG_ACTION_DEREGISTER);
 
-  if (pDevExt->mappedSerialDevice)
+  if (pDevExt->symbolicLinkName.Buffer) {
+    IoSetDeviceInterfaceState(&pDevExt->symbolicLinkName, FALSE);
+    RtlFreeUnicodeString(&pDevExt->symbolicLinkName);
+  }
+
+  if (pDevExt->ntDeviceName.Buffer) {
     RtlDeleteRegistryValue(RTL_REGISTRY_DEVICEMAP, C0C_SERIAL_DEVICEMAP,
                            pDevExt->ntDeviceName.Buffer);
+    StrFree(&pDevExt->ntDeviceName);
+  }
 
-  if (pDevExt->createdSymbolicLink)
+  if (pDevExt->win32DeviceName.Buffer) {
     IoDeleteSymbolicLink(&pDevExt->win32DeviceName);
+    StrFree(&pDevExt->win32DeviceName);
+  }
 
   if (pDevExt->pLowDevObj)
 	  IoDetachDevice(pDevExt->pLowDevObj);
-
-  StrFree(&pDevExt->win32DeviceName);
-  StrFree(&pDevExt->ntDeviceName);
 
   Trace0((PC0C_COMMON_EXTENSION)pDevExt, L"RemoveFdoPort");
 
@@ -138,15 +149,15 @@ NTSTATUS AddFdoPort(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
   PC0C_FDOPORT_EXTENSION pDevExt;
   PC0C_PDOPORT_EXTENSION pPhDevExt;
   ULONG emuBR, emuOverrun;
-  UNICODE_STRING property;
+  UNICODE_STRING ntDeviceName;
   PWCHAR pPortName;
 
   status = STATUS_SUCCESS;
   pDevExt = NULL;
   RtlInitUnicodeString(&portName, NULL);
-  RtlInitUnicodeString(&property, NULL);
+  RtlInitUnicodeString(&ntDeviceName, NULL);
 
-  StrAppendDeviceProperty(&status, &property, pPhDevObj, DevicePropertyPhysicalDeviceObjectName);
+  StrAppendDeviceProperty(&status, &ntDeviceName, pPhDevObj, DevicePropertyPhysicalDeviceObjectName);
 
   if (!NT_SUCCESS(status)) {
     SysLog(pPhDevObj, status, L"AddFdoPort IoGetDeviceProperty FAIL");
@@ -161,7 +172,7 @@ NTSTATUS AddFdoPort(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
     goto clean;
   }
 
-  Trace00((PC0C_COMMON_EXTENSION)pPhDevExt, L"AddFdoPort for ", property.Buffer);
+  Trace00((PC0C_COMMON_EXTENSION)pPhDevExt, L"AddFdoPort for ", ntDeviceName.Buffer);
 
   pPortName = pPhDevExt->portName;
 
@@ -276,7 +287,7 @@ NTSTATUS AddFdoPort(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
                           sizeof(*pDevExt),
                           NULL,
                           FILE_DEVICE_SERIAL_PORT,
-                          0,
+                          FILE_DEVICE_SECURE_OPEN,
                           TRUE,
                           &pNewDevObj);
 
@@ -289,13 +300,6 @@ NTSTATUS AddFdoPort(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
   pDevExt = pNewDevObj->DeviceExtension;
   RtlZeroMemory(pDevExt, sizeof(*pDevExt));
   status = InitCommonExt((PC0C_COMMON_EXTENSION)pDevExt, pNewDevObj, C0C_DOTYPE_FP, portName.Buffer);
-
-  RtlInitUnicodeString(&pDevExt->ntDeviceName, NULL);
-  StrAppendStr0(&status, &pDevExt->ntDeviceName, property.Buffer);
-
-  RtlInitUnicodeString(&pDevExt->win32DeviceName, NULL);
-  StrAppendStr0(&status, &pDevExt->win32DeviceName, C0C_PREF_WIN32_DEVICE_NAME);
-  StrAppendStr0(&status, &pDevExt->win32DeviceName, portName.Buffer);
 
   if (!NT_SUCCESS(status)) {
     SysLog(pPhDevObj, status, L"AddFdoPort FAIL");
@@ -341,27 +345,6 @@ NTSTATUS AddFdoPort(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
 
   SetWriteDelay(pDevExt->pIoPortLocal);
 
-  status = IoCreateSymbolicLink(&pDevExt->win32DeviceName, &pDevExt->ntDeviceName);
-
-  if (!NT_SUCCESS(status)) {
-    SysLog(pPhDevObj, status, L"AddFdoPort IoCreateSymbolicLink FAIL");
-    goto clean;
-  }
-
-  pDevExt->createdSymbolicLink = TRUE;
-
-  status = RtlWriteRegistryValue(RTL_REGISTRY_DEVICEMAP, C0C_SERIAL_DEVICEMAP,
-                                 pDevExt->ntDeviceName.Buffer, REG_SZ,
-                                 portName.Buffer,
-                                 portName.Length + sizeof(WCHAR));
-
-  if (!NT_SUCCESS(status)) {
-    SysLog(pPhDevObj, status, L"AddFdoPort RtlWriteRegistryValue FAIL");
-    goto clean;
-  }
-
-  pDevExt->mappedSerialDevice = TRUE;
-
   pDevExt->pPhDevObj = pPhDevObj;
   pDevExt->pLowDevObj = IoAttachDeviceToDeviceStack(pNewDevObj, pPhDevObj);
 
@@ -374,7 +357,63 @@ NTSTATUS AddFdoPort(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
   pNewDevObj->Flags &= ~DO_DEVICE_INITIALIZING;
   pNewDevObj->Flags |= DO_BUFFERED_IO;
 
-  IoWMIRegistrationControl(pNewDevObj, WMIREG_ACTION_REGISTER);
+  /* Create symbolic links to device */
+
+  RtlInitUnicodeString(&pDevExt->ntDeviceName, NULL);
+  StrAppendStr0(&status, &pDevExt->ntDeviceName, ntDeviceName.Buffer);
+
+  RtlInitUnicodeString(&pDevExt->win32DeviceName, NULL);
+  StrAppendStr0(&status, &pDevExt->win32DeviceName, C0C_PREF_WIN32_DEVICE_NAME);
+  StrAppendStr0(&status, &pDevExt->win32DeviceName, portName.Buffer);
+
+  if (NT_SUCCESS(status)) {
+    status = IoCreateSymbolicLink(&pDevExt->win32DeviceName, &pDevExt->ntDeviceName);
+
+    if (NT_SUCCESS(status)) {
+      status = RtlWriteRegistryValue(RTL_REGISTRY_DEVICEMAP, C0C_SERIAL_DEVICEMAP,
+                                     pDevExt->ntDeviceName.Buffer, REG_SZ,
+                                     portName.Buffer,
+                                     portName.Length + sizeof(WCHAR));
+
+      if (!NT_SUCCESS(status)) {
+        StrFree(&pDevExt->ntDeviceName);
+
+        SysLog(pPhDevObj, status, L"AddFdoPort RtlWriteRegistryValue" C0C_SERIAL_DEVICEMAP L" FAIL");
+      }
+    } else {
+      StrFree(&pDevExt->win32DeviceName);
+      StrFree(&pDevExt->ntDeviceName);
+
+      SysLog(pPhDevObj, status, L"AddFdoPort IoCreateSymbolicLink FAIL");
+    }
+  } else {
+    StrFree(&pDevExt->win32DeviceName);
+    StrFree(&pDevExt->ntDeviceName);
+
+    SysLog(pPhDevObj, status, L"AddFdoPort StrAppendStr0 FAIL");
+  }
+
+  status = IoRegisterDeviceInterface(pPhDevObj,
+                                     (LPGUID)&GUID_CLASS_COMPORT,
+                                     NULL,
+                                     &pDevExt->symbolicLinkName);
+
+  if (NT_SUCCESS(status)) {
+    status = IoSetDeviceInterfaceState(&pDevExt->symbolicLinkName, TRUE);
+
+    if (!NT_SUCCESS(status))
+      SysLog(pPhDevObj, status, L"AddFdoPort IoSetDeviceInterfaceState FAIL");
+  } else {
+    SysLog(pPhDevObj, status, L"AddFdoPort IoRegisterDeviceInterface FAIL");
+    pDevExt->symbolicLinkName.Buffer = NULL;
+  }
+
+  status = IoWMIRegistrationControl(pNewDevObj, WMIREG_ACTION_REGISTER);
+
+  if (!NT_SUCCESS(status))
+    SysLog(pPhDevObj, status, L"AddFdoPort IoWMIRegistrationControl FAIL");
+
+  status = STATUS_SUCCESS;
 
   Trace0((PC0C_COMMON_EXTENSION)pDevExt, L"AddFdoPort OK");
 
@@ -383,7 +422,7 @@ clean:
   if (!NT_SUCCESS(status) && pDevExt)
     RemoveFdoPort(pDevExt);
 
-  StrFree(&property);
+  StrFree(&ntDeviceName);
   StrFree(&portName);
 
   return status;

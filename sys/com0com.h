@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.30  2006/10/16 08:30:45  vfrolov
+ * Added the device interface registration
+ *
  * Revision 1.29  2006/10/13 10:15:02  vfrolov
  * Some defines moved to ../include/com0com.h
  * Changed defines of C0C_DOTYPE_* to more unique values
@@ -258,8 +261,7 @@ typedef struct _C0C_FDOPORT_EXTENSION {
 
   UNICODE_STRING          ntDeviceName;
   UNICODE_STRING          win32DeviceName;
-  BOOLEAN                 createdSymbolicLink;
-  BOOLEAN                 mappedSerialDevice;
+  UNICODE_STRING          symbolicLinkName;
 
   LONG                    openCount;
 
