@@ -19,9 +19,11 @@
  *
  *
  * $Log$
+ * Revision 1.2  2006/10/17 10:03:59  vfrolov
+ * Added MB_SETFOREGROUND flag to MessageBox()
+ *
  * Revision 1.1  2006/07/28 12:16:42  vfrolov
  * Initial revision
- *
  *
  */
 
@@ -32,7 +34,7 @@
 ///////////////////////////////////////////////////////////////
 static int ShowMsgDefault(LPCSTR pText, LPCSTR pCaption, UINT type)
 {
-  return MessageBox(NULL, pText, pCaption, type);
+  return MessageBox(NULL, pText, pCaption, type|MB_SETFOREGROUND);
 }
 
 static int (* pShowMsg)(LPCSTR pText, LPCSTR pCaption, UINT type) = ShowMsgDefault;
