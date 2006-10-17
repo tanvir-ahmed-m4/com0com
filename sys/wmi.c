@@ -19,9 +19,12 @@
  *
  *
  * $Log$
+ * Revision 1.2  2006/10/17 06:54:37  vfrolov
+ * Disabled SERIAL_PORT_WMI_HW_GUID for binary compatibility with
+ * both W2K and WXP
+ *
  * Revision 1.1  2006/08/23 13:09:55  vfrolov
  * Initial revision
- *
  *
  */
 
@@ -34,29 +37,37 @@
 #include "strutils.h"
 #include "commprop.h"
 
- /*
+/*
  * FILE_ID used by HALT_UNLESS to put it on BSOD
  */
 #define FILE_ID 0xB
 
 GUID guidWmiPortName       = SERIAL_PORT_WMI_NAME_GUID;
 GUID guidWmiPortComm       = SERIAL_PORT_WMI_COMM_GUID;
+#ifdef ALLOW_WMI_HW_GUID
 GUID guidWmiPortHW         = SERIAL_PORT_WMI_HW_GUID;
+#endif /* ALLOW_WMI_HW_GUID */
 GUID guidWmiPortPerf       = SERIAL_PORT_WMI_PERF_GUID;
 GUID guidWmiPortProperties = SERIAL_PORT_WMI_PROPERTIES_GUID;
 
-#define COC_WMI_PORT_NAME       0
-#define COC_WMI_PORT_COMM       1
-#define COC_WMI_PORT_HW         2
-#define COC_WMI_PORT_PERF       3
-#define COC_WMI_PORT_PROPERTIES 4
+enum COC_GUID_INDEX {
+  COC_WMI_PORT_NAME,
+  COC_WMI_PORT_COMM,
+#ifdef ALLOW_WMI_HW_GUID
+  COC_WMI_PORT_HW,
+#endif /* ALLOW_WMI_HW_GUID */
+  COC_WMI_PORT_PERF,
+  COC_WMI_PORT_PROPERTIES,
 
-#define COC_WMI_LIST_SIZE       5
+  COC_WMI_LIST_SIZE
+};
 
 WMIGUIDREGINFO guidWmiList[COC_WMI_LIST_SIZE] = {
   {&guidWmiPortName,       1, 0},
   {&guidWmiPortComm,       1, 0},
+#ifdef ALLOW_WMI_HW_GUID
   {&guidWmiPortHW,         1, 0},
+#endif /* ALLOW_WMI_HW_GUID */
   {&guidWmiPortPerf,       1, 0},
   {&guidWmiPortProperties, 1, 0},
 };
@@ -201,6 +212,12 @@ NTSTATUS QueryWmiDataBlock(
 
     status = STATUS_SUCCESS;
     break;
+#ifdef ALLOW_WMI_HW_GUID
+  /*
+   * W2K and WXP have different SERIAL_WMI_HW_DATA structures
+   * so we don't allow SERIAL_PORT_WMI_HW_GUID by default.
+   * Define ALLOW_WMI_HW_GUID if you need it.
+   */
   case COC_WMI_PORT_HW:
     Trace0((PC0C_COMMON_EXTENSION)pDevExt, L"QueryWmiDataBlock PORT_HW");
 
@@ -215,6 +232,7 @@ NTSTATUS QueryWmiDataBlock(
 
     status = STATUS_SUCCESS;
     break;
+#endif /* ALLOW_WMI_HW_GUID */
   case COC_WMI_PORT_PERF:
     Trace0((PC0C_COMMON_EXTENSION)pDevExt, L"QueryWmiDataBlock PORT_PERF");
 
@@ -336,7 +354,7 @@ NTSTATUS FdoPortWmi(
     break;
   case IrpNotCompleted:
     TraceCode((PC0C_COMMON_EXTENSION)pDevExt, "IrpNotCompleted ", NULL,
-        (ULONG)IoGetCurrentIrpStackLocation(pIrp)->Parameters.WMI.DataPath, &status);
+        (ULONG)(ULONG_PTR)IoGetCurrentIrpStackLocation(pIrp)->Parameters.WMI.DataPath, &status);
     IoCompleteRequest(pIrp, IO_NO_INCREMENT);
     break;
   case IrpForward:
