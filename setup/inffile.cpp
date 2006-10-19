@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.2  2006/10/19 13:28:48  vfrolov
+ * Added InfFile::UninstallAllInfFiles()
+ *
  * Revision 1.1  2006/07/28 12:16:43  vfrolov
  * Initial revision
  *
@@ -28,9 +31,10 @@
 #include "precomp.h"
 #include "inffile.h"
 #include "msg.h"
+#include "utils.h"
 
 ///////////////////////////////////////////////////////////////
-static BOOL GetVersionInfo(const char *pInfPath, const char *pKey, char **ppValue)
+static BOOL GetVersionInfo(const char *pInfPath, const char *pKey, char **ppValue, BOOL showErrors)
 {
   if (!pInfPath)
     return FALSE;
@@ -41,14 +45,16 @@ static BOOL GetVersionInfo(const char *pInfPath, const char *pKey, char **ppValu
   char buf[4000];
 
   if (!SetupGetInfInformation(pInfPath, INFINFO_INF_NAME_IS_ABSOLUTE, (PSP_INF_INFORMATION)buf, sizeof(buf), NULL)) {
-    ShowLastError(MB_OK|MB_ICONSTOP, "SetupGetInfInformation()");
+    if (showErrors)
+      ShowLastError(MB_OK|MB_ICONSTOP, "SetupGetInfInformation(%s)", pInfPath);
     return FALSE;
   }
 
   DWORD size;
 
   if (!SetupQueryInfVersionInformation((PSP_INF_INFORMATION)buf, 0, pKey, NULL, 0, &size)) {
-    ShowLastError(MB_OK|MB_ICONSTOP, "SetupQueryInfVersionInformation(%s)", pKey);
+    if (showErrors)
+      ShowLastError(MB_OK|MB_ICONSTOP, "SetupQueryInfVersionInformation(%s) for %s", pKey, pInfPath);
     return FALSE;
   }
 
@@ -56,7 +62,8 @@ static BOOL GetVersionInfo(const char *pInfPath, const char *pKey, char **ppValu
 
   if (*ppValue) {
     if (!SetupQueryInfVersionInformation((PSP_INF_INFORMATION)buf, 0, pKey, *ppValue, size, NULL)) {
-      ShowLastError(MB_OK|MB_ICONSTOP, "SetupQueryInfVersionInformation(%s)", pKey);
+      if (showErrors)
+        ShowLastError(MB_OK|MB_ICONSTOP, "SetupQueryInfVersionInformation(%s) for %s", pKey, pInfPath);
       LocalFree(*ppValue);
       *ppValue = NULL;
       return FALSE;
@@ -77,6 +84,18 @@ static BOOL GetFilePath(
 {
   char *pBuf;
   DWORD res;
+
+  if (!pNearPath) {
+    if (DWORD(lstrlen(pFileName)) >= lenFilePath) {
+      ShowError(MB_OK|MB_ICONSTOP, ERROR_BUFFER_OVERFLOW, "lstrlen(%s) >= %lu",
+                pFileName, (long)lenFilePath);
+      return FALSE;
+    }
+
+    lstrcpy(pFilePath, pFileName);
+
+    return TRUE;
+  }
 
   res = GetFullPathName(pNearPath, lenFilePath, pFilePath, &pBuf);
 
@@ -110,7 +129,7 @@ InfFile::InfFile(const char *pInfName, const char *pNearPath)
 {
   char path[MAX_PATH];
 
-  if (GetFilePath(pInfName, pNearPath, path, sizeof(path))) {
+  if (GetFilePath(pInfName, pNearPath, path, sizeof(path)/sizeof(path[0]))) {
     int len = lstrlen(path);
 
     pPath = (char *)LocalAlloc(LPTR, (len + 1)*sizeof(path[0]));
@@ -134,23 +153,23 @@ InfFile::~InfFile()
     LocalFree((HLOCAL)pProvider);
 }
 ///////////////////////////////////////////////////////////////
-const char *InfFile::ClassGUID() const
+const char *InfFile::ClassGUID(BOOL showErrors) const
 {
-  GetVersionInfo(pPath, "ClassGUID", &(char *)pClassGUID);
+  GetVersionInfo(pPath, "ClassGUID", &(char *)pClassGUID, showErrors);
 
   return pClassGUID;
 }
 ///////////////////////////////////////////////////////////////
-const char *InfFile::Class() const
+const char *InfFile::Class(BOOL showErrors) const
 {
-  GetVersionInfo(pPath, "Class", &(char *)pClass);
+  GetVersionInfo(pPath, "Class", &(char *)pClass, showErrors);
 
   return pClass;
 }
 ///////////////////////////////////////////////////////////////
-const char *InfFile::Provider() const
+const char *InfFile::Provider(BOOL showErrors) const
 {
-  GetVersionInfo(pPath, "Provider", &(char *)pProvider);
+  GetVersionInfo(pPath, "Provider", &(char *)pProvider, showErrors);
 
   return pProvider;
 }
@@ -158,11 +177,12 @@ const char *InfFile::Provider() const
 BOOL InfFile::Compare(
     const char *_pClassGUID,
     const char *_pClass,
-    const char *_pProvider) const
+    const char *_pProvider,
+    BOOL showErrors) const
 {
-  return ClassGUID() && !lstrcmpi(pClassGUID, _pClassGUID) &&
-         Class() && !lstrcmpi(pClass, _pClass) &&
-         Provider() && !lstrcmpi(pProvider, _pProvider);
+  return (!_pClassGUID || (ClassGUID(showErrors) && !lstrcmpi(pClassGUID, _pClassGUID))) &&
+         (!_pClass || (Class(showErrors) && !lstrcmpi(pClass, _pClass))) &&
+         (!_pProvider || (Provider(showErrors) && !lstrcmpi(pProvider, _pProvider)));
 }
 ///////////////////////////////////////////////////////////////
 static UINT FileCallback(
@@ -253,7 +273,9 @@ BOOL InfFile::InstallOEMInf() const
   if (!SetupCopyOEMInf(pPath, NULL, SPOST_PATH, SP_COPY_REPLACEONLY, NULL, 0, NULL, NULL)) {
     char infPathDest[MAX_PATH];
 
-    if (!SetupCopyOEMInf(pPath, NULL, SPOST_PATH, 0, infPathDest, sizeof(infPathDest), NULL, NULL)) {
+    if (!SetupCopyOEMInf(pPath, NULL, SPOST_PATH, 0, infPathDest,
+        sizeof(infPathDest)/sizeof(infPathDest[0]), NULL, NULL))
+    {
       ShowLastError(MB_OK|MB_ICONSTOP, "SetupCopyOEMInf(%s)", pPath);
       return FALSE;
     }
@@ -291,21 +313,23 @@ static BOOL UninstallFile(const char *pPath)
 }
 #endif /* HAVE_SetupUninstallOEMInf */
 
-BOOL InfFile::UninstallOEMInf() const
+static BOOL UninstallInf(const char *pPath)
 {
-  if (!pPath)
-    return FALSE;
-
   int res;
 
   do {
     res = IDCONTINUE;
 
     char infPathDest[MAX_PATH];
-    char *pInfNameDest;
 
-    if (SetupCopyOEMInf(pPath, NULL, SPOST_NONE, SP_COPY_REPLACEONLY, infPathDest, sizeof(infPathDest), NULL, &pInfNameDest)) {
+    if (SNPRINTF(infPathDest, sizeof(infPathDest)/sizeof(infPathDest[0]), "%s", pPath) > 0) {
 #ifdef HAVE_SetupUninstallOEMInf
+      char *pInfNameDest, *p;
+
+      for (pInfNameDest = p = infPathDest ; *p ; p++)
+        if (*p == '\\')
+          pInfNameDest = p + 1;
+
       if (SetupUninstallOEMInf(pInfNameDest, 0, NULL)) {
         Trace("Deleted %s\n", pInfNameDest);
       } else {
@@ -330,6 +354,34 @@ BOOL InfFile::UninstallOEMInf() const
       }
 #endif /* HAVE_SetupUninstallOEMInf */
     } else {
+      Trace("Can't uninstall %s\n", pPath);
+      res = IDCANCEL;
+    }
+  } while (res == IDTRYAGAIN);
+
+  if (res != IDCONTINUE)
+    return FALSE;
+
+  return res;
+}
+///////////////////////////////////////////////////////////////
+BOOL InfFile::UninstallOEMInf() const
+{
+  if (!pPath)
+    return FALSE;
+
+  int res;
+
+  do {
+    res = IDCONTINUE;
+
+    char infPathDest[MAX_PATH];
+
+    if (SetupCopyOEMInf(pPath, NULL, SPOST_NONE, SP_COPY_REPLACEONLY, infPathDest,
+        sizeof(infPathDest)/sizeof(infPathDest[0]), NULL, NULL))
+    {
+      UninstallInf(infPathDest);
+    } else {
       if (GetLastError() == ERROR_FILE_NOT_FOUND) {
         Trace("File %s not installed\n", pPath);
       } else {
@@ -340,6 +392,81 @@ BOOL InfFile::UninstallOEMInf() const
 
   if (res != IDCONTINUE)
     return FALSE;
+
+  return TRUE;
+}
+///////////////////////////////////////////////////////////////
+BOOL InfFile::UninstallAllInfFiles(
+    const char *_pClassGUID,
+    const char *_pClass,
+    const char *_pProvider)
+{
+  DWORD size;
+
+  if (!SetupGetInfFileList(NULL, INF_STYLE_WIN4, NULL, 0, &size)) {
+    ShowLastError(MB_OK|MB_ICONSTOP, "SetupGetInfFileList()");
+    return FALSE;
+  }
+
+  char *pList = (char *)LocalAlloc(LPTR, size*sizeof(pList[0]));
+
+  if (pList) {
+    if (!SetupGetInfFileList(NULL, INF_STYLE_WIN4, pList, size, NULL)) {
+      ShowLastError(MB_OK|MB_ICONSTOP, "SetupGetInfFileList()");
+      LocalFree(pList);
+      return FALSE;
+    }
+  } else {
+    ShowLastError(MB_OK|MB_ICONSTOP, "LocalAlloc()");
+    return FALSE;
+  }
+
+  char windir[MAX_PATH];
+
+  size = GetEnvironmentVariable("windir", windir, sizeof(windir)/sizeof(windir[0]));
+
+  if (!size || size >= sizeof(windir)/sizeof(windir[0])) {
+    DWORD err = !size ? GetLastError() : ERROR_BUFFER_OVERFLOW;
+
+    ShowError(MB_OK|MB_ICONSTOP, err, "GetEnvironmentVariable(windir)");
+
+    LocalFree(pList);
+    return FALSE;
+  }
+
+  char *p = pList;
+
+  do {
+    char infPath[MAX_PATH];
+
+    if (SNPRINTF(infPath, sizeof(infPath)/sizeof(infPath[0]), "%s\\inf\\%s", windir, p) > 0) {
+      InfFile infFile(infPath, NULL);
+
+      if (infFile.Compare(_pClassGUID, _pClass, _pProvider, FALSE)) {
+        if (ShowMsg(MB_YESNO,
+            "The file %s possible should be deleted too.\n"
+            "\n"
+            "%s:\n"
+            "  ClassGUID = %s\n"
+            "  Class = %s\n"
+            "  Provider = %s\n"
+            "\n"
+            "Would you like to delete it?\n",
+            infFile.Path(),
+            infFile.Path(),
+            infFile.ClassGUID(FALSE),
+            infFile.Class(FALSE),
+            infFile.Provider(FALSE)) == IDYES)
+        {
+          UninstallInf(infFile.Path());
+        }
+      }
+    }
+
+    p += lstrlen(p) + 1;
+  } while (*p);
+
+  LocalFree(pList);
 
   return TRUE;
 }

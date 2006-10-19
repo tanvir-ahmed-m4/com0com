@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.2  2006/10/19 13:28:50  vfrolov
+ * Added InfFile::UninstallAllInfFiles()
+ *
  * Revision 1.1  2006/07/28 12:16:42  vfrolov
  * Initial revision
  *
@@ -34,19 +37,25 @@ class InfFile {
     ~InfFile();
 
     const char *Path() const { return pPath; }
-    const char *ClassGUID() const;
-    const char *Class() const;
-    const char *Provider() const;
+    const char *ClassGUID(BOOL showErrors = TRUE) const;
+    const char *Class(BOOL showErrors = TRUE) const;
+    const char *Provider(BOOL showErrors = TRUE) const;
 
     BOOL Compare(
         const char *_pClassGUID,
         const char *_pClass,
-        const char *_pProvider) const;
+        const char *_pProvider,
+        BOOL showErrors = TRUE) const;
 
     BOOL UninstallFiles(const char *pFilesSection) const;
 
     BOOL InstallOEMInf() const;
     BOOL UninstallOEMInf() const;
+
+    static BOOL UninstallAllInfFiles(
+        const char *_pClassGUID,
+        const char *_pClass,
+        const char *_pProvider);
   protected:
     char *pPath;
     char *pClassGUID;

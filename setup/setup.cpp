@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.4  2006/10/19 13:28:50  vfrolov
+ * Added InfFile::UninstallAllInfFiles()
+ *
  * Revision 1.3  2006/10/13 10:26:35  vfrolov
  * Some defines moved to ../include/com0com.h
  * Changed name of device object (for WMI)
@@ -373,6 +376,9 @@ int Uninstall(InfFile &infFile)
   if (!infFile.UninstallFiles(C0C_COPY_DRIVERS_SECTION))
     return 1;
 
+  if (!InfFile::UninstallAllInfFiles(C0C_CLASS_GUID, NULL, NULL))
+    return 1;
+
   return 0;
 }
 ///////////////////////////////////////////////////////////////
@@ -387,8 +393,8 @@ int Help(const char *pProgName)
     "Commands:\n"
     "  list                         - for each port show parameters\n"
     "  change <port> <params>       - set parameters for port\n"
-    "  install <params> <params>    - install a pair of ports\n"
-    "  preinstall                   - install driver\n"
+    "  install <paramsA> <paramsB>  - install a pair of ports\n"
+    "  preinstall                   - preinstall driver\n"
     "  update                       - update driver\n"
     "  uninstall                    - uninstall all pairs and driver\n"
     "\n"
