@@ -28,12 +28,35 @@ BUILDING
 
   1. Set up the DDK environment on your machine.
   2. Run the build -wcZ command in the com0com directory to build
-     com0com.sys.
-  3. Copy com0com.inf and com0com.sys files to a temporary directory.
+     com0com.sys and setup.dll.
+  3. Copy com0com.inf, %CPU%\com0com.sys, %CPU%\setup.dll and setup\setup.bat
+     files to a temporary directory.
 
 
 INSTALLING
 ==========
+
+With setup.dll
+--------------
+
+  1. Run the setup.bat in the directory with com0com.inf, com0com.sys and
+     setup.dll files.
+  2. Enter install command, for example:
+
+       command> install - -
+
+The system will create 3 new virtual devices. One of the devices has
+name "com0com - bus for serial port pair emulator" and other two of
+them have name "com0com - serial port emulator" and located on CNCA0
+and CNCB0 ports (or CNCA1 and CNCB1 or ...).
+
+To get more info enter help command, for example:
+
+       command> help
+
+
+Manually
+--------
 
   1. Start the "Add/Remove Hardware" wizard in Control Panel.
   2. Click "Add/Troubleshoot a Device".
@@ -67,12 +90,25 @@ TESTING
 UNINSTALLING
 ============
 
+With setup.dll
+--------------
+
+  1. Run the setup.bat in the directory with com0com.inf, com0com.sys and
+     setup.dll files.
+  2. Enter uninstall command:
+
+       command> uninstall
+
+
+Manually
+--------
+
 Start Device Manager this way:
 
   set DEVMGR_SHOW_NONPRESENT_DEVICES=1
   %SystemRoot%\system32\devmgmt.msc
 
-Click View and select "Show hidden devices". Remove all "com0com" divices.
+Click View and select "Show hidden devices". Remove all "com0com" devices.
 
 Remove the following subtrees from the registry:
 
