@@ -19,6 +19,11 @@
  *
  *
  * $Log$
+ * Revision 1.5  2006/10/23 12:08:31  vfrolov
+ * Added interactive mode
+ * Added more help
+ * Added SetTitle() calls
+ *
  * Revision 1.4  2006/10/19 13:28:50  vfrolov
  * Added InfFile::UninstallAllInfFiles()
  *
@@ -52,6 +57,8 @@
 #define C0C_PROVIDER             "Vyacheslav Frolov"
 #define C0C_REGKEY_EVENTLOG      REGSTR_PATH_SERVICES "\\Eventlog\\System\\" C0C_SERVICE
 #define C0C_COPY_DRIVERS_SECTION "com0com_CopyDrivers"
+
+#define C0C_SETUP_TITLE          "Setup for com0com"
 
 ///////////////////////////////////////////////////////////////
 int Change(InfFile &infFile, const char *pPhPortName, const char *pParameters)
@@ -382,12 +389,17 @@ int Uninstall(InfFile &infFile)
   return 0;
 }
 ///////////////////////////////////////////////////////////////
-int Help(const char *pProgName)
+int Help(const char *pCmdPref)
 {
+  SetTitle(C0C_SETUP_TITLE " (HELP)");
+
+  Trace(
+    C0C_SETUP_TITLE "\n"
+    "\n");
   Trace(
     "Usage:\n"
-    "  %s <command>\n"
-    , pProgName);
+    "  %s<command>\n"
+    , pCmdPref);
   Trace(
     "\n"
     "Commands:\n"
@@ -397,6 +409,8 @@ int Help(const char *pProgName)
     "  preinstall                   - preinstall driver\n"
     "  update                       - update driver\n"
     "  uninstall                    - uninstall all pairs and driver\n"
+    "  quit                         - quit\n"
+    "  help                         - print this help\n"
     "\n"
     );
   Trace(
@@ -408,78 +422,151 @@ int Help(const char *pProgName)
     "Examples:\n"
     );
   Trace(
-    "  %s install - -\n"
-    , pProgName);
+    "  %sinstall - -\n"
+    , pCmdPref);
   Trace(
-    "  %s install PortName=COM2 PortName=COM4\n"
-    , pProgName);
+    "  %sinstall PortName=COM2 PortName=COM4\n"
+    , pCmdPref);
   Trace(
-    "  %s change " C0C_PREF_PORT_NAME_A "0 EmuBR=yes,EmuOverrun=yes\n"
-    , pProgName);
+    "  %sinstall PortName=COM5,EmuBR=yes,EmuOverrun=yes -\n"
+    , pCmdPref);
+  Trace(
+    "  %schange " C0C_PREF_PORT_NAME_A "0 EmuBR=yes,EmuOverrun=yes\n"
+    , pCmdPref);
+  Trace(
+    "  %slist\n"
+    , pCmdPref);
+  Trace(
+    "  %suninstall\n"
+    , pCmdPref);
+  Trace(
+    "\n");
 
   return 1;
 }
 ///////////////////////////////////////////////////////////////
 int Main(int argc, const char* argv[])
 {
+  if (argc == 1) {
+    return 0;
+  }
+  else
+  if (argc == 2 && !lstrcmpi(argv[1], "help")) {
+    Help(argv[0]);
+    return 0;
+  }
+  else
+  if (argc == 2 && !lstrcmpi(argv[1], "quit")) {
+    return 0;
+  }
+
   InfFile infFile(C0C_INF_NAME, C0C_INF_NAME);
 
   if (!infFile.Compare(C0C_CLASS_GUID, C0C_CLASS, C0C_PROVIDER))
     return 1;
 
   if (argc == 2 && !lstrcmpi(argv[1], "list")) {
+    SetTitle(C0C_SETUP_TITLE " (LIST)");
     return Change(infFile, NULL, NULL);
   }
   else
   if (argc == 4 && !lstrcmpi(argv[1], "change")) {
+    SetTitle(C0C_SETUP_TITLE " (CHANGE)");
     return Change(infFile, argv[2], argv[3]);
   }
   else
   if (argc == 4 && !lstrcmpi(argv[1], "install")) {
+    SetTitle(C0C_SETUP_TITLE " (INSTALL)");
     return Install(infFile, argv[2], argv[3]);
   }
   else
   if (argc == 2 && !lstrcmpi(argv[1], "preinstall")) {
+    SetTitle(C0C_SETUP_TITLE " (PREINSTALL)");
     return Preinstall(infFile);
   }
   else
   if (argc == 2 && !lstrcmpi(argv[1], "update")) {
+    SetTitle(C0C_SETUP_TITLE " (UPDATE)");
     return Update(infFile);
   }
   else
   if (argc == 2 && !lstrcmpi(argv[1], "uninstall")) {
+    SetTitle(C0C_SETUP_TITLE " (UNINSTALL)");
     return Uninstall(infFile);
   }
 
-  return Help(argv[0]);
+  Trace("Unknown command. For more info enter: '%shelp'.\n",
+        argv[0]);
+
+  return 1;
+}
+///////////////////////////////////////////////////////////////
+static int ParseCmd(char *pCmd, const char* argv[], int sizeArgv)
+{
+  int argc;
+
+  argc = 0;
+
+  for (char *pArg = strtok(pCmd, " \t\r\n") ; pArg ; pArg = strtok(NULL, " \t\r\n")) {
+    if ((argc + 2) > sizeArgv)
+      break;
+
+    if (*pArg == '"')
+      pArg++;
+
+    char *pEnd = pArg + lstrlen(pArg);
+
+    if (pEnd-- != pArg && *pEnd == '"')
+      *pEnd = 0;
+
+    argv[argc++] = pArg;
+  }
+
+  argv[argc] = NULL;
+
+  return argc;
 }
 ///////////////////////////////////////////////////////////////
 int CALLBACK RunDllA(HWND /*hWnd*/, HINSTANCE /*hInst*/, LPSTR pCmdLine, int /*nCmdShow*/)
 {
-  int argc;
-  const char* argv[5];
-
-  argc = 0;
-  argv[argc++] = "rundll32 setup,RunDll";
-  argv[argc] = NULL;
+  SetTitle(C0C_SETUP_TITLE);
 
   char cmd[200];
 
   lstrcpyn(cmd, pCmdLine, sizeof(cmd)/sizeof(cmd[0]));
 
-  for (const char *pArg = strtok(cmd, " \t") ; pArg ; pArg = strtok(NULL, " \t")) {
-    if ((argc + 2) > sizeof(argv)/sizeof(argv[0]))
-      break;
+  int argc;
+  const char* argv[5];
 
-    argv[argc++] = pArg;
-    argv[argc] = NULL;
+  argc = ParseCmd(cmd, argv + 1, sizeof(argv)/sizeof(argv[0]) - 1) + 1;
+
+  if (argc == 1) {
+    argv[0] = "";
+
+    for (;;) {
+      argv[1] = NULL;
+
+      ConsoleWriteRead(cmd, sizeof(cmd)/sizeof(cmd[0]), "command> ");
+
+      argc = ParseCmd(cmd, argv + 1, sizeof(argv)/sizeof(argv[0]) - 1) + 1;
+
+      if (argc == 2 && !lstrcmpi(argv[1], "quit"))
+        return 0;
+
+      Main(argc, argv);
+    }
   }
+
+  argv[0] = "rundll32 setup,RunDll ";
 
   int res = Main(argc, argv);
 
-  char buf[2];
-
-  ConsoleWriteRead(buf, sizeof(buf)/sizeof(buf[0]), "\nresult = %d\n\nPress <RETURN> to continue\n", res);
+  ConsoleWriteRead(cmd, sizeof(cmd)/sizeof(cmd[0]),
+                   "\n"
+                   "result = %d\n"
+                   "\n"
+                   "Press <RETURN> to continue\n",
+                   res);
 
   return res;
 }
