@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.2  2006/10/23 12:04:23  vfrolov
+ * Added SetTitle()
+ *
  * Revision 1.1  2006/07/28 12:16:42  vfrolov
  * Initial revision
  *
@@ -33,5 +36,6 @@ int ShowError(UINT type, DWORD err, const char *pFmt, ...);
 int ShowLastError(UINT type, const char *pFmt, ...);
 void Trace(const char *pFmt, ...);
 void ConsoleWriteRead(char *pReadBuf, int lenReadBuf, const char *pFmt, ...);
+void SetTitle(const char *pTitle);
 
 #endif /* _C0C_MSG_H_ */

@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.3  2006/10/23 12:04:23  vfrolov
+ * Added SetTitle()
+ *
  * Revision 1.2  2006/10/17 10:03:59  vfrolov
  * Added MB_SETFOREGROUND flag to MessageBox()
  *
@@ -31,13 +34,15 @@
 #include "msg.h"
 #include "utils.h"
 
+char title[80] = "";
+
 ///////////////////////////////////////////////////////////////
-static int ShowMsgDefault(LPCSTR pText, LPCSTR pCaption, UINT type)
+static int ShowMsgDefault(LPCSTR pText, UINT type)
 {
-  return MessageBox(NULL, pText, pCaption, type|MB_SETFOREGROUND);
+  return MessageBox(NULL, pText, title, type|MB_SETFOREGROUND);
 }
 
-static int (* pShowMsg)(LPCSTR pText, LPCSTR pCaption, UINT type) = ShowMsgDefault;
+static int (* pShowMsg)(LPCSTR pText, UINT type) = ShowMsgDefault;
 ///////////////////////////////////////////////////////////////
 static void ConsoleWriteReadDefault(LPSTR pReadBuf, DWORD lenReadBuf, LPCSTR pText)
 {
@@ -46,6 +51,7 @@ static void ConsoleWriteReadDefault(LPSTR pReadBuf, DWORD lenReadBuf, LPCSTR pTe
   if (handle == INVALID_HANDLE_VALUE) {
     AllocConsole();
     handle = GetStdHandle(STD_OUTPUT_HANDLE);
+    SetConsoleTitle(title);
   }
 
   if (pText)
@@ -77,7 +83,7 @@ static int ShowMsgVA(UINT type, const char *pFmt, va_list va)
 
   VSNPRINTF(buf, sizeof(buf)/sizeof(buf[0]), pFmt, va);
 
-  return pShowMsg(buf, NULL, type);
+  return pShowMsg(buf, type);
 }
 ///////////////////////////////////////////////////////////////
 static int ShowErrorVA(UINT type, DWORD err, const char *pFmt, va_list va)
@@ -103,7 +109,7 @@ static int ShowErrorVA(UINT type, DWORD err, const char *pFmt, va_list va)
 
   LocalFree(pMsgBuf);
 
-  return pShowMsg(buf, NULL, type);
+  return pShowMsg(buf, type);
 }
 ///////////////////////////////////////////////////////////////
 int ShowMsg(UINT type, const char *pFmt, ...)
@@ -173,5 +179,10 @@ void ConsoleWriteRead(char *pReadBuf, int lenReadBuf, const char *pFmt, ...)
   va_end(va);
 
   pConsole(pReadBuf, lenReadBuf, buf);
+}
+///////////////////////////////////////////////////////////////
+void SetTitle(const char *pTitle)
+{
+  lstrcpyn(title, pTitle, sizeof(title)/sizeof(title[0]));
 }
 ///////////////////////////////////////////////////////////////
