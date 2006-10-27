@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.3  2006/10/27 12:44:14  vfrolov
+ * Fixed typecasting
+ *
  * Revision 1.2  2006/10/17 06:54:37  vfrolov
  * Disabled SERIAL_PORT_WMI_HW_GUID for binary compatibility with
  * both W2K and WXP
@@ -117,7 +120,7 @@ NTSTATUS QueryWmiDataBlock(
   case COC_WMI_PORT_NAME:
     Trace0((PC0C_COMMON_EXTENSION)pDevExt, L"QueryWmiDataBlock PORT_NAME");
 
-    size = wcslen(pDevExt->portName) * sizeof(pDevExt->portName[0]);
+    size = (ULONG)wcslen(pDevExt->portName) * sizeof(pDevExt->portName[0]);
 
     if (bufSize < (size + sizeof(USHORT))) {
       size += sizeof(USHORT);
