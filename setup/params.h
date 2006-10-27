@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.2  2006/10/27 13:11:58  vfrolov
+ * Added PortParameters::FillPortName()
+ *
  * Revision 1.1  2006/07/28 12:16:43  vfrolov
  * Initial revision
  *
@@ -37,6 +40,7 @@ class PortParameters {
     LONG Save();
     BOOL ParseParametersStr(const char *pParameters);
     BOOL FillParametersStr(char *pParameters, int size);
+    BOOL FillPortName(char *pPortName, int size);
     BOOL Changed() const { return maskChanged != 0; }
 
     static const char *PortParameters::GetHelp();

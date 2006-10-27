@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.2  2006/10/27 13:11:58  vfrolov
+ * Added PortParameters::FillPortName()
+ *
  * Revision 1.1  2006/07/28 12:16:43  vfrolov
  * Initial revision
  *
@@ -413,6 +416,16 @@ BOOL PortParameters::FillParametersStr(char *pParameters, int size)
                  (maskExplicit & m_portName) ? (portName) : "-",
                  (maskExplicit & m_emuBR) ? (emuBR ? "yes" : "no") : "-",
                  (maskExplicit & m_emuOverrun) ? (emuOverrun ? "yes" : "no") : "-");
+
+  return len >= 0;
+}
+///////////////////////////////////////////////////////////////
+BOOL PortParameters::FillPortName(char *pPortName, int size)
+{
+  int len;
+
+  len = SNPRINTF(pPortName, size, "%s",
+                 (maskExplicit & m_portName) ? portName : phPortName);
 
   return len >= 0;
 }
