@@ -19,6 +19,11 @@
  *
  *
  * $Log$
+ * Revision 1.6  2006/10/27 13:23:49  vfrolov
+ * Added check if port name is already used for other device
+ * Fixed incorrect port restart
+ * Fixed prompts
+ *
  * Revision 1.5  2006/10/23 12:08:31  vfrolov
  * Added interactive mode
  * Added more help
@@ -60,6 +65,40 @@
 
 #define C0C_SETUP_TITLE          "Setup for com0com"
 
+
+///////////////////////////////////////////////////////////////
+BOOL IsValidPortName(
+    const char *pPortName,
+    const char *pPhDevName)
+{
+  int res;
+
+  do {
+    res = IDCONTINUE;
+
+    char phDevName[80];
+
+    if (!QueryDosDevice(pPortName, phDevName, sizeof(phDevName)/sizeof(phDevName[0]))) {
+      if (GetLastError() != ERROR_INSUFFICIENT_BUFFER)
+        break;
+
+      phDevName[0] = 0;
+    }
+
+    if (pPhDevName && !lstrcmpi(pPhDevName, phDevName))
+      break;
+
+    res = ShowMsg(MB_CANCELTRYCONTINUE,
+                  "Port name %s is already used for other device %s.",
+                  pPortName, phDevName);
+
+  } while (res == IDTRYAGAIN);
+
+  if (res != IDCONTINUE)
+    return FALSE;
+
+  return TRUE;
+}
 ///////////////////////////////////////////////////////////////
 int Change(InfFile &infFile, const char *pPhPortName, const char *pParameters)
 {
@@ -85,24 +124,29 @@ int Change(InfFile &infFile, const char *pPhPortName, const char *pParameters)
       Trace("       %s %s\n", phPortName, buf);
 
       if (err == ERROR_SUCCESS) {
-        if (pPhPortName && !lstrcmpi(pPhPortName, phPortName))
+        if (pPhPortName && !lstrcmpi(pPhPortName, phPortName)) {
           portParameters.ParseParametersStr(pParameters);
 
-        if (portParameters.Changed()) {
-          err = portParameters.Save();
+          char phDevName[40];
 
-          if (err == ERROR_SUCCESS) {
-            portParameters.FillParametersStr(buf, sizeof(buf)/sizeof(buf[0]));
-            Trace("change %s %s\n", phPortName, buf);
+          SNPRINTF(phDevName, sizeof(phDevName)/sizeof(phDevName[0]), "%s%d",
+                   j ? C0C_PREF_DEVICE_NAME_B : C0C_PREF_DEVICE_NAME_A, i);
 
-            char phDevDevName[40];
+          char portName[20];
 
-            SNPRINTF(phDevDevName, sizeof(phDevDevName)/sizeof(phDevDevName[0]), "%s%d",
-                     j ? C0C_PREF_DEVICE_NAME_A : C0C_PREF_DEVICE_NAME_B, i);
+          portParameters.FillPortName(portName, sizeof(portName)/sizeof(portName[0]));
 
-            RestartDevices(infFile, C0C_PORT_DEVICE_ID, phDevDevName, &rebootRequired);
-          } else {
-            ShowError(MB_OK|MB_ICONWARNING, err, "portParameters.Save(%s)", phPortName);
+          if (IsValidPortName(portName, phDevName) && portParameters.Changed()) {
+            err = portParameters.Save();
+
+            if (err == ERROR_SUCCESS) {
+              portParameters.FillParametersStr(buf, sizeof(buf)/sizeof(buf[0]));
+              Trace("change %s %s\n", phPortName, buf);
+
+              RestartDevices(infFile, C0C_PORT_DEVICE_ID, phDevName, &rebootRequired);
+            } else {
+              ShowError(MB_OK|MB_ICONWARNING, err, "portParameters.Save(%s)", phPortName);
+            }
           }
         }
       } else {
@@ -167,6 +211,18 @@ int Install(InfFile &infFile, const char *pParametersA, const char *pParametersB
 
     if (err == ERROR_SUCCESS) {
       portParameters.ParseParametersStr(pParameters);
+
+      char phDevName[40];
+
+      SNPRINTF(phDevName, sizeof(phDevName)/sizeof(phDevName[0]), "%s%d",
+               j ? C0C_PREF_DEVICE_NAME_B : C0C_PREF_DEVICE_NAME_A, i);
+
+      char portName[20];
+
+      portParameters.FillPortName(portName, sizeof(portName)/sizeof(portName[0]));
+
+      if (!IsValidPortName(portName, phDevName))
+        return 1;
 
       if (portParameters.Changed()) {
         err = portParameters.Save();
@@ -495,8 +551,7 @@ int Main(int argc, const char* argv[])
     return Uninstall(infFile);
   }
 
-  Trace("Unknown command. For more info enter: '%shelp'.\n",
-        argv[0]);
+  Trace("Invalid command\n");
 
   return 1;
 }
@@ -541,6 +596,8 @@ int CALLBACK RunDllA(HWND /*hWnd*/, HINSTANCE /*hInst*/, LPSTR pCmdLine, int /*n
   argc = ParseCmd(cmd, argv + 1, sizeof(argv)/sizeof(argv[0]) - 1) + 1;
 
   if (argc == 1) {
+    Trace("Enter 'help' to get info about usage of " C0C_SETUP_TITLE ".\n\n");
+
     argv[0] = "";
 
     for (;;) {
@@ -561,12 +618,7 @@ int CALLBACK RunDllA(HWND /*hWnd*/, HINSTANCE /*hInst*/, LPSTR pCmdLine, int /*n
 
   int res = Main(argc, argv);
 
-  ConsoleWriteRead(cmd, sizeof(cmd)/sizeof(cmd[0]),
-                   "\n"
-                   "result = %d\n"
-                   "\n"
-                   "Press <RETURN> to continue\n",
-                   res);
+  ConsoleWriteRead(cmd, sizeof(cmd)/sizeof(cmd[0]), "\nPress <RETURN> to continue\n");
 
   return res;
 }
