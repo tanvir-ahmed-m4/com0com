@@ -3,5 +3,5 @@ MSG00001.bin
 c0clog.h
 c0clog.rc
 obj
-objchk
-objfre
+objchk*
+objfre*
