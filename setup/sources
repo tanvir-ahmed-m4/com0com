@@ -9,6 +9,7 @@ SOURCES= \
         inffile.cpp \
         params.cpp \
         devutils.cpp \
+        portnum.cpp \
         msg.cpp \
         utils.cpp \
         setup.rc \
