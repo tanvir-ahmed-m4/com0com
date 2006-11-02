@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.7  2006/11/02 16:20:44  vfrolov
+ * Added usage the fixed port numbers
+ *
  * Revision 1.6  2006/10/27 13:23:49  vfrolov
  * Added check if port name is already used for other device
  * Fixed incorrect port restart
@@ -43,7 +46,6 @@
  * Revision 1.1  2006/07/28 12:16:42  vfrolov
  * Initial revision
  *
- *
  */
 
 #include "precomp.h"
@@ -52,6 +54,7 @@
 #include "devutils.h"
 #include "msg.h"
 #include "utils.h"
+#include "portnum.h"
 
 #define TEXT_PREF
 #include "../include/com0com.h"
@@ -65,9 +68,8 @@
 
 #define C0C_SETUP_TITLE          "Setup for com0com"
 
-
 ///////////////////////////////////////////////////////////////
-BOOL IsValidPortName(
+static BOOL IsValidPortName(
     const char *pPortName,
     const char *pPhDevName)
 {
@@ -100,14 +102,28 @@ BOOL IsValidPortName(
   return TRUE;
 }
 ///////////////////////////////////////////////////////////////
-int Change(InfFile &infFile, const char *pPhPortName, const char *pParameters)
+struct ChangeDeviceParams {
+  ChangeDeviceParams(InfFile &_infFile, const char *_pPhPortName, const char *_pParameters)
+    : pInfFile(&_infFile), pPhPortName(_pPhPortName), pParameters(_pParameters) {}
+
+  InfFile *pInfFile;
+  const char *pPhPortName;
+  const char *pParameters;
+};
+
+static BOOL ChangeDevice(
+    HDEVINFO hDevInfo,
+    PSP_DEVINFO_DATA pDevInfoData,
+    BOOL *pRebootRequired,
+    void *pParam)
 {
-  BOOL rebootRequired = FALSE;
-  int numPairs = CountDevices(infFile, C0C_BUS_DEVICE_ID);
+  int i = GetPortNum(hDevInfo, pDevInfoData);
 
-  //Trace("Found %d pairs\n", numPairs);
+  if (i >= 0) {
+    InfFile &infFile = *((ChangeDeviceParams *)pParam)->pInfFile;
+    const char *pPhPortName = ((ChangeDeviceParams *)pParam)->pPhPortName;
+    const char *pParameters = ((ChangeDeviceParams *)pParam)->pParameters;
 
-  for (int i = 0 ; i < numPairs ; i++) {
     for (int j = 0 ; j < 2 ; j++) {
       char phPortName[20];
 
@@ -143,7 +159,7 @@ int Change(InfFile &infFile, const char *pPhPortName, const char *pParameters)
               portParameters.FillParametersStr(buf, sizeof(buf)/sizeof(buf[0]));
               Trace("change %s %s\n", phPortName, buf);
 
-              RestartDevices(infFile, C0C_PORT_DEVICE_ID, phDevName, &rebootRequired);
+              RestartDevices(infFile, C0C_PORT_DEVICE_ID, phDevName, pRebootRequired);
             } else {
               ShowError(MB_OK|MB_ICONWARNING, err, "portParameters.Save(%s)", phPortName);
             }
@@ -154,6 +170,16 @@ int Change(InfFile &infFile, const char *pPhPortName, const char *pParameters)
       }
     }
   }
+
+  return TRUE;
+}
+
+int Change(InfFile &infFile, const char *pPhPortName, const char *pParameters)
+{
+  BOOL rebootRequired = FALSE;
+  ChangeDeviceParams params(infFile, pPhPortName, pParameters);
+
+  EnumDevices(infFile, C0C_BUS_DEVICE_ID, &rebootRequired, ChangeDevice, &params);
 
   if (rebootRequired)
     SetupPromptReboot(NULL, NULL, FALSE);
@@ -192,9 +218,75 @@ int Update(InfFile &infFile)
   return  0;
 }
 ///////////////////////////////////////////////////////////////
-int Install(InfFile &infFile, const char *pParametersA, const char *pParametersB)
+static BOOL SetPortNum(
+    HDEVINFO hDevInfo,
+    PSP_DEVINFO_DATA pDevInfoData,
+    BOOL * /* pRebootRequired */,
+    void *pParam)
 {
-  int i = CountDevices(infFile, C0C_BUS_DEVICE_ID);
+  int res;
+
+  do {
+    res = IDCONTINUE;
+
+    LONG err = SetPortNum(hDevInfo, pDevInfoData, (int)pParam);
+
+    if (err != ERROR_SUCCESS)
+      res = ShowError(MB_CANCELTRYCONTINUE, err, "SetPortNum(%d)", (int)pParam);
+
+  } while (res == IDTRYAGAIN);
+
+  if (res != IDCONTINUE)
+    return FALSE;
+
+  return TRUE;
+}
+
+static BOOL AddDeviceToBusyMask(
+    HDEVINFO hDevInfo,
+    PSP_DEVINFO_DATA pDevInfoData,
+    BOOL * /* pRebootRequired */,
+    void *pParam)
+{
+  int i = GetPortNum(hDevInfo, pDevInfoData);
+
+  if (i >= 0)
+    ((BusyMask *)pParam)->AddNum(i);
+
+  return TRUE;
+}
+
+static int AllocPortNum(InfFile &infFile, int num)
+{
+  BusyMask busyMask;
+
+  EnumDevices(infFile, C0C_BUS_DEVICE_ID, NULL, AddDeviceToBusyMask, &busyMask);
+
+  return busyMask.IsFreeNum(num) ? num : busyMask.GetFirstFreeNum();
+}
+
+int Install(InfFile &infFile, const char *pParametersA, const char *pParametersB, int num)
+{
+  int i;
+  int res;
+
+  do {
+    res = IDCONTINUE;
+
+    i = AllocPortNum(infFile, num >= 0 ? num : 0);
+
+    if (num >= 0 && num != i) {
+      res = ShowMsg(MB_CANCELTRYCONTINUE|MB_ICONWARNING,
+                    "The identifiers " C0C_PREF_PORT_NAME_A "%d and "
+                    C0C_PREF_PORT_NAME_B "%d are already used for other ports\n"
+                    "so ports with identifiers " C0C_PREF_PORT_NAME_A "%d and "
+                    C0C_PREF_PORT_NAME_B "%d will be installed instead.\n",
+                    num, num, i, i);
+    }
+  } while (res == IDTRYAGAIN);
+
+  if (res != IDCONTINUE)
+    goto err;
 
   for (int j = 0 ; j < 2 ; j++) {
     char phPortName[20];
@@ -212,17 +304,12 @@ int Install(InfFile &infFile, const char *pParametersA, const char *pParametersB
     if (err == ERROR_SUCCESS) {
       portParameters.ParseParametersStr(pParameters);
 
-      char phDevName[40];
-
-      SNPRINTF(phDevName, sizeof(phDevName)/sizeof(phDevName[0]), "%s%d",
-               j ? C0C_PREF_DEVICE_NAME_B : C0C_PREF_DEVICE_NAME_A, i);
-
       char portName[20];
 
       portParameters.FillPortName(portName, sizeof(portName)/sizeof(portName[0]));
 
-      if (!IsValidPortName(portName, phDevName))
-        return 1;
+      if (!IsValidPortName(portName, NULL))
+        goto err;
 
       if (portParameters.Changed()) {
         err = portParameters.Save();
@@ -241,10 +328,16 @@ int Install(InfFile &infFile, const char *pParametersA, const char *pParametersB
     Trace("       %s %s\n", phPortName, buf);
   }
 
-  if (!InstallDevice(infFile, C0C_BUS_DEVICE_ID))
-    return 1;
+  if (!InstallDevice(infFile, C0C_BUS_DEVICE_ID, SetPortNum, (void *)i))
+    goto err;
 
   return  0;
+
+err:
+
+  Trace("\nInstall not completed!\n");
+
+  return  1;
 }
 ///////////////////////////////////////////////////////////////
 int Uninstall(InfFile &infFile)
@@ -459,15 +552,20 @@ int Help(const char *pCmdPref)
   Trace(
     "\n"
     "Commands:\n"
-    "  list                         - for each port show parameters\n"
-    "  change <port> <params>       - set parameters for port\n"
-    "  install <paramsA> <paramsB>  - install a pair of ports\n"
+    "  install <n> <prmsA> <prmsB>  - install a pair of linked ports with\n"
+    "   or                            identifiers " C0C_PREF_PORT_NAME_A "<n> and "
+                                      C0C_PREF_PORT_NAME_B "<n>\n"
+    "  install <prmsA> <prmsB>        (by default <n> is the first not used number),\n"
+    "                                 set their parameters to <prmsA> and <prmsB>\n"
+    "  change <portid> <prms>       - set parameters <prms> for port with\n"
+    "                                 identifier <portid>\n"
+    "  list                         - for each port show its identifier and\n"
+    "                                 parameters\n"
     "  preinstall                   - preinstall driver\n"
     "  update                       - update driver\n"
-    "  uninstall                    - uninstall all pairs and driver\n"
+    "  uninstall                    - uninstall all ports and the driver\n"
     "  quit                         - quit\n"
     "  help                         - print this help\n"
-    "\n"
     );
   Trace(
     "\n"
@@ -479,6 +577,9 @@ int Help(const char *pCmdPref)
     );
   Trace(
     "  %sinstall - -\n"
+    , pCmdPref);
+  Trace(
+    "  %sinstall 5 * *\n"
     , pCmdPref);
   Trace(
     "  %sinstall PortName=COM2 PortName=COM4\n"
@@ -533,7 +634,16 @@ int Main(int argc, const char* argv[])
   else
   if (argc == 4 && !lstrcmpi(argv[1], "install")) {
     SetTitle(C0C_SETUP_TITLE " (INSTALL)");
-    return Install(infFile, argv[2], argv[3]);
+    return Install(infFile, argv[2], argv[3], -1);
+  }
+  else
+  if (argc == 5 && !lstrcmpi(argv[1], "install")) {
+    SetTitle(C0C_SETUP_TITLE " (INSTALL)");
+
+    int num;
+
+    if (StrToInt(argv[2], &num) && num >= 0)
+      return Install(infFile, argv[3], argv[4], num);
   }
   else
   if (argc == 2 && !lstrcmpi(argv[1], "preinstall")) {
@@ -591,7 +701,7 @@ int CALLBACK RunDllA(HWND /*hWnd*/, HINSTANCE /*hInst*/, LPSTR pCmdLine, int /*n
   lstrcpyn(cmd, pCmdLine, sizeof(cmd)/sizeof(cmd[0]));
 
   int argc;
-  const char* argv[5];
+  const char* argv[10];
 
   argc = ParseCmd(cmd, argv + 1, sizeof(argv)/sizeof(argv[0]) - 1) + 1;
 

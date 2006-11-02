@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.2  2006/11/02 16:20:44  vfrolov
+ * Added usage the fixed port numbers
+ *
  * Revision 1.1  2006/07/28 12:16:43  vfrolov
  * Initial revision
  *
@@ -30,9 +33,18 @@
 
 class InfFile;
 
-int CountDevices(
+typedef BOOL (* PDEVCALLBACK)(
+    HDEVINFO hDevInfo,
+    PSP_DEVINFO_DATA pDevInfoData,
+    BOOL *pRebootRequired,
+    void *pParam);
+
+int EnumDevices(
     InfFile &infFile,
-    const char *pDevId);
+    const char *pDevId,
+    BOOL *pRebootRequired,
+    PDEVCALLBACK pDevCallBack,
+    void *pCallBackParam);
 
 BOOL DisableDevices(
     InfFile &infFile,
@@ -52,6 +64,8 @@ BOOL RemoveDevices(
 
 BOOL InstallDevice(
     InfFile &infFile,
-    const char *pDevId);
+    const char *pDevId,
+    PDEVCALLBACK pDevCallBack,
+    void *pCallBackParam);
 
 #endif /* _C0C_DEVUTILS_H_ */
