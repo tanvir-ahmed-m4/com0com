@@ -19,12 +19,14 @@
  *
  *
  * $Log$
+ * Revision 1.3  2006/11/02 16:11:58  vfrolov
+ * Added default values to help text
+ *
  * Revision 1.2  2006/10/27 13:11:58  vfrolov
  * Added PortParameters::FillPortName()
  *
  * Revision 1.1  2006/07/28 12:16:43  vfrolov
  * Initial revision
- *
  *
  */
 
@@ -440,8 +442,11 @@ const char *PortParameters::GetHelp()
     "\n"
     "Parameters:\n"
     "  PortName=<name>         - set port name to <name>\n"
+    "                            (port identifier by default)\n"
     "  EmuBR={yes|no}          - enable/disable baud rate emulation\n"
+    "                            (disabled by default)\n"
     "  EmuOverrun={yes|no}     - enable/disable buffer overrun\n"
+    "                            (disabled by default)\n"
     "\n"
     "Special values:\n"
     "  -                       - use driver's default value\n"
