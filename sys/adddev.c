@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.21  2006/11/02 16:04:50  vfrolov
+ * Added using fixed port numbers
+ *
  * Revision 1.20  2006/10/16 08:30:45  vfrolov
  * Added the device interface registration
  *
@@ -134,7 +137,7 @@ VOID RemoveFdoPort(IN PC0C_FDOPORT_EXTENSION pDevExt)
   }
 
   if (pDevExt->pLowDevObj)
-	  IoDetachDevice(pDevExt->pLowDevObj);
+    IoDetachDevice(pDevExt->pLowDevObj);
 
   Trace0((PC0C_COMMON_EXTENSION)pDevExt, L"RemoveFdoPort");
 
@@ -524,44 +527,123 @@ VOID RemoveFdoBus(IN PC0C_FDOBUS_EXTENSION pDevExt)
   IoDeleteDevice(pDevExt->pDevObj);
 }
 
-ULONG AllocPortNum(IN PDRIVER_OBJECT pDrvObj)
+ULONG AllocPortNum(IN PDRIVER_OBJECT pDrvObj, ULONG num)
 {
-  static ULONG numNext = 0;
-
   PDEVICE_OBJECT pDevObj;
-  ULONG num;
+  ULONG numNext;
   PCHAR pBusyMask;
   SIZE_T busyMaskLen;
+  ULONG maskNum;
+  ULONG mask;
 
-  if (!numNext)
-    return numNext++;
+  numNext = 0;
 
-  busyMaskLen = numNext;
+  for (pDevObj = pDrvObj->DeviceObject ; pDevObj ; pDevObj = pDevObj->NextDevice) {
+    if (((PC0C_COMMON_EXTENSION)pDevObj->DeviceExtension)->doType == C0C_DOTYPE_FB) {
+      ULONG portNum = ((PC0C_FDOBUS_EXTENSION)pDevObj->DeviceExtension)->portNum;
+
+      if (portNum >= numNext)
+        numNext = portNum + 1;
+    }
+  }
+
+  if (num == (ULONG)-1)
+    num = 0;
+
+  if (num >= numNext)
+    return num;
+
+  busyMaskLen = (numNext + (sizeof(*pBusyMask)*8 - 1))/(sizeof(*pBusyMask)*8);
+
   pBusyMask = ExAllocatePool(PagedPool, busyMaskLen);
 
-  if (!pBusyMask)
-    return numNext++;
+  if (!pBusyMask) {
+    SysLog(pDrvObj, STATUS_INSUFFICIENT_RESOURCES, L"AllocPortNum ExAllocatePool FAIL");
+    return numNext;
+  }
 
   RtlZeroMemory(pBusyMask, busyMaskLen);
 
   for (pDevObj = pDrvObj->DeviceObject ; pDevObj ; pDevObj = pDevObj->NextDevice) {
     if (((PC0C_COMMON_EXTENSION)pDevObj->DeviceExtension)->doType == C0C_DOTYPE_FB) {
-      ULONG num = ((PC0C_FDOBUS_EXTENSION)pDevObj->DeviceExtension)->portNum;
+      ULONG portNum = ((PC0C_FDOBUS_EXTENSION)pDevObj->DeviceExtension)->portNum;
 
-      HALT_UNLESS3(num < busyMaskLen, num, busyMaskLen, numNext);
-      pBusyMask[num] = 1;
+      maskNum = portNum/(sizeof(*pBusyMask)*8);
+      mask = 1 << (portNum%(sizeof(*pBusyMask)*8));
+
+      HALT_UNLESS3(maskNum < busyMaskLen, portNum, busyMaskLen, numNext);
+      pBusyMask[maskNum] |= mask;
     }
   }
 
-  for (num = 0 ; num < busyMaskLen ; num++) {
-    if (!pBusyMask[num])
-      break;
+  maskNum = num/(sizeof(*pBusyMask)*8);
+  mask = 1 << (num%(sizeof(*pBusyMask)*8));
+
+  if ((pBusyMask[maskNum] & mask) != 0) {
+    for (num = 0 ; num < numNext ; num++) {
+      maskNum = num/(sizeof(*pBusyMask)*8);
+      mask = 1 << (num%(sizeof(*pBusyMask)*8));
+
+      HALT_UNLESS3(maskNum < busyMaskLen, num, busyMaskLen, numNext);
+      if ((pBusyMask[maskNum] & mask) == 0)
+        break;
+    }
   }
 
   ExFreePool(pBusyMask);
 
-  if (num >= busyMaskLen)
-    return numNext++;
+  return num;
+}
+
+ULONG GetPortNum(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
+{
+  ULONG num;
+  ULONG numPref;
+  HANDLE hKey;
+  NTSTATUS status;
+
+  numPref = (ULONG)-1;
+
+  status = IoOpenDeviceRegistryKey(pPhDevObj,
+                                   PLUGPLAY_REGKEY_DEVICE,
+                                   STANDARD_RIGHTS_READ,
+                                   &hKey);
+
+  if (status == STATUS_SUCCESS) {
+    UNICODE_STRING keyName;
+    PKEY_VALUE_PARTIAL_INFORMATION pInfo;
+    SIZE_T len;
+
+    RtlInitUnicodeString(&keyName, C0C_REGSTR_VAL_PORT_NUM);
+
+    len = sizeof(KEY_VALUE_FULL_INFORMATION) + sizeof(ULONG);
+
+    pInfo = ExAllocatePool(PagedPool, len);
+
+    if (pInfo) {
+      status = ZwQueryValueKey(hKey, &keyName, KeyValuePartialInformation, pInfo, len, &len);
+
+      if (NT_SUCCESS(status) && pInfo->DataLength == sizeof(ULONG))
+        numPref = *(PULONG)pInfo->Data;
+
+      ExFreePool(pInfo);
+    }
+
+    num = AllocPortNum(pDrvObj, numPref);
+
+    if (num != numPref) {
+      status = ZwSetValueKey(hKey, &keyName, 0, REG_DWORD, &num, sizeof(num));
+
+      if (!NT_SUCCESS(status))
+        SysLog(pPhDevObj, status, L"ZwSetValueKey(PortName) FAIL");
+    }
+
+    ZwClose(hKey);
+  } else {
+    SysLog(pPhDevObj, status, L"GetPortNum IoOpenDeviceRegistryKey(PLUGPLAY_REGKEY_DEVICE) FAIL");
+
+    num = AllocPortNum(pDrvObj, numPref);
+  }
 
   return num;
 }
@@ -576,7 +658,7 @@ NTSTATUS AddFdoBus(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
   ULONG num;
   int i;
 
-  num = AllocPortNum(pDrvObj);
+  num = GetPortNum(pDrvObj, pPhDevObj);
 
   RtlInitUnicodeString(&portName, NULL);
   StrAppendStr0(&status, &portName, C0C_PREF_BUS_NAME);
@@ -683,7 +765,7 @@ NTSTATUS c0cAddDevice(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
   StrAppendDeviceProperty(&status, &property, pPhDevObj, DevicePropertyHardwareID);
 
   if (NT_SUCCESS(status))
-	  Trace00(NULL, L"c0cAddDevice for ", property.Buffer);
+    Trace00(NULL, L"c0cAddDevice for ", property.Buffer);
   else {
     SysLog(pDrvObj, status, L"c0cAddDevice IoGetDeviceProperty FAIL");
     return status;
