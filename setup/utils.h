@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.2  2006/11/02 16:09:13  vfrolov
+ * Added StrToInt() and class BusyMask
+ *
  * Revision 1.1  2006/07/28 12:16:43  vfrolov
  * Initial revision
  *
@@ -30,5 +33,19 @@
 
 int VSNPRINTF(char *pBuf, int size, const char *pFmt, va_list va);
 int SNPRINTF(char *pBuf, int size, const char *pFmt, ...);
+BOOL StrToInt(const char *pStr, int *pNum);
+
+class BusyMask {
+public:
+  BusyMask() : pBusyMask(NULL), busyMaskLen(0) {}
+  ~BusyMask();
+
+  void AddNum(int num);
+  BOOL IsFreeNum(int num) const;
+  int GetFirstFreeNum() const;
+private:
+  PBYTE pBusyMask;
+  SIZE_T busyMaskLen;
+};
 
 #endif /* _C0C_UTILS_H_ */

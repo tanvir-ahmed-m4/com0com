@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.2  2006/11/02 16:09:13  vfrolov
+ * Added StrToInt() and class BusyMask
+ *
  * Revision 1.1  2006/07/28 12:16:43  vfrolov
  * Initial revision
  *
@@ -54,5 +57,102 @@ int SNPRINTF(char *pBuf, int size, const char *pFmt, ...)
   va_end(va);
 
   return res1;
+}
+///////////////////////////////////////////////////////////////
+BOOL StrToInt(const char *pStr, int *pNum)
+{
+  BOOL res = FALSE;
+  int num;
+  int sign = 1;
+
+  switch (*pStr) {
+    case '-':
+      sign = -1;
+    case '+':
+      pStr++;
+      break;
+  }
+
+  for (num = 0 ;; pStr++) {
+    switch (*pStr) {
+      case '0':
+      case '1':
+      case '2':
+      case '3':
+      case '4':
+      case '5':
+      case '6':
+      case '7':
+      case '8':
+      case '9':
+        num = num*10 + (*pStr - '0');
+        res = TRUE;
+        continue;
+      case 0:
+        break;
+      default:
+        res = FALSE;
+    }
+    break;
+  }
+
+  if (pNum)
+    *pNum = num*sign;
+
+  return res;
+}
+///////////////////////////////////////////////////////////////
+BusyMask::~BusyMask()
+{
+  if (pBusyMask)
+    LocalFree(pBusyMask);
+}
+
+void BusyMask::AddNum(int num)
+{
+  ULONG maskNum = num/(sizeof(*pBusyMask)*8);
+
+  if (maskNum >= busyMaskLen) {
+    SIZE_T newBusyMaskLen = maskNum + 1;
+    PBYTE pNewBusyMask;
+
+    if (!pBusyMask)
+      pNewBusyMask = (PBYTE)LocalAlloc(LPTR, newBusyMaskLen);
+    else
+      pNewBusyMask = (PBYTE)LocalReAlloc(pBusyMask, newBusyMaskLen, LMEM_ZEROINIT);
+
+    if (pNewBusyMask) {
+      pBusyMask = pNewBusyMask;
+      busyMaskLen = newBusyMaskLen;
+    } else {
+      return;
+    }
+  }
+
+  ULONG mask = 1 << (num%(sizeof(*pBusyMask)*8));
+
+  pBusyMask[maskNum] |= mask;
+}
+
+BOOL BusyMask::IsFreeNum(int num) const
+{
+  ULONG maskNum = num/(sizeof(*pBusyMask)*8);
+
+  if (maskNum >= busyMaskLen)
+    return TRUE;
+
+  ULONG mask = 1 << (num%(sizeof(*pBusyMask)*8));
+
+  return (pBusyMask[maskNum] & mask) == 0;
+}
+
+int BusyMask::GetFirstFreeNum() const
+{
+  int num;
+
+  for (num = 0 ; !IsFreeNum(num) ; num++)
+    ;
+
+  return num;
 }
 ///////////////////////////////////////////////////////////////
