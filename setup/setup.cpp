@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.9  2006/11/03 16:13:29  vfrolov
+ * Added port name length checkings
+ *
  * Revision 1.8  2006/11/03 13:22:07  vfrolov
  * Added checking of BusyMask::AddNum() return value
  *
@@ -72,11 +75,41 @@
 #define C0C_SETUP_TITLE          "Setup for com0com"
 
 ///////////////////////////////////////////////////////////////
+static BOOL IsValidPortNum(int num)
+{
+  if (num < 0)
+    return FALSE;
+
+  char buf[C0C_PORT_NAME_LEN + 1];
+
+  if (SNPRINTF(buf, sizeof(buf)/sizeof(buf[0]), C0C_PREF_BUS_NAME "%d", num) < 0 ||
+      SNPRINTF(buf, sizeof(buf)/sizeof(buf[0]), C0C_PREF_PORT_NAME_A "%d", num) < 0 ||
+      SNPRINTF(buf, sizeof(buf)/sizeof(buf[0]), C0C_PREF_PORT_NAME_B "%d", num) < 0)
+  {
+    int res = ShowMsg(MB_OKCANCEL|MB_ICONWARNING, "The port number %d is too big.\n", num);
+
+    if (res == IDCANCEL)
+      return FALSE;
+  }
+
+  return TRUE;
+}
+///////////////////////////////////////////////////////////////
 static BOOL IsValidPortName(
     const char *pPortName,
     const char *pPhDevName)
 {
   int res;
+
+  if (lstrlen(pPortName) > C0C_PORT_NAME_LEN) {
+    res = ShowMsg(MB_OKCANCEL|MB_ICONWARNING,
+                  "The length of port name %s\n"
+                  "is too big (greater then %d).\n",
+                  pPortName, C0C_PORT_NAME_LEN);
+
+    if (res == IDCANCEL)
+      return FALSE;
+  }
 
   do {
     res = IDCONTINUE;
@@ -94,7 +127,7 @@ static BOOL IsValidPortName(
       break;
 
     res = ShowMsg(MB_CANCELTRYCONTINUE,
-                  "Port name %s is already used for other device %s.",
+                  "The port name %s is already used for other device %s.",
                   pPortName, phDevName);
 
   } while (res == IDTRYAGAIN);
@@ -302,6 +335,9 @@ int Install(InfFile &infFile, const char *pParametersA, const char *pParametersB
   } while (res == IDTRYAGAIN);
 
   if (res != IDCONTINUE)
+    goto err;
+
+  if (!IsValidPortNum(i))
     goto err;
 
   for (int j = 0 ; j < 2 ; j++) {
