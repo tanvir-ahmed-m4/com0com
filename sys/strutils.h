@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.4  2006/11/03 13:13:26  vfrolov
+ * CopyStrW() now gets size in characters (not in bytes)
+ *
  * Revision 1.3  2006/03/27 09:37:28  vfrolov
  * Added StrAppendDeviceProperty()
  *
@@ -33,7 +36,7 @@
 #ifndef _C0C_STRUTILS_H_
 #define _C0C_STRUTILS_H_
 
-NTSTATUS CopyStrW(OUT PWCHAR pDestStr, IN SIZE_T size, IN PWCHAR pStr);
+NTSTATUS CopyStrW(OUT PWCHAR pDestStr, IN LONG size, IN PWCHAR pStr);
 
 NTSTATUS DupStrW(OUT PWCHAR *ppDestStr, IN PWCHAR pStr, IN BOOLEAN multiStr);
 VOID StrFree(IN OUT PUNICODE_STRING  pDest);
