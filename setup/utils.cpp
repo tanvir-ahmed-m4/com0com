@@ -19,12 +19,15 @@
  *
  *
  * $Log$
+ * Revision 1.3  2006/11/03 13:17:28  vfrolov
+ * Fixed LocalReAlloc() usage
+ * Added return value to BusyMask::AddNum()
+ *
  * Revision 1.2  2006/11/02 16:09:13  vfrolov
  * Added StrToInt() and class BusyMask
  *
  * Revision 1.1  2006/07/28 12:16:43  vfrolov
  * Initial revision
- *
  *
  */
 
@@ -108,7 +111,7 @@ BusyMask::~BusyMask()
     LocalFree(pBusyMask);
 }
 
-void BusyMask::AddNum(int num)
+BOOL BusyMask::AddNum(int num)
 {
   ULONG maskNum = num/(sizeof(*pBusyMask)*8);
 
@@ -119,19 +122,21 @@ void BusyMask::AddNum(int num)
     if (!pBusyMask)
       pNewBusyMask = (PBYTE)LocalAlloc(LPTR, newBusyMaskLen);
     else
-      pNewBusyMask = (PBYTE)LocalReAlloc(pBusyMask, newBusyMaskLen, LMEM_ZEROINIT);
+      pNewBusyMask = (PBYTE)LocalReAlloc(pBusyMask, newBusyMaskLen, LMEM_ZEROINIT|LMEM_MOVEABLE);
 
     if (pNewBusyMask) {
       pBusyMask = pNewBusyMask;
       busyMaskLen = newBusyMaskLen;
     } else {
-      return;
+      return FALSE;
     }
   }
 
   ULONG mask = 1 << (num%(sizeof(*pBusyMask)*8));
 
   pBusyMask[maskNum] |= mask;
+
+  return TRUE;
 }
 
 BOOL BusyMask::IsFreeNum(int num) const

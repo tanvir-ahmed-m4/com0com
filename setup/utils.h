@@ -19,12 +19,15 @@
  *
  *
  * $Log$
+ * Revision 1.3  2006/11/03 13:17:28  vfrolov
+ * Fixed LocalReAlloc() usage
+ * Added return value to BusyMask::AddNum()
+ *
  * Revision 1.2  2006/11/02 16:09:13  vfrolov
  * Added StrToInt() and class BusyMask
  *
  * Revision 1.1  2006/07/28 12:16:43  vfrolov
  * Initial revision
- *
  *
  */
 
@@ -40,7 +43,7 @@ public:
   BusyMask() : pBusyMask(NULL), busyMaskLen(0) {}
   ~BusyMask();
 
-  void AddNum(int num);
+  BOOL AddNum(int num);
   BOOL IsFreeNum(int num) const;
   int GetFirstFreeNum() const;
 private:
