@@ -19,12 +19,14 @@
  *
  *
  * $Log$
+ * Revision 1.3  2006/11/03 13:06:33  vfrolov
+ * Moved C0C_PORT_NAME_LEN from sys/com0com.h to include/com0com.h
+ *
  * Revision 1.2  2006/11/02 15:56:38  vfrolov
  * Defined C0C_REGSTR_VAL_PORT_NUM
  *
  * Revision 1.1  2006/10/13 10:06:13  vfrolov
  * Initial revision
- *
  *
  */
 
@@ -36,6 +38,7 @@
 #define C0C_SERVICE                 TEXT_PREF"com0com"
 #define C0C_PREF_NT_DEVICE_NAME     TEXT_PREF"\\Device\\"
 
+#define C0C_PORT_NAME_LEN           12
 #define C0C_PREF_BUS_NAME           TEXT_PREF"CNCBUS"
 #define C0C_PREF_PORT_NAME_A        TEXT_PREF"CNCA"
 #define C0C_PREF_PORT_NAME_B        TEXT_PREF"CNCB"
