@@ -19,47 +19,75 @@
  *
  *
  * $Log$
+ * Revision 1.3  2006/11/10 14:07:40  vfrolov
+ * Implemented remove command
+ *
  * Revision 1.2  2006/11/02 16:20:44  vfrolov
  * Added usage the fixed port numbers
  *
  * Revision 1.1  2006/07/28 12:16:43  vfrolov
  * Initial revision
  *
- *
  */
 
 #ifndef _C0C_DEVUTILS_H_
 #define _C0C_DEVUTILS_H_
+
+///////////////////////////////////////////////////////////////
+
+struct DevProperties {
+  DevProperties() : pDevId(), pPhObjName(), pLocation() {}
+
+  const char *pDevId;
+  const char *pPhObjName;
+  const char *pLocation;
+};
+
+typedef const DevProperties *PCDevProperties;
 
 class InfFile;
 
 typedef BOOL (* PDEVCALLBACK)(
     HDEVINFO hDevInfo,
     PSP_DEVINFO_DATA pDevInfoData,
+    PCDevProperties pDevProperties,
     BOOL *pRebootRequired,
     void *pParam);
 
+///////////////////////////////////////////////////////////////
+
 int EnumDevices(
     InfFile &infFile,
-    const char *pDevId,
+    PCDevProperties pDevProperties,
     BOOL *pRebootRequired,
     PDEVCALLBACK pDevCallBack,
     void *pCallBackParam);
 
+int DisableDevice(
+    HDEVINFO hDevInfo,
+    PSP_DEVINFO_DATA pDevInfoData,
+    PCDevProperties pDevProperties,
+    BOOL *pRebootRequired);
+
 BOOL DisableDevices(
     InfFile &infFile,
-    const char *pDevId,
+    PCDevProperties pDevProperties,
     BOOL *pRebootRequired);
 
 BOOL RestartDevices(
     InfFile &infFile,
-    const char *pDevId,
-    const char *pPhDevName,
+    PCDevProperties pDevProperties,
+    BOOL *pRebootRequired);
+
+BOOL RemoveDevice(
+    HDEVINFO hDevInfo,
+    PSP_DEVINFO_DATA pDevInfoData,
+    PCDevProperties pDevProperties,
     BOOL *pRebootRequired);
 
 BOOL RemoveDevices(
     InfFile &infFile,
-    const char *pDevId,
+    PCDevProperties pDevProperties,
     BOOL *pRebootRequired);
 
 BOOL InstallDevice(
@@ -67,5 +95,7 @@ BOOL InstallDevice(
     const char *pDevId,
     PDEVCALLBACK pDevCallBack,
     void *pCallBackParam);
+
+///////////////////////////////////////////////////////////////
 
 #endif /* _C0C_DEVUTILS_H_ */

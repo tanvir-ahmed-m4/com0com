@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.10  2006/11/10 14:07:40  vfrolov
+ * Implemented remove command
+ *
  * Revision 1.9  2006/11/03 16:13:29  vfrolov
  * Added port name length checkings
  *
@@ -150,6 +153,7 @@ struct ChangeDeviceParams {
 static BOOL ChangeDevice(
     HDEVINFO hDevInfo,
     PSP_DEVINFO_DATA pDevInfoData,
+    PCDevProperties /*pDevProperties*/,
     BOOL *pRebootRequired,
     void *pParam)
 {
@@ -195,7 +199,11 @@ static BOOL ChangeDevice(
               portParameters.FillParametersStr(buf, sizeof(buf)/sizeof(buf[0]));
               Trace("change %s %s\n", phPortName, buf);
 
-              RestartDevices(infFile, C0C_PORT_DEVICE_ID, phDevName, pRebootRequired);
+              DevProperties devProperties;
+              devProperties.pDevId = C0C_PORT_DEVICE_ID;
+              devProperties.pPhObjName = phDevName;
+
+              RestartDevices(infFile, &devProperties, pRebootRequired);
             } else {
               ShowError(MB_OK|MB_ICONWARNING, err, "portParameters.Save(%s)", phPortName);
             }
@@ -215,10 +223,84 @@ int Change(InfFile &infFile, const char *pPhPortName, const char *pParameters)
   BOOL rebootRequired = FALSE;
   ChangeDeviceParams params(infFile, pPhPortName, pParameters);
 
-  EnumDevices(infFile, C0C_BUS_DEVICE_ID, &rebootRequired, ChangeDevice, &params);
+  DevProperties devProperties;
+  devProperties.pDevId = C0C_BUS_DEVICE_ID;
+
+  EnumDevices(infFile, &devProperties, &rebootRequired, ChangeDevice, &params);
 
   if (rebootRequired)
     SetupPromptReboot(NULL, NULL, FALSE);
+
+  return 0;
+}
+///////////////////////////////////////////////////////////////
+struct RemoveDeviceParams {
+  RemoveDeviceParams(int _num) : num(_num), res(IDCANCEL) {}
+
+  int num;
+  int res;
+};
+
+static BOOL RemoveDevice(
+    HDEVINFO hDevInfo,
+    PSP_DEVINFO_DATA pDevInfoData,
+    PCDevProperties pDevProperties,
+    BOOL *pRebootRequired,
+    void *pParam)
+{
+  int i = GetPortNum(hDevInfo, pDevInfoData);
+
+  if (i == ((RemoveDeviceParams *)pParam)->num) {
+    ((RemoveDeviceParams *)pParam)->res =
+        DisableDevice(hDevInfo, pDevInfoData, pDevProperties, pRebootRequired);
+
+    if (((RemoveDeviceParams *)pParam)->res != IDCONTINUE)
+      return FALSE;
+
+    return RemoveDevice(hDevInfo, pDevInfoData, pDevProperties, pRebootRequired);
+  }
+
+  return TRUE;
+}
+
+int Remove(InfFile &infFile, int num)
+{
+  int res;
+  BOOL rebootRequired = FALSE;
+
+  do {
+    RemoveDeviceParams removeDeviceParams(num);
+
+    DevProperties devProperties;
+    devProperties.pDevId = C0C_BUS_DEVICE_ID;
+
+    EnumDevices(infFile, &devProperties, &rebootRequired, RemoveDevice, &removeDeviceParams);
+
+    res = removeDeviceParams.res;
+
+  } while (res == IDTRYAGAIN);
+
+  if (res == IDCONTINUE) {
+    for (int j = 0 ; j < 2 ; j++) {
+      char phPortName[20];
+
+      SNPRINTF(phPortName, sizeof(phPortName)/sizeof(phPortName[0]), "%s%d",
+               j ? C0C_PREF_PORT_NAME_B : C0C_PREF_PORT_NAME_A, num);
+
+      DevProperties devProperties;
+
+      devProperties.pDevId = C0C_PORT_DEVICE_ID;
+      devProperties.pLocation = phPortName;
+
+      RemoveDevices(infFile, &devProperties, NULL);
+    }
+  }
+
+  if (rebootRequired)
+    SetupPromptReboot(NULL, NULL, FALSE);
+
+  if (res != IDCONTINUE)
+    return 1;
 
   return 0;
 }
@@ -257,7 +339,8 @@ int Update(InfFile &infFile)
 static BOOL SetPortNum(
     HDEVINFO hDevInfo,
     PSP_DEVINFO_DATA pDevInfoData,
-    BOOL * /* pRebootRequired */,
+    PCDevProperties /*pDevProperties*/,
+    BOOL * /*pRebootRequired*/,
     void *pParam)
 {
   int res;
@@ -286,7 +369,8 @@ static BOOL InstallBusDevice(InfFile &infFile, int num)
 static BOOL AddDeviceToBusyMask(
     HDEVINFO hDevInfo,
     PSP_DEVINFO_DATA pDevInfoData,
-    BOOL * /* pRebootRequired */,
+    PCDevProperties /*pDevProperties*/,
+    BOOL * /*pRebootRequired*/,
     void *pParam)
 {
   int i = GetPortNum(hDevInfo, pDevInfoData);
@@ -305,7 +389,10 @@ static int AllocPortNum(InfFile &infFile, int num)
 {
   BusyMask busyMask;
 
-  if (EnumDevices(infFile, C0C_BUS_DEVICE_ID, NULL, AddDeviceToBusyMask, &busyMask) < 0)
+  DevProperties devProperties;
+  devProperties.pDevId = C0C_BUS_DEVICE_ID;
+
+  if (EnumDevices(infFile, &devProperties, NULL, AddDeviceToBusyMask, &busyMask) < 0)
     return -1;
 
   return busyMask.IsFreeNum(num) ? num : busyMask.GetFirstFreeNum();
@@ -395,11 +482,18 @@ err:
 int Uninstall(InfFile &infFile)
 {
   BOOL rebootRequired = FALSE;
+  DevProperties devProperties;
 
-  if (!DisableDevices(infFile, C0C_PORT_DEVICE_ID, &rebootRequired))
+  devProperties = DevProperties();
+  devProperties.pDevId = C0C_PORT_DEVICE_ID;
+
+  if (!DisableDevices(infFile, &devProperties, &rebootRequired))
     return 1;
 
-  if (!RemoveDevices(infFile, C0C_BUS_DEVICE_ID, &rebootRequired))
+  devProperties = DevProperties();
+  devProperties.pDevId = C0C_BUS_DEVICE_ID;
+
+  if (!RemoveDevices(infFile, &devProperties, &rebootRequired))
     return 1;
 
   if (!RemoveDevices(infFile, NULL, NULL))
@@ -609,6 +703,9 @@ int Help(const char *pCmdPref)
                                       C0C_PREF_PORT_NAME_B "<n>\n"
     "  install <prmsA> <prmsB>        (by default <n> is the first not used number),\n"
     "                                 set their parameters to <prmsA> and <prmsB>\n"
+    "  remove <n>                   - remove a pair of linked ports with\n"
+    "                                 identifiers " C0C_PREF_PORT_NAME_A "<n> and "
+                                      C0C_PREF_PORT_NAME_B "<n>\n"
     "  change <portid> <prms>       - set parameters <prms> for port with\n"
     "                                 identifier <portid>\n"
     "  list                         - for each port show its identifier and\n"
@@ -632,6 +729,9 @@ int Help(const char *pCmdPref)
     , pCmdPref);
   Trace(
     "  %sinstall 5 * *\n"
+    , pCmdPref);
+  Trace(
+    "  %sremove 0\n"
     , pCmdPref);
   Trace(
     "  %sinstall PortName=COM2 PortName=COM4\n"
@@ -696,6 +796,15 @@ int Main(int argc, const char* argv[])
 
     if (StrToInt(argv[2], &num) && num >= 0)
       return Install(infFile, argv[3], argv[4], num);
+  }
+  else
+  if (argc == 3 && !lstrcmpi(argv[1], "remove")) {
+    SetTitle(C0C_SETUP_TITLE " (REMOVE)");
+
+    int num;
+
+    if (StrToInt(argv[2], &num) && num >= 0)
+      return Remove(infFile, num);
   }
   else
   if (argc == 2 && !lstrcmpi(argv[1], "preinstall")) {

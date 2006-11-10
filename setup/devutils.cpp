@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.4  2006/11/10 14:07:40  vfrolov
+ * Implemented remove command
+ *
  * Revision 1.3  2006/11/02 16:20:44  vfrolov
  * Added usage the fixed port numbers
  *
@@ -40,20 +43,15 @@
 ///////////////////////////////////////////////////////////////
 struct EnumParams {
   EnumParams() {
-    pDevId = NULL;
-    pPhObjName = NULL;
     pParam1 = NULL;
     pParam2 = NULL;
-
     count = 0;
     pRebootRequired = NULL;
   }
 
-  const char *pDevId;
-  const char *pPhObjName;
+  DevProperties devProperties;
   void *pParam1;
   void *pParam2;
-
   int count;
   BOOL *pRebootRequired;
 };
@@ -63,15 +61,10 @@ typedef EnumParams *PEnumParams;
 struct DevParams {
   DevParams(PEnumParams _pEnumParams) {
     pEnumParams = _pEnumParams;
-
-    pDevId = NULL;
-    pPhObjName = NULL;
   }
 
   PEnumParams pEnumParams;
-
-  const char *pDevId;
-  const char *pPhObjName;
+  DevProperties devProperties;
 };
 
 typedef DevParams *PDevParams;
@@ -116,21 +109,38 @@ static int EnumDevices(
 
     DevParams devParams(pEnumParams);
 
-    char hwid[150];
+    char hwid[40];
 
     if (SetupDiGetDeviceRegistryProperty(hDevInfo, &devInfoData, SPDRP_HARDWAREID, NULL, (PBYTE)hwid, sizeof(hwid), NULL))
-      devParams.pDevId = hwid;
+      devParams.devProperties.pDevId = hwid;
 
-    if (pEnumParams->pDevId && (!devParams.pDevId || lstrcmpi(devParams.pDevId, pEnumParams->pDevId)))
+    if (pEnumParams->devProperties.pDevId && (!devParams.devProperties.pDevId ||
+        lstrcmpi(devParams.devProperties.pDevId, pEnumParams->devProperties.pDevId)))
+    {
       continue;
+    }
 
-    char name[150];
+    char location[40];
+
+    if (SetupDiGetDeviceRegistryProperty(hDevInfo, &devInfoData, SPDRP_LOCATION_INFORMATION, NULL, (PBYTE)location, sizeof(location), NULL))
+      devParams.devProperties.pLocation = location;
+
+    if (pEnumParams->devProperties.pLocation && (!devParams.devProperties.pLocation ||
+        lstrcmpi(devParams.devProperties.pLocation, pEnumParams->devProperties.pLocation)))
+    {
+      continue;
+    }
+
+    char name[40];
 
     if (SetupDiGetDeviceRegistryProperty(hDevInfo, &devInfoData, SPDRP_PHYSICAL_DEVICE_OBJECT_NAME, NULL, (PBYTE)name, sizeof(name), NULL))
-      devParams.pPhObjName = name;
+      devParams.devProperties.pPhObjName = name;
 
-    if (pEnumParams->pPhObjName && (!devParams.pPhObjName || lstrcmpi(devParams.pPhObjName, pEnumParams->pPhObjName)))
+    if (pEnumParams->devProperties.pPhObjName && (!devParams.devProperties.pPhObjName ||
+        lstrcmpi(devParams.devProperties.pPhObjName, pEnumParams->devProperties.pPhObjName)))
+    {
       continue;
+    }
 
     res = pFunk(hDevInfo, &devInfoData, &devParams);
 
@@ -196,13 +206,19 @@ static BOOL ChangeState(HDEVINFO hDevInfo, PSP_DEVINFO_DATA pDevInfoData, DWORD 
 ///////////////////////////////////////////////////////////////
 static int EnumDevice(HDEVINFO hDevInfo, PSP_DEVINFO_DATA pDevInfoData, PDevParams pDevParams)
 {
-  //Trace("Enumerated %s %s\n", pDevParams->pDevId, pDevParams->pPhObjName);
+  /*
+  Trace("Enumerated %s %s %s\n",
+        pDevParams->devProperties.pLocation,
+        pDevParams->devProperties.pDevId,
+        pDevParams->devProperties.pPhObjName);
+  */
 
   int res = IDCONTINUE;
 
   if (pDevParams->pEnumParams->pParam1) {
     if (!PDEVCALLBACK(pDevParams->pEnumParams->pParam1)(hDevInfo,
                                                         pDevInfoData,
+                                                        &pDevParams->devProperties,
                                                         pDevParams->pEnumParams->pRebootRequired,
                                                         pDevParams->pEnumParams->pParam2))
     {
@@ -217,14 +233,16 @@ static int EnumDevice(HDEVINFO hDevInfo, PSP_DEVINFO_DATA pDevInfoData, PDevPara
 
 int EnumDevices(
     InfFile &infFile,
-    const char *pDevId,
+    PCDevProperties pDevProperties,
     BOOL *pRebootRequired,
     PDEVCALLBACK pDevCallBack,
     void *pCallBackParam)
 {
   EnumParams enumParams;
 
-  enumParams.pDevId = pDevId;
+  if (pDevProperties)
+    enumParams.devProperties = *pDevProperties;
+
   enumParams.pRebootRequired = pRebootRequired;
   enumParams.pParam1 = pDevCallBack;
   enumParams.pParam2 = pCallBackParam;
@@ -235,15 +253,21 @@ int EnumDevices(
   return enumParams.count;
 }
 ///////////////////////////////////////////////////////////////
-static int DisableDevice(HDEVINFO hDevInfo, PSP_DEVINFO_DATA pDevInfoData, PDevParams pDevParams)
+int DisableDevice(
+    HDEVINFO hDevInfo,
+    PSP_DEVINFO_DATA pDevInfoData,
+    PCDevProperties pDevProperties,
+    BOOL *pRebootRequired)
 {
   if (!ChangeState(hDevInfo, pDevInfoData, DICS_DISABLE))
     return IDCANCEL;
 
-  Trace("Disabled %s %s\n", pDevParams->pDevId, pDevParams->pPhObjName);
-  pDevParams->pEnumParams->count++;
+  Trace("Disabled %s %s %s\n",
+        pDevProperties->pLocation,
+        pDevProperties->pDevId,
+        pDevProperties->pPhObjName);
 
-  if (pDevParams->pEnumParams->pRebootRequired && !*pDevParams->pEnumParams->pRebootRequired) {
+  if (pRebootRequired && !*pRebootRequired) {
     BOOL rebootRequired = FALSE;
 
     if (!UpdateRebootRequired(hDevInfo, pDevInfoData, &rebootRequired))
@@ -251,31 +275,45 @@ static int DisableDevice(HDEVINFO hDevInfo, PSP_DEVINFO_DATA pDevInfoData, PDevP
 
     if (rebootRequired) {
       int res = ShowMsg(MB_CANCELTRYCONTINUE,
-                        "Can't disable device %s %s.\n"
+                        "Can't disable device %s %s %s.\n"
                         "Close application that use this device and Try Again.\n"
                         "Or Continue and then reboot system.\n",
-                        pDevParams->pDevId, pDevParams->pPhObjName);
+                        pDevProperties->pLocation,
+                        pDevProperties->pDevId,
+                        pDevProperties->pPhObjName);
 
       if (res != IDCONTINUE) {
         if (!ChangeState(hDevInfo, pDevInfoData, DICS_ENABLE))
           return IDCANCEL;
 
-        Trace("Enabled %s %s\n", pDevParams->pDevId, pDevParams->pPhObjName);
-        pDevParams->pEnumParams->count--;
+        Trace("Enabled %s %s %s\n",
+              pDevProperties->pLocation,
+              pDevProperties->pDevId,
+              pDevProperties->pPhObjName);
 
         return res;
       }
 
-      *pDevParams->pEnumParams->pRebootRequired = TRUE;
+      *pRebootRequired = TRUE;
     }
   }
 
   return IDCONTINUE;
 }
+///////////////////////////////////////////////////////////////
+static int DisableDevice(HDEVINFO hDevInfo, PSP_DEVINFO_DATA pDevInfoData, PDevParams pDevParams)
+{
+  int res = DisableDevice(hDevInfo, pDevInfoData, &pDevParams->devProperties, pDevParams->pEnumParams->pRebootRequired);
+
+  if (res != IDCONTINUE)
+    pDevParams->pEnumParams->count++;
+
+  return res;
+}
 
 BOOL DisableDevices(
     InfFile &infFile,
-    const char *pDevId,
+    PCDevProperties pDevProperties,
     BOOL *pRebootRequired)
 {
   EnumParams enumParams;
@@ -283,7 +321,8 @@ BOOL DisableDevices(
   int res;
 
   enumParams.pRebootRequired = pRebootRequired;
-  enumParams.pDevId = pDevId;
+  if (pDevProperties)
+    enumParams.devProperties = *pDevProperties;
 
   do {
     res = EnumDevices(infFile, DIGCF_PRESENT, DisableDevice, &enumParams);
@@ -310,10 +349,12 @@ static int RestartDevice(HDEVINFO hDevInfo, PSP_DEVINFO_DATA pDevInfoData, PDevP
 
     if (rebootRequired) {
       int res = ShowMsg(MB_CANCELTRYCONTINUE,
-                        "Can't reastart device %s %s.\n"
+                        "Can't reastart device %s %s %s.\n"
                         "Close application that use this device and Try Again.\n"
                         "Or Continue and then reboot system.\n",
-                        pDevParams->pDevId, pDevParams->pPhObjName);
+                        pDevParams->devProperties.pLocation,
+                        pDevParams->devProperties.pDevId,
+                        pDevParams->devProperties.pPhObjName);
 
       if (res != IDCONTINUE) {
         if (!ChangeState(hDevInfo, pDevInfoData, DICS_ENABLE))
@@ -327,7 +368,11 @@ static int RestartDevice(HDEVINFO hDevInfo, PSP_DEVINFO_DATA pDevInfoData, PDevP
   }
 
   if (!pDevParams->pEnumParams->pRebootRequired || !*pDevParams->pEnumParams->pRebootRequired) {
-    Trace("Restarted %s %s\n", pDevParams->pDevId, pDevParams->pPhObjName);
+    Trace("Restarted %s %s %s\n",
+        pDevParams->devProperties.pLocation,
+        pDevParams->devProperties.pDevId,
+        pDevParams->devProperties.pPhObjName);
+
     pDevParams->pEnumParams->count++;
   }
 
@@ -336,8 +381,7 @@ static int RestartDevice(HDEVINFO hDevInfo, PSP_DEVINFO_DATA pDevInfoData, PDevP
 
 BOOL RestartDevices(
     InfFile &infFile,
-    const char *pDevId,
-    const char *pPhDevName,
+    PCDevProperties pDevProperties,
     BOOL *pRebootRequired)
 {
   EnumParams enumParams;
@@ -345,8 +389,8 @@ BOOL RestartDevices(
   int res;
 
   enumParams.pRebootRequired = pRebootRequired;
-  enumParams.pDevId = pDevId;
-  enumParams.pPhObjName = pPhDevName;
+  if (pDevProperties)
+    enumParams.devProperties = *pDevProperties;
 
   do {
     res = EnumDevices(infFile, DIGCF_PRESENT, RestartDevice, &enumParams);
@@ -358,25 +402,36 @@ BOOL RestartDevices(
   return TRUE;
 }
 ///////////////////////////////////////////////////////////////
-static int RemoveDevice(HDEVINFO hDevInfo, PSP_DEVINFO_DATA pDevInfoData, PDevParams pDevParams)
+BOOL RemoveDevice(
+    HDEVINFO hDevInfo,
+    PSP_DEVINFO_DATA pDevInfoData,
+    PCDevProperties pDevProperties,
+    BOOL *pRebootRequired)
 {
   if (!SetupDiCallClassInstaller(DIF_REMOVE, hDevInfo, pDevInfoData)) {
-    ShowLastError(MB_OK|MB_ICONSTOP, "SetupDiCallClassInstaller(DIF_REMOVE, %s, %s)", pDevParams->pDevId, pDevParams->pPhObjName);
-    return IDCANCEL;
+    ShowLastError(MB_OK|MB_ICONSTOP, "SetupDiCallClassInstaller(DIF_REMOVE, %s, %s)",
+                  pDevProperties->pDevId, pDevProperties->pPhObjName);
+    return FALSE;
   }
 
-  Trace("Removed %s %s\n", pDevParams->pDevId, pDevParams->pPhObjName);
-  pDevParams->pEnumParams->count++;
+  Trace("Removed %s %s %s\n", pDevProperties->pLocation, pDevProperties->pDevId, pDevProperties->pPhObjName);
 
-  if (!UpdateRebootRequired(hDevInfo, pDevInfoData, pDevParams->pEnumParams->pRebootRequired))
+  return UpdateRebootRequired(hDevInfo, pDevInfoData, pRebootRequired);
+}
+///////////////////////////////////////////////////////////////
+static int RemoveDevice(HDEVINFO hDevInfo, PSP_DEVINFO_DATA pDevInfoData, PDevParams pDevParams)
+{
+  if (!RemoveDevice(hDevInfo, pDevInfoData, &pDevParams->devProperties, pDevParams->pEnumParams->pRebootRequired))
     return IDCANCEL;
+
+  pDevParams->pEnumParams->count++;
 
   return IDCONTINUE;
 }
 
 BOOL RemoveDevices(
     InfFile &infFile,
-    const char *pDevId,
+    PCDevProperties pDevProperties,
     BOOL *pRebootRequired)
 {
   EnumParams enumParams;
@@ -384,7 +439,8 @@ BOOL RemoveDevices(
   int res;
 
   enumParams.pRebootRequired = pRebootRequired;
-  enumParams.pDevId = pDevId;
+  if (pDevProperties)
+    enumParams.devProperties = *pDevProperties;
 
   do {
     res = EnumDevices(infFile, 0, RemoveDevice, &enumParams);
@@ -460,7 +516,11 @@ BOOL InstallDevice(
   }
 
   if (pDevCallBack) {
-    res = pDevCallBack(hDevInfo, &devInfoData, NULL, pCallBackParam);
+    DevProperties devProperties;
+
+    devProperties.pDevId = pDevId;
+
+    res = pDevCallBack(hDevInfo, &devInfoData, &devProperties, NULL, pCallBackParam);
 
     if (!res)
       goto err1;
