@@ -19,11 +19,64 @@
  *
  *
  * $Log$
+ * Revision 1.2  2006/11/21 11:43:42  vfrolov
+ * Added Modern UI
+ * Added "CNCA0<->CNCB0" section
+ * Added "Launch Setup Command Prompt" on finish page
+ *
  * Revision 1.1  2006/10/23 12:26:02  vfrolov
  * Initial revision
  *
  *
  */
+
+;--------------------------------
+
+  !include "MUI.nsh"
+
+;--------------------------------
+
+Function LaunchSetupCommandPrompt
+
+  Exec "RunDll32 setup,RunDll"
+
+FunctionEnd
+
+;--------------------------------
+
+!macro MoveFileToDetails file
+
+  Push $0
+  Push $1
+  Push $2
+  Push $3
+
+  StrCpy $0 "${file}"
+
+  FileOpen $1 $0 r
+  IfErrors +9
+
+    FileRead $1 $2
+    IfErrors +7
+
+    StrCpy $3 $2 2 -2
+    StrCmp $3 "$\r$\n" 0 +2
+      StrCpy $2 $2 -2
+
+    StrCmp $2 "" +2
+      DetailPrint $2
+
+    Goto -7
+
+  FileClose $1
+  Delete $0
+
+  Pop $3
+  Pop $2
+  Pop $1
+  Pop $0
+
+!macroend
 
 ;--------------------------------
 
@@ -40,21 +93,37 @@ InstallDir $PROGRAMFILES\com0com
 ; overwrite the old one automatically)
 InstallDirRegKey HKLM "Software\com0com" "Install_Dir"
 
-;--------------------------------
+ShowInstDetails show
+ShowUninstDetails show
 
+;--------------------------------
 ; Pages
 
-Page components
-Page directory
-Page instfiles
+  !define MUI_FINISHPAGE_RUN
+  !define MUI_FINISHPAGE_RUN_FUNCTION LaunchSetupCommandPrompt
+  !define MUI_FINISHPAGE_RUN_TEXT "Launch Setup Command Prompt"
+  !define MUI_FINISHPAGE_NOAUTOCLOSE
+  !define MUI_UNFINISHPAGE_NOAUTOCLOSE
 
-UninstPage uninstConfirm
-UninstPage instfiles
+  !insertmacro MUI_PAGE_WELCOME
+  !insertmacro MUI_PAGE_COMPONENTS
+  !insertmacro MUI_PAGE_DIRECTORY
+  !insertmacro MUI_PAGE_INSTFILES
+  !insertmacro MUI_PAGE_FINISH
+
+  !insertmacro MUI_UNPAGE_WELCOME
+  !insertmacro MUI_UNPAGE_CONFIRM
+  !insertmacro MUI_UNPAGE_INSTFILES
+  !insertmacro MUI_UNPAGE_FINISH
+
+;--------------------------------
+;Languages
+
+  !insertmacro MUI_LANGUAGE "English"
 
 ;--------------------------------
 
-; The stuff to install
-Section "Install com0com"
+Section "com0com" sec_com0com
 
   SectionIn RO
 
@@ -81,12 +150,23 @@ Section "Install com0com"
 
 SectionEnd
 
-; Optional section (can be disabled by the user)
-Section "Start Menu Shortcuts"
+;--------------------------------
+
+Section "Start Menu Shortcuts" sec_shortcuts
 
   CreateDirectory "$SMPROGRAMS\com0com"
-  CreateShortCut "$SMPROGRAMS\com0com\setup.lnk" "$INSTDIR\setup.bat"
+  CreateShortCut "$SMPROGRAMS\com0com\Setup Command Prompt.lnk" "$INSTDIR\setup.bat"
   CreateShortCut "$SMPROGRAMS\com0com\Uninstall.lnk" "$INSTDIR\uninstall.exe" "" "$INSTDIR\uninstall.exe" 0
+
+SectionEnd
+
+;--------------------------------
+
+Section "CNCA0<->CNCB0" sec_ports
+
+  GetTempFileName $0
+  ExecWait "RunDll32 setup,RunDll --output $0 install 0 - -"
+  !insertmacro MoveFileToDetails $0
 
 SectionEnd
 
@@ -96,7 +176,9 @@ SectionEnd
 
 Section "Uninstall"
 
-  ExecWait "RunDll32 setup,RunDll uninstall"
+  GetTempFileName $0
+  ExecWait "RunDll32 setup,RunDll --output $0 uninstall"
+  !insertmacro MoveFileToDetails $0
 
   ; Remove registry keys
   DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\com0com"
@@ -118,3 +200,19 @@ Section "Uninstall"
   RMDir "$INSTDIR"
 
 SectionEnd
+
+;--------------------------------
+
+  ;Language strings
+  LangString DESC_sec_com0com ${LANG_ENGLISH} "Install com0com files."
+  LangString DESC_sec_shortcuts ${LANG_ENGLISH} "Add shortcuts to the Start Menu."
+  LangString DESC_sec_ports ${LANG_ENGLISH} "Install a pair of linked ports with identifiers CNCA0 and CNCB0."
+
+  ;Assign language strings to sections
+  !insertmacro MUI_FUNCTION_DESCRIPTION_BEGIN
+    !insertmacro MUI_DESCRIPTION_TEXT ${sec_com0com} $(DESC_sec_com0com)
+    !insertmacro MUI_DESCRIPTION_TEXT ${sec_shortcuts} $(DESC_sec_shortcuts)
+    !insertmacro MUI_DESCRIPTION_TEXT ${sec_ports} $(DESC_sec_ports)
+  !insertmacro MUI_FUNCTION_DESCRIPTION_END
+
+;--------------------------------
