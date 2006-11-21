@@ -19,6 +19,13 @@
  *
  *
  * $Log$
+ * Revision 1.4  2006/11/21 11:34:55  vfrolov
+ * Added
+ *   ConsoleWrite()
+ *   IsConsoleOpen()
+ *   SetOutputFile()
+ *   GetOutputFile()
+ *
  * Revision 1.3  2006/10/23 12:04:23  vfrolov
  * Added SetTitle()
  *
@@ -34,6 +41,7 @@
 #include "msg.h"
 #include "utils.h"
 
+char *pOutputFile = NULL;
 char title[80] = "";
 
 ///////////////////////////////////////////////////////////////
@@ -44,6 +52,8 @@ static int ShowMsgDefault(LPCSTR pText, UINT type)
 
 static int (* pShowMsg)(LPCSTR pText, UINT type) = ShowMsgDefault;
 ///////////////////////////////////////////////////////////////
+static BOOL isConsoleOpen = FALSE;
+
 static void ConsoleWriteReadDefault(LPSTR pReadBuf, DWORD lenReadBuf, LPCSTR pText)
 {
   static HANDLE handle = INVALID_HANDLE_VALUE;
@@ -52,6 +62,7 @@ static void ConsoleWriteReadDefault(LPSTR pReadBuf, DWORD lenReadBuf, LPCSTR pTe
     AllocConsole();
     handle = GetStdHandle(STD_OUTPUT_HANDLE);
     SetConsoleTitle(title);
+    isConsoleOpen = TRUE;
   }
 
   if (pText)
@@ -73,6 +84,34 @@ static void (* pConsole)(LPSTR pReadBuf, DWORD lenReadBuf, LPCSTR pText) = Conso
 static void TraceDefault(LPCSTR pText)
 {
   pConsole(NULL, 0, pText);
+
+  if (!pOutputFile || !pText)
+    return;
+
+  HANDLE hFile = CreateFile(
+                   pOutputFile,
+                   GENERIC_WRITE,
+                   FILE_SHARE_READ,
+                   NULL,
+                   OPEN_ALWAYS,
+                   FILE_ATTRIBUTE_NORMAL,
+                   NULL);
+
+  if (hFile != INVALID_HANDLE_VALUE) {
+    SetFilePointer(hFile, 0, NULL, FILE_END);
+
+    LPCSTR p;
+
+    for (p = pText ; *p ; p++) {
+      DWORD not_used;
+
+      if (*p == '\n')
+        WriteFile(hFile, "\r", sizeof(*p), &not_used, NULL);
+      WriteFile(hFile, p, sizeof(*p), &not_used, NULL);
+    }
+
+    CloseHandle(hFile);
+  }
 }
 
 static void (* pTrace)(LPCSTR pText) = TraceDefault;
@@ -181,8 +220,47 @@ void ConsoleWriteRead(char *pReadBuf, int lenReadBuf, const char *pFmt, ...)
   pConsole(pReadBuf, lenReadBuf, buf);
 }
 ///////////////////////////////////////////////////////////////
+void ConsoleWrite(const char *pFmt, ...)
+{
+  char buf[1024];
+  va_list va;
+
+  va_start(va, pFmt);
+
+  VSNPRINTF(buf, sizeof(buf)/sizeof(buf[0]), pFmt, va);
+
+  va_end(va);
+
+  pConsole(NULL, 0, buf);
+}
+///////////////////////////////////////////////////////////////
+BOOL IsConsoleOpen()
+{
+  return isConsoleOpen;
+}
+///////////////////////////////////////////////////////////////
 void SetTitle(const char *pTitle)
 {
   lstrcpyn(title, pTitle, sizeof(title)/sizeof(title[0]));
+}
+///////////////////////////////////////////////////////////////
+void SetOutputFile(const char *pFile)
+{
+  if (pOutputFile) {
+    LocalFree(pOutputFile);
+    pOutputFile = NULL;
+  }
+
+  if (pFile) {
+    pOutputFile = (char *)LocalAlloc(LPTR, (lstrlen(pFile) + 1)*sizeof(*pFile));
+
+    if (pOutputFile)
+      lstrcpy(pOutputFile, pFile);
+  }
+}
+///////////////////////////////////////////////////////////////
+const char *GetOutputFile()
+{
+  return pOutputFile;
 }
 ///////////////////////////////////////////////////////////////

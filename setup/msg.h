@@ -19,12 +19,18 @@
  *
  *
  * $Log$
+ * Revision 1.3  2006/11/21 11:34:55  vfrolov
+ * Added
+ *   ConsoleWrite()
+ *   IsConsoleOpen()
+ *   SetOutputFile()
+ *   GetOutputFile()
+ *
  * Revision 1.2  2006/10/23 12:04:23  vfrolov
  * Added SetTitle()
  *
  * Revision 1.1  2006/07/28 12:16:42  vfrolov
  * Initial revision
- *
  *
  */
 
@@ -36,6 +42,10 @@ int ShowError(UINT type, DWORD err, const char *pFmt, ...);
 int ShowLastError(UINT type, const char *pFmt, ...);
 void Trace(const char *pFmt, ...);
 void ConsoleWriteRead(char *pReadBuf, int lenReadBuf, const char *pFmt, ...);
+void ConsoleWrite(const char *pFmt, ...);
+BOOL IsConsoleOpen();
 void SetTitle(const char *pTitle);
+void SetOutputFile(const char *pFile);
+const char *GetOutputFile();
 
 #endif /* _C0C_MSG_H_ */
