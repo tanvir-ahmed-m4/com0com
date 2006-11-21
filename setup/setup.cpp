@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.11  2006/11/21 11:36:06  vfrolov
+ * Added --output option
+ *
  * Revision 1.10  2006/11/10 14:07:40  vfrolov
  * Implemented remove command
  *
@@ -688,14 +691,19 @@ int Help(const char *pCmdPref)
 {
   SetTitle(C0C_SETUP_TITLE " (HELP)");
 
-  Trace(
+  ConsoleWrite(
     C0C_SETUP_TITLE "\n"
     "\n");
-  Trace(
+  ConsoleWrite(
     "Usage:\n"
-    "  %s<command>\n"
+    "  %s [options] <command>\n"
     , pCmdPref);
-  Trace(
+  ConsoleWrite(
+    "\n"
+    "Options:\n"
+    "  --output <file>              - file for output, default is console\n"
+    );
+  ConsoleWrite(
     "\n"
     "Commands:\n"
     "  install <n> <prmsA> <prmsB>  - install a pair of linked ports with\n"
@@ -716,39 +724,39 @@ int Help(const char *pCmdPref)
     "  quit                         - quit\n"
     "  help                         - print this help\n"
     );
-  Trace(
+  ConsoleWrite(
     "\n"
     "%s",
     PortParameters::GetHelp());
-  Trace(
+  ConsoleWrite(
     "\n"
     "Examples:\n"
     );
-  Trace(
+  ConsoleWrite(
     "  %sinstall - -\n"
     , pCmdPref);
-  Trace(
+  ConsoleWrite(
     "  %sinstall 5 * *\n"
     , pCmdPref);
-  Trace(
+  ConsoleWrite(
     "  %sremove 0\n"
     , pCmdPref);
-  Trace(
+  ConsoleWrite(
     "  %sinstall PortName=COM2 PortName=COM4\n"
     , pCmdPref);
-  Trace(
+  ConsoleWrite(
     "  %sinstall PortName=COM5,EmuBR=yes,EmuOverrun=yes -\n"
     , pCmdPref);
-  Trace(
+  ConsoleWrite(
     "  %schange " C0C_PREF_PORT_NAME_A "0 EmuBR=yes,EmuOverrun=yes\n"
     , pCmdPref);
-  Trace(
+  ConsoleWrite(
     "  %slist\n"
     , pCmdPref);
-  Trace(
+  ConsoleWrite(
     "  %suninstall\n"
     , pCmdPref);
-  Trace(
+  ConsoleWrite(
     "\n");
 
   return 1;
@@ -756,6 +764,23 @@ int Help(const char *pCmdPref)
 ///////////////////////////////////////////////////////////////
 int Main(int argc, const char* argv[])
 {
+  SetOutputFile(NULL);
+
+  while (argc > 1) {
+    if (*argv[1] != '-')
+      break;
+
+    if (!strcmp(argv[1], "--output") && argc > 2) {
+      SetOutputFile(argv[2]);
+      argv[2] = argv[0];
+      argv += 2;
+      argc -= 2;
+    } else {
+      ConsoleWrite("Invalid option %s\n", argv[1]);
+      return 1;
+    }
+  }
+
   if (argc == 1) {
     return 0;
   }
@@ -822,7 +847,7 @@ int Main(int argc, const char* argv[])
     return Uninstall(infFile);
   }
 
-  Trace("Invalid command\n");
+  ConsoleWrite("Invalid command\n");
 
   return 1;
 }
@@ -867,7 +892,7 @@ int CALLBACK RunDllA(HWND /*hWnd*/, HINSTANCE /*hInst*/, LPSTR pCmdLine, int /*n
   argc = ParseCmd(cmd, argv + 1, sizeof(argv)/sizeof(argv[0]) - 1) + 1;
 
   if (argc == 1) {
-    Trace("Enter 'help' to get info about usage of " C0C_SETUP_TITLE ".\n\n");
+    ConsoleWrite("Enter 'help' to get info about usage of " C0C_SETUP_TITLE ".\n\n");
 
     argv[0] = "";
 
@@ -889,7 +914,8 @@ int CALLBACK RunDllA(HWND /*hWnd*/, HINSTANCE /*hInst*/, LPSTR pCmdLine, int /*n
 
   int res = Main(argc, argv);
 
-  ConsoleWriteRead(cmd, sizeof(cmd)/sizeof(cmd[0]), "\nPress <RETURN> to continue\n");
+  if (!GetOutputFile())
+    ConsoleWriteRead(cmd, sizeof(cmd)/sizeof(cmd[0]), "\nPress <RETURN> to continue\n");
 
   return res;
 }
