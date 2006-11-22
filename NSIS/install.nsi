@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.3  2006/11/22 07:58:45  vfrolov
+ * Changed uninstall keys
+ *
  * Revision 1.2  2006/11/21 11:43:42  vfrolov
  * Added Modern UI
  * Added "CNCA0<->CNCB0" section
@@ -26,7 +29,6 @@
  *
  * Revision 1.1  2006/10/23 12:26:02  vfrolov
  * Initial revision
- *
  *
  */
 
@@ -142,10 +144,14 @@ Section "com0com" sec_com0com
 
   ; Write the uninstall keys for Windows
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\com0com" "DisplayName" "Null-modem emulator (com0com)"
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\com0com" "HelpLink" "http://com0com.sourceforge.net/"
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\com0com" "URLUpdateInfo" "http://com0com.sourceforge.net/"
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\com0com" "Readme" "$INSTDIR\ReadMe.txt"
+
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\com0com" "UninstallString" '"$INSTDIR\uninstall.exe"'
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\com0com" "URLInfoAbout" "http://com0com.sourceforge.net/"
   WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\com0com" "NoModify" 1
   WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\com0com" "NoRepair" 1
+
   WriteUninstaller "uninstall.exe"
 
 SectionEnd
