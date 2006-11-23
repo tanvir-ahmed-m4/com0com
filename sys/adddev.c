@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.23  2006/11/23 11:10:10  vfrolov
+ * Strict usage fixed port numbers
+ *
  * Revision 1.22  2006/11/03 13:13:26  vfrolov
  * CopyStrW() now gets size in characters (not in bytes)
  *
@@ -632,7 +635,10 @@ ULONG GetPortNum(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
       ExFreePool(pInfo);
     }
 
-    num = AllocPortNum(pDrvObj, numPref);
+    if (numPref == (ULONG)-1)
+      num = AllocPortNum(pDrvObj, numPref);
+    else
+      num = numPref;
 
     if (num != numPref) {
       status = ZwSetValueKey(hKey, &keyName, 0, REG_DWORD, &num, sizeof(num));
