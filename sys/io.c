@@ -19,6 +19,10 @@
  *
  *
  * $Log$
+ * Revision 1.29  2006/11/27 11:58:27  vfrolov
+ * Fixed unexpected completing all queued read requests when
+ * completing the first one
+ *
  * Revision 1.28  2006/06/21 16:23:57  vfrolov
  * Fixed possible BSOD after one port of pair removal
  *
@@ -759,7 +763,7 @@ NTSTATUS TryReadWrite(
 
   /* get first pIrpRead */
 
-  dataIrpRead.data.irp.status = STATUS_SUCCESS;
+  dataIrpRead.data.irp.status = STATUS_PENDING;
   doneRead = 0;
   firstRead = TRUE;
 
@@ -951,6 +955,7 @@ NTSTATUS TryReadWrite(
     /* get next pIrpRead */
 
     if (dataIrpRead.data.irp.status != STATUS_PENDING) {
+      dataIrpRead.data.irp.status = STATUS_PENDING;
       doneRead = 0;
       firstRead = FALSE;
       dataIrpRead.data.irp.pIrp =
