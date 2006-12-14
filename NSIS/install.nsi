@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.4  2006/12/14 08:25:44  vfrolov
+ * Added ReadMe.lnk
+ *
  * Revision 1.3  2006/11/22 07:58:45  vfrolov
  * Changed uninstall keys
  *
@@ -163,6 +166,7 @@ Section "Start Menu Shortcuts" sec_shortcuts
   CreateDirectory "$SMPROGRAMS\com0com"
   CreateShortCut "$SMPROGRAMS\com0com\Setup Command Prompt.lnk" "$INSTDIR\setup.bat"
   CreateShortCut "$SMPROGRAMS\com0com\Uninstall.lnk" "$INSTDIR\uninstall.exe" "" "$INSTDIR\uninstall.exe" 0
+  CreateShortCut "$SMPROGRAMS\com0com\ReadMe.lnk" "$INSTDIR\ReadMe.txt"
 
 SectionEnd
 
