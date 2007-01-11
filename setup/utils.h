@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2006 Vyacheslav Frolov
+ * Copyright (c) 2006-2007 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.4  2007/01/11 15:03:43  vfrolov
+ * Added STRTOK_R()
+ *
  * Revision 1.3  2006/11/03 13:17:28  vfrolov
  * Fixed LocalReAlloc() usage
  * Added return value to BusyMask::AddNum()
@@ -36,6 +39,7 @@
 
 int VSNPRINTF(char *pBuf, int size, const char *pFmt, va_list va);
 int SNPRINTF(char *pBuf, int size, const char *pFmt, ...);
+char *STRTOK_R(char *pStr, const char *pDelims, char **ppSave);
 BOOL StrToInt(const char *pStr, int *pNum);
 
 class BusyMask {
