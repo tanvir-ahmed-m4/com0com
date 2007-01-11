@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2006 Vyacheslav Frolov
+ * Copyright (c) 2006-2007 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.4  2007/01/11 15:05:03  vfrolov
+ * Replaced strtok() by STRTOK_R()
+ *
  * Revision 1.3  2006/11/02 16:11:58  vfrolov
  * Added default values to help text
  *
@@ -33,6 +36,7 @@
 #include "precomp.h"
 #include "params.h"
 #include "utils.h"
+#include "msg.h"
 
 ///////////////////////////////////////////////////////////////
 enum {
@@ -377,25 +381,29 @@ BOOL PortParameters::ParseParametersStr(const char *pParameters)
     lstrcpyn(pars, pParameters, sizeof(pars));
     pars[sizeof(pars) - 1] = 0;
 
-    for (const char *pPar = strtok(pars, "=") ; pPar ; pPar = strtok(NULL, "=")) {
-      const char *pVal = strtok(NULL, ",");
+    char *pSave1;
 
-      //Trace("'%s'='%s'\n", pPar, pVal);
+    for (char *pPar = STRTOK_R(pars, ",", &pSave1) ; pPar ; pPar = STRTOK_R(NULL, ",", &pSave1)) {
+      char *pSave2;
+      const char *pKey = STRTOK_R(pPar, "=", &pSave2);
+      const char *pVal = STRTOK_R(NULL, "=", &pSave2);
+
+      //Trace("'%s'='%s'\n", pKey, pVal);
 
       if (!pVal)
         return FALSE;
 
-      if (!lstrcmpi(pPar, "PortName")) {
+      if (!lstrcmpi(pKey, "PortName")) {
         if (!tmp.SetPortName(pVal))
           return FALSE;
       }
       else
-      if (!lstrcmpi(pPar, "EmuBR")) {
+      if (!lstrcmpi(pKey, "EmuBR")) {
         if (!tmp.SetEmuBR(pVal))
           return FALSE;
       }
       else
-      if (!lstrcmpi(pPar, "EmuOverrun")) {
+      if (!lstrcmpi(pKey, "EmuOverrun")) {
         if (!tmp.SetEmuOverrun(pVal))
           return FALSE;
       }
