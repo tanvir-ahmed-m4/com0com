@@ -5,8 +5,9 @@
 INTRODUCTION
 ============
 
-The null-modem emulator is a kernel-mode virtual serial port driver for
-Windows. You can create an unlimited number of virtual COM port
+The Null-modem emulator is an open source kernel-mode virtual serial
+port driver for Windows, available freely under GPL license.
+You can create an unlimited number of virtual COM port
 pairs and use any pair to connect one application to another.
 Each COM port pair provides two COM ports with default names starting
 at CNCA0 and CNCB0. The output to one port is the input from other
@@ -40,9 +41,14 @@ INSTALLING
 ==========
 
 Simply run the installer (setup.exe). An installation wizard will guide
-you through the required steps. The one COM port pair with names CNCA0 and
-CNCB0 will be available on your system after the installation. You can add
-more pairs with the Setup Command Prompt:
+you through the required steps.
+If the Found New Hardware Wizard will pop up then
+  - select "No, not this time" and click Next;
+  - select "Install the software automatically (Recommended)" and click Next.
+The one COM port pair with names CNCA0 and CNCB0 will be available on your
+system after the installation.
+
+You can add more pairs with the Setup Command Prompt:
 
   1. Launch the Setup Command Prompt shortcut.
   2. Enter the install command, for example:
