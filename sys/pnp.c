@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2004-2006 Vyacheslav Frolov
+ * Copyright (c) 2004-2007 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,12 @@
  *
  *
  * $Log$
+ * Revision 1.6  2007/01/11 14:50:29  vfrolov
+ * Pool functions replaced by
+ *   C0C_ALLOCATE_POOL()
+ *   C0C_ALLOCATE_POOL_WITH_QUOTA()
+ *   C0C_FREE_POOL()
+ *
  * Revision 1.5  2006/06/23 07:37:24  vfrolov
  * Disabled usage pDevExt after deleting device
  * Added check of openCount to IRP_MN_QUERY_REMOVE_DEVICE
@@ -82,7 +88,7 @@ NTSTATUS FdoBusPnp(
       pRelationsPrev = (PDEVICE_RELATIONS)pIrp->IoStatus.Information;
       countRelations = pRelationsPrev ? pRelationsPrev->Count : 0;
 
-      pRelations = (PDEVICE_RELATIONS)ExAllocatePool(PagedPool,
+      pRelations = (PDEVICE_RELATIONS)C0C_ALLOCATE_POOL(PagedPool,
         sizeof(DEVICE_RELATIONS) + ((countPdos + countRelations - 1) * sizeof (PDEVICE_OBJECT)));
 
       if (!pRelations) {
@@ -104,7 +110,7 @@ NTSTATUS FdoBusPnp(
       pRelations->Count = countRelations;
 
       if (pRelationsPrev)
-        ExFreePool(pRelationsPrev);
+        C0C_FREE_POOL(pRelationsPrev);
 
       pIrp->IoStatus.Information = (ULONG_PTR)pRelations;
       pIrp->IoStatus.Status = STATUS_SUCCESS;
@@ -225,7 +231,7 @@ NTSTATUS PdoPortBusInfo(
 {
   PPNP_BUS_INFORMATION pBusInfo;
 
-  pBusInfo = (PPNP_BUS_INFORMATION)ExAllocatePool(PagedPool, sizeof(PNP_BUS_INFORMATION));
+  pBusInfo = (PPNP_BUS_INFORMATION)C0C_ALLOCATE_POOL(PagedPool, sizeof(PNP_BUS_INFORMATION));
 
   if (!pBusInfo)
     return STATUS_INSUFFICIENT_RESOURCES;

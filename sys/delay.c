@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2005-2006 Vyacheslav Frolov
+ * Copyright (c) 2005-2007 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,12 @@
  *
  *
  * $Log$
+ * Revision 1.5  2007/01/11 14:50:29  vfrolov
+ * Pool functions replaced by
+ *   C0C_ALLOCATE_POOL()
+ *   C0C_ALLOCATE_POOL_WITH_QUOTA()
+ *   C0C_FREE_POOL()
+ *
  * Revision 1.4  2006/06/23 11:44:52  vfrolov
  * Mass replacement pDevExt by pIoPort
  *
@@ -111,7 +117,7 @@ NTSTATUS AllocWriteDelay(PC0C_IO_PORT pIoPort)
 {
   PC0C_ADAPTIVE_DELAY pWriteDelay;
 
-  pWriteDelay = (PC0C_ADAPTIVE_DELAY)ExAllocatePool(NonPagedPool, sizeof(*pWriteDelay));
+  pWriteDelay = (PC0C_ADAPTIVE_DELAY)C0C_ALLOCATE_POOL(NonPagedPool, sizeof(*pWriteDelay));
 
   if (!pWriteDelay)
     return STATUS_INSUFFICIENT_RESOURCES;
@@ -135,7 +141,7 @@ VOID FreeWriteDelay(PC0C_IO_PORT pIoPort)
   if (pWriteDelay) {
     pIoPort->pWriteDelay = NULL;
     StopWriteDelayTimer(pWriteDelay);
-    ExFreePool(pWriteDelay);
+    C0C_FREE_POOL(pWriteDelay);
   }
 }
 
