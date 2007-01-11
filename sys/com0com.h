@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2004-2006 Vyacheslav Frolov
+ * Copyright (c) 2004-2007 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,13 @@
  *
  *
  * $Log$
+ * Revision 1.32  2007/01/11 14:44:52  vfrolov
+ * Defined
+ *   C0C_TAG
+ *   C0C_ALLOCATE_POOL()
+ *   C0C_ALLOCATE_POOL_WITH_QUOTA()
+ *   C0C_FREE_POOL()
+ *
  * Revision 1.31  2006/11/03 13:07:58  vfrolov
  * Moved C0C_PORT_NAME_LEN from sys/com0com.h to include/com0com.h
  *
@@ -394,5 +401,13 @@ VOID SetModemStatus(
     IN ULONG bits,
     IN ULONG mask,
     PLIST_ENTRY pQueueToComplete);
+
+#define C0C_TAG 'c0c'
+#define C0C_ALLOCATE_POOL(PoolType, NumberOfBytes) \
+    ExAllocatePoolWithTag(PoolType, NumberOfBytes, C0C_TAG)
+#define C0C_ALLOCATE_POOL_WITH_QUOTA(PoolType, NumberOfBytes) \
+    ExAllocatePoolWithQuotaTag(PoolType, NumberOfBytes, C0C_TAG)
+#define C0C_FREE_POOL(P) \
+    ExFreePool(P) /*ExFreePoolWithTag(P, C0C_TAG)*/
 
 #endif /* _C0C_COM0COM_H_ */
