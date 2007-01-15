@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2004-2006 Vyacheslav Frolov
+ * Copyright (c) 2004-2007 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.14  2007/01/15 16:09:16  vfrolov
+ * Fixed non zero Information for IOCTL_SERIAL_IMMEDIATE_CHAR
+ *
  * Revision 1.13  2006/06/28 13:52:09  vfrolov
  * Fixed double-release of spin lock
  *
@@ -207,6 +210,7 @@ VOID FdoPortCompleteQueue(IN PLIST_ENTRY pQueueToComplete)
     PIRP pIrp;
     PC0C_IRP_STATE pState;
     PLIST_ENTRY pListEntry;
+    PIO_STACK_LOCATION pIrpStack;
 
     pListEntry = RemoveHeadList(pQueueToComplete);
     pIrp = CONTAINING_RECORD(pListEntry, IRP, Tail.Overlay.ListEntry);
@@ -228,8 +232,14 @@ VOID FdoPortCompleteQueue(IN PLIST_ENTRY pQueueToComplete)
       KeReleaseSpinLock(pIoPort->pIoLock, oldIrql);
     }
 
-    if (pIrp->IoStatus.Status == STATUS_CANCELLED)
+    pIrpStack = IoGetCurrentIrpStackLocation(pIrp);
+
+    if (pIrp->IoStatus.Status == STATUS_CANCELLED ||
+        (pIrpStack->MajorFunction == IRP_MJ_DEVICE_CONTROL &&
+            pIrpStack->Parameters.DeviceIoControl.IoControlCode == IOCTL_SERIAL_IMMEDIATE_CHAR))
+    {
       pIrp->IoStatus.Information = 0;
+    }
 
     IoCompleteRequest(pIrp, IO_SERIAL_INCREMENT);
   }
@@ -282,9 +292,22 @@ NTSTATUS StartIrp(
   } else {
     status = NoPending(pIrp, status);
 
-    if (pState->iQueue == C0C_QUEUE_WRITE && status != STATUS_PENDING) {
-      pIoPort->amountInWriteQueue -=
-          GetWriteLength(pIrp) - (ULONG)pIrp->IoStatus.Information;
+    if (status != STATUS_PENDING) {
+      PIO_STACK_LOCATION pIrpStack;
+
+      if (pState->iQueue == C0C_QUEUE_WRITE) {
+        pIoPort->amountInWriteQueue -=
+            GetWriteLength(pIrp) - (ULONG)pIrp->IoStatus.Information;
+      }
+
+      pIrpStack = IoGetCurrentIrpStackLocation(pIrp);
+
+      if (status == STATUS_CANCELLED ||
+          (pIrpStack->MajorFunction == IRP_MJ_DEVICE_CONTROL &&
+              pIrpStack->Parameters.DeviceIoControl.IoControlCode == IOCTL_SERIAL_IMMEDIATE_CHAR))
+      {
+        pIrp->IoStatus.Information = 0;
+      }
     }
 
     if (pQueue->pCurrent == pIrp)
