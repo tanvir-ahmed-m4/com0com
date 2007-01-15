@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.28  2007/01/15 16:07:12  vfrolov
+ * Fixed non zero Information for IOCTL_SERIAL_PURGE and IOCTL_SERIAL_LSRMST_INSERT
+ *
  * Revision 1.27  2007/01/11 14:50:29  vfrolov
  * Pool functions replaced by
  *   C0C_ALLOCATE_POOL()
@@ -356,7 +359,6 @@ NTSTATUS FdoPortIoCtl(
       KeReleaseSpinLock(pIoPortLocal->pIoLock, oldIrql);
       FdoPortCompleteQueue(&queueToComplete);
 
-      pIrp->IoStatus.Information = sizeof(ULONG);
       break;
     }
     case IOCTL_SERIAL_GET_COMMSTATUS: {
@@ -518,10 +520,8 @@ NTSTATUS FdoPortIoCtl(
         status = STATUS_INVALID_PARAMETER;
       }
 
-      if (status == STATUS_SUCCESS) {
+      if (status == STATUS_SUCCESS)
         pIoPortLocal->escapeChar = escapeChar;
-        pIrp->IoStatus.Information = sizeof(UCHAR);
-      }
 
       KeReleaseSpinLock(pIoPortLocal->pIoLock, oldIrql);
       break;
