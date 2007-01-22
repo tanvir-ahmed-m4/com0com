@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.15  2007/01/22 17:05:16  vfrolov
+ * Added missing 1IoMarkIrpPending()
+ *
  * Revision 1.14  2007/01/15 16:09:16  vfrolov
  * Fixed non zero Information for IOCTL_SERIAL_IMMEDIATE_CHAR
  *
@@ -253,8 +256,10 @@ NTSTATUS NoPending(IN PIRP pIrp, NTSTATUS status)
   pCancelRoutine = IoSetCancelRoutine(pIrp, NULL);
   #pragma warning(pop)
 
-  if (!pCancelRoutine)
+  if (!pCancelRoutine) {
+    IoMarkIrpPending(pIrp);
     return STATUS_PENDING;
+  }
 
   return status;
 }
