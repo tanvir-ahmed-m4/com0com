@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2006 Vyacheslav Frolov
+ * Copyright (c) 2006-2007 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.5  2007/01/22 17:10:32  vfrolov
+ * Partially added support for non i386 CPUs
+ *
  * Revision 1.4  2006/12/14 08:25:44  vfrolov
  * Added ReadMe.lnk
  *
@@ -38,6 +41,25 @@
 ;--------------------------------
 
   !include "MUI.nsh"
+
+;--------------------------------
+
+!if "$%BUILD_DEFAULT_TARGETS%" == "-386"
+  !define TARGET_CPU i386
+!else if "$%BUILD_DEFAULT_TARGETS%" == "-IA64"
+  !define TARGET_CPU ia64
+!else if "$%BUILD_DEFAULT_TARGETS%" == "-ia64"
+  !define TARGET_CPU ia64
+!else if "$%BUILD_DEFAULT_TARGETS%" == "-AMD64"
+  !define TARGET_CPU amd64
+!else if "$%BUILD_DEFAULT_TARGETS%" == "-amd64"
+  !define TARGET_CPU amd64
+!endif
+
+!ifndef TARGET_CPU
+  !define TARGET_CPU i386
+  !Warning "TARGET_CPU=${TARGET_CPU}"
+!endif
 
 ;--------------------------------
 
@@ -138,8 +160,8 @@ Section "com0com" sec_com0com
   ; Put files there
   File "..\ReadMe.txt"
   File "..\com0com.inf"
-  File "..\i386\com0com.sys"
-  File "..\i386\setup.dll"
+  File "..\${TARGET_CPU}\com0com.sys"
+  File "..\${TARGET_CPU}\setup.dll"
   File "..\setup\setup.bat"
 
   ; Write the installation path into the registry
