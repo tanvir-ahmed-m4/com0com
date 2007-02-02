@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2004-2006 Vyacheslav Frolov
+ * Copyright (c) 2004-2007 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.23  2007/02/02 09:52:21  vfrolov
+ * Fixed huge system error logging if bad trace file used
+ *
  * Revision 1.22  2006/10/27 12:36:58  vfrolov
  * Removed unnecessary InterlockedExchange*()
  *
@@ -111,6 +114,7 @@
 #include "trace.h"
 #include "strutils.h"
 /********************************************************************/
+#define TRACE_ERROR_LIMIT 10
 #define TRACE_BUF_SIZE 256
 #define TRACE_BUFS_NUM 4
 /********************************************************************/
@@ -134,6 +138,7 @@ static struct {
   ULONG modemStatus;
 } traceEnable;
 /********************************************************************/
+static int errorCount;
 static WCHAR traceFileNameBuf[256];
 static UNICODE_STRING traceFileName;
 static PDRIVER_OBJECT pDrvObj;
@@ -891,8 +896,10 @@ NTSTATUS TraceWrite(
       NULL,
       NULL);
 
-  if (!NT_SUCCESS(status))
+  if (!NT_SUCCESS(status)) {
+    errorCount++;
     SysLog(pIoObject, status, L"TraceWrite ZwWriteFile FAIL");
+  }
 
   return status;
 }
@@ -910,6 +917,14 @@ VOID TraceOutput(
   static CHAR strOld[500];
   static LONG strOldBusyInd = 0;
   static LONG strOldFreeInd = 0;
+
+  if (errorCount > TRACE_ERROR_LIMIT) {
+    if (errorCount < (TRACE_ERROR_LIMIT + 100)) {
+      errorCount += 100;
+      SysLog(pDrvObj, STATUS_SUCCESS, L"Trace disabled");
+    }
+    return;
+  }
 
   if (KeGetCurrentIrql() != PASSIVE_LEVEL) {
     SIZE_T size;
@@ -1025,10 +1040,13 @@ VOID TraceOutput(
 
     status = ZwClose(handle);
 
-    if (!NT_SUCCESS(status))
+    if (!NT_SUCCESS(status)) {
+      errorCount++;
       SysLog(pIoObject, status, L"TraceOutput ZwClose FAIL");
+    }
   }
   else {
+    errorCount++;
     SysLog(pIoObject, status, L"TraceOutput ZwCreateFile FAIL");
   }
 }
@@ -1074,6 +1092,7 @@ VOID TraceOpen(
   RtlZeroMemory(traceBufs, sizeof(traceBufs));
 
   RtlInitUnicodeString(&traceFileName, NULL);
+  errorCount = 0;
 
   QueryRegistryTrace(pRegistryPath);
   QueryRegistryTraceEnable(pRegistryPath);
@@ -1095,6 +1114,11 @@ VOID TraceOpen(
 
     TraceF(NULL, "===== BEGIN =====");
     TraceF(NULL, "VERSION " C0C_VERSION_STR " (" __DATE__ " " __TIME__ ")");
+
+    if (errorCount) {
+      RtlInitUnicodeString(&traceFileName, NULL);
+      SysLog(pDrvObj, STATUS_SUCCESS, L"Trace disabled");
+    }
   }
 }
 
