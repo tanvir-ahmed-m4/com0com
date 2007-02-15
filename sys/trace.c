@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.24  2007/02/15 11:43:56  vfrolov
+ * Added tracing SERIAL_XOFF_COUNTER
+ *
  * Revision 1.23  2007/02/02 09:52:21  vfrolov
  * Fixed huge system error logging if bad trace file used
  *
@@ -462,6 +465,20 @@ PCHAR _AnsiStrVaFormat(
           format = FALSE;
           break;
         }
+        case 'd': {
+          LONG n;
+          if (l)
+            n = va_arg(va, long);
+          else
+            n = va_arg(va, int);
+          if (n < 0) {
+            pDestStr = AnsiStrCopyStr(pDestStr, &size, "-");
+            n = -n;
+          }
+          pDestStr = AnsiStrCopyNum(pDestStr, &size, n, 10, width);
+          format = FALSE;
+          break;
+        }
         case 'u': {
           ULONG n;
           if (l)
@@ -765,6 +782,16 @@ PCHAR AnsiStrCopyQueueSize(
   return AnsiStrFormat(pDestStr, pSize,
       " InSize=%lu OutSize=%lu",
       (long)pQueueSize->InSize, (long)pQueueSize->OutSize);
+}
+
+PCHAR AnsiStrCopyXoffCounter(
+    PCHAR pDestStr,
+    PSIZE_T pSize,
+    IN PSERIAL_XOFF_COUNTER pXoffCounter)
+{
+  return AnsiStrFormat(pDestStr, pSize,
+      " Timeout=%lu Counter=%ld XoffChar=0x%X",
+      (long)pXoffCounter->Timeout, (long)pXoffCounter->Counter, (int)pXoffCounter->XoffChar);
 }
 
 PCHAR AnsiStrCopyCommStatus(
@@ -1441,6 +1468,10 @@ VOID TraceIrp(
             pDestStr = AnsiStrCopyStr(pDestStr, &size, " ");
             pDestStr = AnsiStrCopyDump(pDestStr, &size, pSysBuf, inform);
           }
+          break;
+        case IOCTL_SERIAL_XOFF_COUNTER:
+          if ((flags & TRACE_FLAG_PARAMS) && inLength >= sizeof(SERIAL_XOFF_COUNTER))
+            pDestStr = AnsiStrCopyXoffCounter(pDestStr, &size, (PSERIAL_XOFF_COUNTER)pSysBuf);
           break;
       }
       break;
