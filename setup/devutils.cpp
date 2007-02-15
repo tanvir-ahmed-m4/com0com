@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2006 Vyacheslav Frolov
+ * Copyright (c) 2006-2007 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,10 @@
  *
  *
  * $Log$
+ * Revision 1.5  2007/02/15 08:48:45  vfrolov
+ * Fixed 1658441 - Installation Failed
+ * Thanks to Michael A. Smith
+ *
  * Revision 1.4  2006/11/10 14:07:40  vfrolov
  * Implemented remove command
  *
@@ -455,7 +459,7 @@ BOOL RemoveDevices(
   return TRUE;
 }
 ///////////////////////////////////////////////////////////////
-BOOL InstallDevice(
+static int TryInstallDevice(
     InfFile &infFile,
     const char *pDevId,
     PDEVCALLBACK pDevCallBack,
@@ -463,10 +467,13 @@ BOOL InstallDevice(
 {
   GUID classGUID;
   char className[32];
+  DWORD updateErr;
+
+  updateErr = ERROR_SUCCESS;
 
   if (!SetupDiGetINFClass(infFile.Path(), &classGUID, className, sizeof(className), 0)) {
     ShowLastError(MB_OK|MB_ICONSTOP, "SetupDiGetINFClass(%s)", infFile.Path());
-    return FALSE;
+    return IDCANCEL;
   }
 
   //Trace("className=%s\n", className);
@@ -477,7 +484,7 @@ BOOL InstallDevice(
 
   if (hDevInfo == INVALID_HANDLE_VALUE) {
     ShowLastError(MB_OK|MB_ICONSTOP, "SetupDiCreateDeviceInfoList()");
-    return FALSE;
+    return IDCANCEL;
   }
 
   BOOL res;
@@ -530,7 +537,7 @@ BOOL InstallDevice(
   res = UpdateDriverForPlugAndPlayDevices(0, pDevId, infFile.Path(), INSTALLFLAG_FORCE, &rebootRequired);
 
   if (!res) {
-    ShowLastError(MB_OK|MB_ICONSTOP, "UpdateDriverForPlugAndPlayDevices()");
+    updateErr = GetLastError();
 
 err1:
 
@@ -541,6 +548,60 @@ err1:
 err:
 
   SetupDiDestroyDeviceInfoList(hDevInfo);
-  return res;
+
+  if (updateErr != ERROR_SUCCESS) {
+    if (updateErr == ERROR_FILE_NOT_FOUND) {
+      LONG err;
+      HKEY hKey;
+
+      err = RegOpenKeyEx(HKEY_LOCAL_MACHINE, REGSTR_PATH_RUNONCE, 0, KEY_READ, &hKey);
+
+      if (err == ERROR_SUCCESS)
+        RegCloseKey(hKey);
+
+      if (err == ERROR_FILE_NOT_FOUND) {
+        int res2 = ShowMsg(MB_CANCELTRYCONTINUE,
+                           "Can't update driver. Possible it's because your Windows registry is corrupted and\n"
+                           "there is not the following key:\n"
+                           "\n"
+                           "HKEY_LOCAL_MACHINE\\" REGSTR_PATH_RUNONCE "\n"
+                           "\n"
+                           "Continue to add the key to the registry.\n");
+
+        if (res2 == IDCONTINUE) {
+          err = RegCreateKeyEx(HKEY_LOCAL_MACHINE, REGSTR_PATH_RUNONCE, 0, NULL, 0, KEY_WRITE, NULL, &hKey, NULL);
+
+          if (err == ERROR_SUCCESS) {
+            RegCloseKey(hKey);
+            return IDTRYAGAIN;
+          } else {
+            ShowLastError(MB_OK|MB_ICONSTOP, "RegCreateKeyEx()");
+            return IDCANCEL;
+          }
+        }
+
+        return res2;
+      }
+    }
+
+    ShowError(MB_OK|MB_ICONSTOP, updateErr, "UpdateDriverForPlugAndPlayDevices()");
+  }
+
+  return res ? IDCONTINUE : IDCANCEL;
+}
+
+BOOL InstallDevice(
+    InfFile &infFile,
+    const char *pDevId,
+    PDEVCALLBACK pDevCallBack,
+    void *pCallBackParam)
+{
+  int res;
+
+  do {
+    res = TryInstallDevice(infFile, pDevId, pDevCallBack, pCallBackParam);
+  } while (res == IDTRYAGAIN);
+
+  return res == IDCONTINUE;
 }
 ///////////////////////////////////////////////////////////////
