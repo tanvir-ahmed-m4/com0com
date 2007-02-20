@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.25  2007/02/20 12:01:47  vfrolov
+ * Added result dumping SERIAL_XOFF_COUNTER
+ *
  * Revision 1.24  2007/02/15 11:43:56  vfrolov
  * Added tracing SERIAL_XOFF_COUNTER
  *
@@ -1348,7 +1351,7 @@ VOID TraceIrp(
         if (enableMask & TRACE_ENABLE_DUMP)
           pDestStr = AnsiStrCopyDump(pDestStr, &size, pSysBuf, inform);
         else
-          pDestStr = AnsiStrFormat(pDestStr, &size, "%lu:", (long)inform);
+          pDestStr = AnsiStrFormat(pDestStr, &size, "%lu", (long)inform);
       }
       break;
     case IRP_MJ_DEVICE_CONTROL: {
@@ -1470,8 +1473,17 @@ VOID TraceIrp(
           }
           break;
         case IOCTL_SERIAL_XOFF_COUNTER:
-          if ((flags & TRACE_FLAG_PARAMS) && inLength >= sizeof(SERIAL_XOFF_COUNTER))
-            pDestStr = AnsiStrCopyXoffCounter(pDestStr, &size, (PSERIAL_XOFF_COUNTER)pSysBuf);
+          if (inLength >= sizeof(SERIAL_XOFF_COUNTER)) {
+            if ((flags & TRACE_FLAG_PARAMS))
+              pDestStr = AnsiStrCopyXoffCounter(pDestStr, &size, (PSERIAL_XOFF_COUNTER)pSysBuf);
+            if (flags & TRACE_FLAG_RESULTS) {
+              pDestStr = AnsiStrCopyStr(pDestStr, &size, " ");
+              if (enableMask & TRACE_ENABLE_DUMP)
+                pDestStr = AnsiStrCopyDump(pDestStr, &size, &((PSERIAL_XOFF_COUNTER)pSysBuf)->XoffChar, inform);
+              else
+                pDestStr = AnsiStrFormat(pDestStr, &size, "%lu", (long)inform);
+            }
+          }
           break;
       }
       break;
