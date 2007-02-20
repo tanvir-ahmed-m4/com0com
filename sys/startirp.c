@@ -19,8 +19,12 @@
  *
  *
  * $Log$
+ * Revision 1.16  2007/02/20 12:05:11  vfrolov
+ * Implemented IOCTL_SERIAL_XOFF_COUNTER
+ * Fixed cancel and timeout routines
+ *
  * Revision 1.15  2007/01/22 17:05:16  vfrolov
- * Added missing 1IoMarkIrpPending()
+ * Added missing IoMarkIrpPending()
  *
  * Revision 1.14  2007/01/15 16:09:16  vfrolov
  * Fixed non zero Information for IOCTL_SERIAL_IMMEDIATE_CHAR
@@ -90,6 +94,7 @@ PC0C_IRP_STATE GetIrpState(IN PIRP pIrp)
     switch (pIrpStack->Parameters.DeviceIoControl.IoControlCode) {
     case IOCTL_SERIAL_WAIT_ON_MASK:
     case IOCTL_SERIAL_IMMEDIATE_CHAR:
+    case IOCTL_SERIAL_XOFF_COUNTER:
       return (PC0C_IRP_STATE)&pIrpStack->Parameters.DeviceIoControl.Type3InputBuffer;
     }
     break;
@@ -133,6 +138,7 @@ VOID ShiftQueue(PC0C_IRP_QUEUE pQueue)
 
 VOID CancelRoutine(IN PDEVICE_OBJECT pDevObj, IN PIRP pIrp)
 {
+  LIST_ENTRY queueToComplete;
   PC0C_IO_PORT pIoPort;
   PC0C_IRP_STATE pState;
   KIRQL oldIrql;
@@ -146,6 +152,8 @@ VOID CancelRoutine(IN PDEVICE_OBJECT pDevObj, IN PIRP pIrp)
 
   pQueue = &pIoPort->irpQueues[pState->iQueue];
 
+  InitializeListHead(&queueToComplete);
+
   KeAcquireSpinLock(pIoPort->pIoLock, &oldIrql);
 
   if (pState->iQueue == C0C_QUEUE_WRITE) {
@@ -158,36 +166,44 @@ VOID CancelRoutine(IN PDEVICE_OBJECT pDevObj, IN PIRP pIrp)
     pState->flags &= ~C0C_IRP_FLAG_IN_QUEUE;
   }
 
-  if (pState->flags & C0C_IRP_FLAG_IS_CURRENT)
+  pIrp->IoStatus.Status = STATUS_CANCELLED;
+  InsertTailList(&queueToComplete, &pIrp->Tail.Overlay.ListEntry);
+
+  if (pState->flags & C0C_IRP_FLAG_IS_CURRENT) {
     ShiftQueue(pQueue);
+
+    if (pState->iQueue == C0C_QUEUE_WRITE)
+      ReadWrite(pIoPort->pIoPortRemote, FALSE, pIoPort, FALSE, &queueToComplete);
+  }
 
   KeReleaseSpinLock(pIoPort->pIoLock, oldIrql);
 
-  TraceIrp("cancel", pIrp, NULL, TRACE_FLAG_RESULTS);
+  FdoPortCompleteQueue(&queueToComplete);
+}
 
-  pIrp->IoStatus.Status = STATUS_CANCELLED;
-  pIrp->IoStatus.Information = 0;
-  IoCompleteRequest(pIrp, IO_SERIAL_INCREMENT);
+VOID CompleteIrp(PIRP pIrp, NTSTATUS status, PLIST_ENTRY pQueueToComplete)
+{
+  PDRIVER_CANCEL pCancelRoutine;
+
+  #pragma warning(push, 3)
+  pCancelRoutine = IoSetCancelRoutine(pIrp, NULL);
+  #pragma warning(pop)
+
+  if (pCancelRoutine) {
+    pIrp->IoStatus.Status = status;
+    InsertTailList(pQueueToComplete, &pIrp->Tail.Overlay.ListEntry);
+  }
 }
 
 VOID CancelQueue(PC0C_IRP_QUEUE pQueue, PLIST_ENTRY pQueueToComplete)
 {
   while (pQueue->pCurrent) {
-    PDRIVER_CANCEL pCancelRoutine;
     PIRP pIrp;
 
     pIrp = pQueue->pCurrent;
-
-    #pragma warning(push, 3)
-    pCancelRoutine = IoSetCancelRoutine(pIrp, NULL);
-    #pragma warning(pop)
-
     ShiftQueue(pQueue);
 
-    if (pCancelRoutine) {
-      pIrp->IoStatus.Status = STATUS_CANCELLED;
-      InsertTailList(pQueueToComplete, &pIrp->Tail.Overlay.ListEntry);
-    }
+    CompleteIrp(pIrp, STATUS_CANCELLED, pQueueToComplete);
   }
 }
 
@@ -217,6 +233,14 @@ VOID FdoPortCompleteQueue(IN PLIST_ENTRY pQueueToComplete)
 
     pListEntry = RemoveHeadList(pQueueToComplete);
     pIrp = CONTAINING_RECORD(pListEntry, IRP, Tail.Overlay.ListEntry);
+    pIrpStack = IoGetCurrentIrpStackLocation(pIrp);
+
+    if (pIrp->IoStatus.Status == STATUS_TIMEOUT && pIrp->IoStatus.Information &&
+        pIrpStack->MajorFunction == IRP_MJ_DEVICE_CONTROL &&
+            pIrpStack->Parameters.DeviceIoControl.IoControlCode == IOCTL_SERIAL_XOFF_COUNTER)
+    {
+      pIrp->IoStatus.Status = STATUS_SERIAL_COUNTER_TIMEOUT;
+    }
 
     TraceIrp("complete", pIrp, &pIrp->IoStatus.Status, TRACE_FLAG_RESULTS);
 
@@ -235,11 +259,10 @@ VOID FdoPortCompleteQueue(IN PLIST_ENTRY pQueueToComplete)
       KeReleaseSpinLock(pIoPort->pIoLock, oldIrql);
     }
 
-    pIrpStack = IoGetCurrentIrpStackLocation(pIrp);
-
     if (pIrp->IoStatus.Status == STATUS_CANCELLED ||
         (pIrpStack->MajorFunction == IRP_MJ_DEVICE_CONTROL &&
-            pIrpStack->Parameters.DeviceIoControl.IoControlCode == IOCTL_SERIAL_IMMEDIATE_CHAR))
+            (pIrpStack->Parameters.DeviceIoControl.IoControlCode == IOCTL_SERIAL_IMMEDIATE_CHAR ||
+                pIrpStack->Parameters.DeviceIoControl.IoControlCode == IOCTL_SERIAL_XOFF_COUNTER)))
     {
       pIrp->IoStatus.Information = 0;
     }
@@ -265,31 +288,28 @@ NTSTATUS NoPending(IN PIRP pIrp, NTSTATUS status)
 }
 
 NTSTATUS StartIrp(
-    IN PC0C_IO_PORT pIoPort,
-    IN PIRP pIrp,
-    IN PC0C_IRP_STATE pState,
-    IN PC0C_IRP_QUEUE pQueue,
-    IN KIRQL oldIrql,
-    IN PC0C_FDOPORT_START_ROUTINE pStartRoutine)
+    PC0C_IO_PORT pIoPort,
+    PIRP pIrp,
+    PC0C_IRP_STATE pState,
+    PC0C_IRP_QUEUE pQueue,
+    PLIST_ENTRY pQueueToComplete,
+    PC0C_FDOPORT_START_ROUTINE pStartRoutine)
 {
   NTSTATUS status;
-  LIST_ENTRY queueToComplete;
 
   pQueue->pCurrent = pIrp;
   pState->flags |= C0C_IRP_FLAG_IS_CURRENT;
-
-  InitializeListHead(&queueToComplete);
 
   if (pState->iQueue == C0C_QUEUE_WRITE) {
     ULONG length = GetWriteLength(pIrp);
 
     if (length) {
       pIoPort->amountInWriteQueue += length;
-      UpdateTransmitToggle(pIoPort, &queueToComplete);
+      UpdateTransmitToggle(pIoPort, pQueueToComplete);
     }
   }
 
-  status = pStartRoutine(pIoPort, &queueToComplete);
+  status = pStartRoutine(pIoPort, pQueueToComplete);
 
   if (status == STATUS_PENDING) {
     pIrp->IoStatus.Status = STATUS_PENDING;
@@ -309,7 +329,8 @@ NTSTATUS StartIrp(
 
       if (status == STATUS_CANCELLED ||
           (pIrpStack->MajorFunction == IRP_MJ_DEVICE_CONTROL &&
-              pIrpStack->Parameters.DeviceIoControl.IoControlCode == IOCTL_SERIAL_IMMEDIATE_CHAR))
+              (pIrpStack->Parameters.DeviceIoControl.IoControlCode == IOCTL_SERIAL_IMMEDIATE_CHAR ||
+                  pIrpStack->Parameters.DeviceIoControl.IoControlCode == IOCTL_SERIAL_XOFF_COUNTER)))
       {
         pIrp->IoStatus.Information = 0;
       }
@@ -318,10 +339,6 @@ NTSTATUS StartIrp(
     if (pQueue->pCurrent == pIrp)
       ShiftQueue(pQueue);
   }
-
-  KeReleaseSpinLock(pIoPort->pIoLock, oldIrql);
-
-  FdoPortCompleteQueue(&queueToComplete);
 
   return status;
 }
@@ -333,10 +350,12 @@ NTSTATUS FdoPortStartIrp(
     IN PC0C_FDOPORT_START_ROUTINE pStartRoutine)
 {
   NTSTATUS status;
+  LIST_ENTRY queueToComplete;
   KIRQL oldIrql;
   PC0C_IRP_QUEUE pQueue;
   PC0C_IRP_STATE pState;
 
+  InitializeListHead(&queueToComplete);
   pState = GetIrpState(pIrp);
 
   HALT_UNLESS(pState);
@@ -356,11 +375,13 @@ NTSTATUS FdoPortStartIrp(
     status = NoPending(pIrp, STATUS_CANCELLED);
   } else {
     if (!pQueue->pCurrent) {
-      return StartIrp(pIoPort, pIrp, pState, pQueue, oldIrql, pStartRoutine);
+      status = StartIrp(pIoPort, pIrp, pState, pQueue, &queueToComplete, pStartRoutine);
     } else {
       PIO_STACK_LOCATION pIrpStack;
+      PIO_STACK_LOCATION pCurrentStack;
 
       pIrpStack = IoGetCurrentIrpStackLocation(pIrp);
+      pCurrentStack = IoGetCurrentIrpStackLocation(pQueue->pCurrent);
 
       if (pIrpStack->MajorFunction == IRP_MJ_DEVICE_CONTROL &&
           pIrpStack->Parameters.DeviceIoControl.IoControlCode == IOCTL_SERIAL_WAIT_ON_MASK)
@@ -371,10 +392,6 @@ NTSTATUS FdoPortStartIrp(
       if (pIrpStack->MajorFunction == IRP_MJ_DEVICE_CONTROL &&
           pIrpStack->Parameters.DeviceIoControl.IoControlCode == IOCTL_SERIAL_IMMEDIATE_CHAR)
       {
-        PIO_STACK_LOCATION pCurrentStack;
-
-        pCurrentStack = IoGetCurrentIrpStackLocation(pQueue->pCurrent);
-
         if (pCurrentStack->MajorFunction == IRP_MJ_DEVICE_CONTROL &&
             pCurrentStack->Parameters.DeviceIoControl.IoControlCode == IOCTL_SERIAL_IMMEDIATE_CHAR)
         {
@@ -390,24 +407,43 @@ NTSTATUS FdoPortStartIrp(
           InsertHeadList(&pQueue->queue, &pQueue->pCurrent->Tail.Overlay.ListEntry);
           pCurrentState->flags |= C0C_IRP_FLAG_IN_QUEUE;
 
-          return StartIrp(pIoPort, pIrp, pState, pQueue, oldIrql, pStartRoutine);
+          status = StartIrp(pIoPort, pIrp, pState, pQueue, &queueToComplete, pStartRoutine);
         }
       }
       else {
-        pIrp->IoStatus.Status = STATUS_PENDING;
-        IoMarkIrpPending(pIrp);
         InsertTailList(&pQueue->queue, &pIrp->Tail.Overlay.ListEntry);
         pState->flags |= C0C_IRP_FLAG_IN_QUEUE;
 
-        if (pState->iQueue == C0C_QUEUE_WRITE)
+        if (pState->iQueue == C0C_QUEUE_WRITE) {
           pIoPort->amountInWriteQueue += GetWriteLength(pIrp);
+        }
 
-        status = STATUS_PENDING;
+        if (pCurrentStack->MajorFunction == IRP_MJ_DEVICE_CONTROL &&
+            pCurrentStack->Parameters.DeviceIoControl.IoControlCode == IOCTL_SERIAL_XOFF_COUNTER &&
+            pQueue->pCurrent->IoStatus.Information)
+        {
+          if (pIrpStack->MajorFunction == IRP_MJ_FLUSH_BUFFERS) {
+            status = NoPending(pIrp, STATUS_SUCCESS);
+          } else {
+            PIRP pIrpXoffCounter = pQueue->pCurrent;
+
+            ShiftQueue(pQueue);
+            CompleteIrp(pIrpXoffCounter, STATUS_SERIAL_MORE_WRITES, &queueToComplete);
+
+            status = StartIrp(pIoPort, pIrp, pState, pQueue, &queueToComplete, pStartRoutine);
+          }
+        } else {
+          pIrp->IoStatus.Status = STATUS_PENDING;
+          IoMarkIrpPending(pIrp);
+          status = STATUS_PENDING;
+        }
       }
     }
   }
 
   KeReleaseSpinLock(pIoPort->pIoLock, oldIrql);
+
+  FdoPortCompleteQueue(&queueToComplete);
 
   return status;
 }

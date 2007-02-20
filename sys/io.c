@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2004-2006 Vyacheslav Frolov
+ * Copyright (c) 2004-2007 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,10 @@
  *
  *
  * $Log$
+ * Revision 1.30  2007/02/20 12:05:11  vfrolov
+ * Implemented IOCTL_SERIAL_XOFF_COUNTER
+ * Fixed cancel and timeout routines
+ *
  * Revision 1.29  2006/11/27 11:58:27  vfrolov
  * Fixed unexpected completing all queued read requests when
  * completing the first one
@@ -125,7 +129,13 @@
 #define FILE_ID 1
 
 #define GET_REST_BUFFER(pIrp, done) \
-    (((PUCHAR)(pIrp)->AssociatedIrp.SystemBuffer) + done)
+    (((PUCHAR)(pIrp)->AssociatedIrp.SystemBuffer) + (done))
+
+#define GET_REST_BUFFER_WRITE(pIrp, done) \
+    ((IoGetCurrentIrpStackLocation(pIrp)->MajorFunction == IRP_MJ_DEVICE_CONTROL && \
+      IoGetCurrentIrpStackLocation(pIrp)->Parameters.DeviceIoControl.IoControlCode == IOCTL_SERIAL_XOFF_COUNTER) \
+        ? &(((PSERIAL_XOFF_COUNTER)(pIrp)->AssociatedIrp.SystemBuffer)->XoffChar) + (done) \
+        : GET_REST_BUFFER(pIrp, (done)))
 
 typedef struct _RW_DATA {
 
@@ -164,12 +174,15 @@ ULONG GetWriteLength(IN PIRP pIrp)
 {
   PIO_STACK_LOCATION pIrpStack = IoGetCurrentIrpStackLocation(pIrp);
 
-  switch(pIrpStack->MajorFunction) {
+  switch (pIrpStack->MajorFunction) {
   case IRP_MJ_WRITE:
     return pIrpStack->Parameters.Write.Length;
   case IRP_MJ_DEVICE_CONTROL:
-    if (pIrpStack->Parameters.DeviceIoControl.IoControlCode == IOCTL_SERIAL_IMMEDIATE_CHAR)
+    switch (pIrpStack->Parameters.DeviceIoControl.IoControlCode) {
+    case IOCTL_SERIAL_IMMEDIATE_CHAR:
+    case IOCTL_SERIAL_XOFF_COUNTER:
       return sizeof(UCHAR);
+    }
     break;
   }
   return 0;
@@ -218,6 +231,8 @@ VOID OnRxChars(
     PC0C_FLOW_FILTER pFlowFilter,
     PLIST_ENTRY pQueueToComplete)
 {
+  PIRP pCurrent;
+
   SetXonXoffHolding(pReadIoPort, pFlowFilter->lastXonXoff);
 
   if (pFlowFilter->events & (C0C_FLOW_FILTER_EV_RXCHAR | C0C_FLOW_FILTER_EV_RXFLAG)) {
@@ -232,6 +247,26 @@ VOID OnRxChars(
   }
 
   pReadIoPort->perfStats.ReceivedCount += (ULONG)size;
+
+  pCurrent = pReadIoPort->irpQueues[C0C_QUEUE_WRITE].pCurrent;
+
+  if (pCurrent) {
+    PIO_STACK_LOCATION pCurrentStack;
+
+    pCurrentStack = IoGetCurrentIrpStackLocation(pCurrent);
+
+    if (pCurrentStack->MajorFunction == IRP_MJ_DEVICE_CONTROL &&
+        pCurrentStack->Parameters.DeviceIoControl.IoControlCode == IOCTL_SERIAL_XOFF_COUNTER &&
+        pCurrent->IoStatus.Information)
+    {
+      if ((LONG)size < pReadIoPort->xoffCounter) {
+        pReadIoPort->xoffCounter -= (LONG)size;
+      } else {
+        ShiftQueue(&pReadIoPort->irpQueues[C0C_QUEUE_WRITE]);
+        CompleteIrp(pCurrent, STATUS_SUCCESS, pQueueToComplete);
+      }
+    }
+  }
 }
 
 VOID WriteBuffer(
@@ -255,7 +290,7 @@ VOID WriteBuffer(
     PIRP pIrp = pDataWrite->data.irp.pIrp;
 
     information = pIrp->IoStatus.Information;
-    pWriteBuf = GET_REST_BUFFER(pIrp, information);
+    pWriteBuf = GET_REST_BUFFER_WRITE(pIrp, information);
     writeLength = GetWriteLength(pIrp);
   } else {
     HALT_UNLESS1(pDataWrite->type == RW_DATA_TYPE_CHR, pDataWrite->type);
@@ -340,7 +375,7 @@ VOID WriteOverrun(
     PIRP pIrp = pDataWrite->data.irp.pIrp;
 
     information = pIrp->IoStatus.Information;
-    pWriteBuf = GET_REST_BUFFER(pIrp, information);
+    pWriteBuf = GET_REST_BUFFER_WRITE(pIrp, information);
     writeLength = GetWriteLength(pIrp);
   } else {
     HALT_UNLESS1(pDataWrite->type == RW_DATA_TYPE_CHR, pDataWrite->type);
@@ -425,7 +460,7 @@ VOID ReadWriteDirect(
   if (pDataWrite->type == RW_DATA_TYPE_IRP) {
     PIRP pIrpWrite = pDataWrite->data.irp.pIrp;
 
-    pWriteBuf = GET_REST_BUFFER(pIrpWrite, pIrpWrite->IoStatus.Information);
+    pWriteBuf = GET_REST_BUFFER_WRITE(pIrpWrite, pIrpWrite->IoStatus.Information);
     writeLength = GetWriteLength(pIrpWrite) - pIrpWrite->IoStatus.Information;
   } else {
     HALT_UNLESS1(pDataWrite->type == RW_DATA_TYPE_CHR, pDataWrite->type);
@@ -539,6 +574,7 @@ NTSTATUS StopCurrentIrp(
     PLIST_ENTRY pQueueToComplete)
 {
   PIRP pIrp;
+  PC0C_IRP_STATE pState;
 
 #if DBG
   HALT_UNLESS(pQueue->started);
@@ -547,12 +583,10 @@ NTSTATUS StopCurrentIrp(
 
   pIrp = pQueue->pCurrent;
 
+  pState = GetIrpState(pIrp);
+  HALT_UNLESS(pState);
+
   if (status == STATUS_PENDING && done) {
-    PC0C_IRP_STATE pState;
-
-    pState = GetIrpState(pIrp);
-    HALT_UNLESS(pState);
-
     if ((pState->flags & C0C_IRP_FLAG_WAIT_ONE) != 0) {
       status = STATUS_SUCCESS;
     }
@@ -562,8 +596,13 @@ NTSTATUS StopCurrentIrp(
     }
   }
 
-  if (!first && status == STATUS_PENDING)
+  if (status == STATUS_PENDING && (pState->flags & C0C_IRP_FLAG_EXPIRED) != 0) {
+    status = STATUS_TIMEOUT;
+  }
+  else
+  if (!first && status == STATUS_PENDING) {
     status = SetIrpTimeout(pIoPort, pIrp);
+  }
 
   HALT_UNLESS(pCancelRoutine);
 
@@ -572,16 +611,9 @@ NTSTATUS StopCurrentIrp(
     IoSetCancelRoutine(pIrp, pCancelRoutine);
     #pragma warning(pop)
     if (pIrp->Cancel) {
-      #pragma warning(push, 3)
-      pCancelRoutine = IoSetCancelRoutine(pIrp, NULL);
-      #pragma warning(pop)
-
-      if (pCancelRoutine) {
-        ShiftQueue(pQueue);
-        pIrp->IoStatus.Status = STATUS_CANCELLED;
-        InsertTailList(pQueueToComplete, &pIrp->Tail.Overlay.ListEntry);
-        return STATUS_CANCELLED;
-      }
+      ShiftQueue(pQueue);
+      CompleteIrp(pIrp, STATUS_CANCELLED, pQueueToComplete);
+      return STATUS_CANCELLED;
     }
   } else {
     ShiftQueue(pQueue);
@@ -590,6 +622,44 @@ NTSTATUS StopCurrentIrp(
   }
 
   return status;
+}
+
+VOID StartXoffCounter(PC0C_IO_PORT pIoPortWrite, PLIST_ENTRY pQueueToComplete)
+{
+  PIRP pIrpXoffCounter;
+  PC0C_IRP_STATE pState;
+  PC0C_IRP_QUEUE pQueue;
+
+  pQueue = &pIoPortWrite->irpQueues[C0C_QUEUE_WRITE];
+
+#if DBG
+  HALT_UNLESS(!pQueue->started);
+#endif /* DBG */
+
+  pIrpXoffCounter = pQueue->pCurrent;
+  ShiftQueue(pQueue);
+
+  while (pQueue->pCurrent) {
+    PIRP pCurrent = pQueue->pCurrent;
+
+    if (IoGetCurrentIrpStackLocation(pCurrent)->MajorFunction != IRP_MJ_FLUSH_BUFFERS) {
+      CompleteIrp(pIrpXoffCounter, STATUS_SERIAL_MORE_WRITES, pQueueToComplete);
+      return;
+    }
+
+    ShiftQueue(pQueue);
+    CompleteIrp(pCurrent, STATUS_SUCCESS, pQueueToComplete);
+  }
+
+  pIoPortWrite->xoffCounter = ((PSERIAL_XOFF_COUNTER)pIrpXoffCounter->AssociatedIrp.SystemBuffer)->Counter;
+
+  pState = GetIrpState(pIrpXoffCounter);
+  HALT_UNLESS(pState);
+
+  pQueue->pCurrent = pIrpXoffCounter;
+  pState->flags |= C0C_IRP_FLAG_IS_CURRENT;
+
+  SetXoffCounterTimeout(pIoPortWrite, pIrpXoffCounter);
 }
 
 NTSTATUS FdoPortIo(
@@ -880,9 +950,9 @@ NTSTATUS TryReadWrite(
     }
 
     while (dataIrpWrite.data.irp.pIrp) {
-      if (IoGetCurrentIrpStackLocation(dataIrpWrite.data.irp.pIrp)->MajorFunction ==
-                                                                IRP_MJ_FLUSH_BUFFERS)
-      {
+      PIO_STACK_LOCATION pIrpStackWrite = IoGetCurrentIrpStackLocation(dataIrpWrite.data.irp.pIrp);
+
+      if (pIrpStackWrite->MajorFunction == IRP_MJ_FLUSH_BUFFERS) {
         dataIrpWrite.data.irp.status = STATUS_SUCCESS;
       } else {
         dataIrpWrite.data.irp.status = STATUS_PENDING;
@@ -920,12 +990,35 @@ NTSTATUS TryReadWrite(
       if (dataIrpWrite.data.irp.status == STATUS_PENDING)
         break;
 
-      if(startWrite && firstWrite) {
-        status = dataIrpWrite.data.irp.status;
-        ShiftQueue(pQueueWrite);
+      /* stop current pIrpWrite */
+
+      if (dataIrpWrite.data.irp.status == STATUS_SUCCESS &&
+          pIrpStackWrite->MajorFunction == IRP_MJ_DEVICE_CONTROL &&
+          pIrpStackWrite->Parameters.DeviceIoControl.IoControlCode == IOCTL_SERIAL_XOFF_COUNTER)
+      {
+        if(startWrite && firstWrite)
+          status = STATUS_PENDING;
+        else
+          StopCurrentIrp(STATUS_PENDING, pCancelRoutineWrite, firstWrite,
+                         doneWrite, pIoPortWrite, pQueueWrite, pQueueToComplete);
+
+        if (dataIrpWrite.data.irp.pIrp == pQueueWrite->pCurrent) {
+          if (doneWrite)
+            StartXoffCounter(pIoPortWrite, pQueueToComplete);
+
+          if (dataIrpWrite.data.irp.pIrp == pQueueWrite->pCurrent) {
+            dataIrpWrite.data.irp.pIrp = NULL;
+            break;
+          }
+        }
       } else {
-        StopCurrentIrp(dataIrpWrite.data.irp.status, pCancelRoutineWrite, firstWrite,
-                       doneWrite, pIoPortWrite, pQueueWrite, pQueueToComplete);
+        if(startWrite && firstWrite) {
+          status = dataIrpWrite.data.irp.status;
+          ShiftQueue(pQueueWrite);
+        } else {
+          StopCurrentIrp(dataIrpWrite.data.irp.status, pCancelRoutineWrite, firstWrite,
+                         doneWrite, pIoPortWrite, pQueueWrite, pQueueToComplete);
+        }
       }
 
       /* get next pIrpWrite */
@@ -1036,9 +1129,9 @@ NTSTATUS TryReadWrite(
   }
 
   while (dataIrpWrite.data.irp.pIrp) {
-    if (IoGetCurrentIrpStackLocation(dataIrpWrite.data.irp.pIrp)->MajorFunction ==
-                                                              IRP_MJ_FLUSH_BUFFERS)
-    {
+    PIO_STACK_LOCATION pIrpStackWrite = IoGetCurrentIrpStackLocation(dataIrpWrite.data.irp.pIrp);
+
+    if (pIrpStackWrite->MajorFunction == IRP_MJ_FLUSH_BUFFERS) {
       dataIrpWrite.data.irp.status = STATUS_SUCCESS;
     } else {
       dataIrpWrite.data.irp.status = STATUS_PENDING;
@@ -1090,19 +1183,40 @@ NTSTATUS TryReadWrite(
       }
     }
 
-    if(startWrite && firstWrite) {
-      if (dataIrpWrite.data.irp.status == STATUS_PENDING)
-        dataIrpWrite.data.irp.status =
-            SetIrpTimeout(pIoPortWrite, dataIrpWrite.data.irp.pIrp);
+    /* stop current pIrpWrite */
 
-      status = dataIrpWrite.data.irp.status;
+    if (dataIrpWrite.data.irp.status == STATUS_SUCCESS &&
+        pIrpStackWrite->MajorFunction == IRP_MJ_DEVICE_CONTROL &&
+        pIrpStackWrite->Parameters.DeviceIoControl.IoControlCode == IOCTL_SERIAL_XOFF_COUNTER)
+    {
+      if(startWrite && firstWrite)
+        status = STATUS_PENDING;
+      else
+        StopCurrentIrp(STATUS_PENDING, pCancelRoutineWrite, firstWrite,
+                       doneWrite, pIoPortWrite, pQueueWrite, pQueueToComplete);
 
-      if (dataIrpWrite.data.irp.status != STATUS_PENDING)
-        ShiftQueue(pQueueWrite);
+      if (dataIrpWrite.data.irp.pIrp == pQueueWrite->pCurrent) {
+        if (doneWrite)
+          StartXoffCounter(pIoPortWrite, pQueueToComplete);
+
+        if (dataIrpWrite.data.irp.pIrp == pQueueWrite->pCurrent)
+          break;
+      }
     } else {
-      dataIrpWrite.data.irp.status =
-          StopCurrentIrp(dataIrpWrite.data.irp.status, pCancelRoutineWrite, firstWrite,
-                         doneWrite, pIoPortWrite, pQueueWrite, pQueueToComplete);
+      if(startWrite && firstWrite) {
+        if (dataIrpWrite.data.irp.status == STATUS_PENDING)
+          dataIrpWrite.data.irp.status =
+              SetIrpTimeout(pIoPortWrite, dataIrpWrite.data.irp.pIrp);
+
+        status = dataIrpWrite.data.irp.status;
+
+        if (dataIrpWrite.data.irp.status != STATUS_PENDING)
+          ShiftQueue(pQueueWrite);
+      } else {
+        dataIrpWrite.data.irp.status =
+            StopCurrentIrp(dataIrpWrite.data.irp.status, pCancelRoutineWrite, firstWrite,
+                           doneWrite, pIoPortWrite, pQueueWrite, pQueueToComplete);
+      }
     }
 
     /* get next pIrpWrite */

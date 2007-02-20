@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2004-2006 Vyacheslav Frolov
+ * Copyright (c) 2004-2007 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,10 @@
  *
  *
  * $Log$
+ * Revision 1.8  2007/02/20 12:05:11  vfrolov
+ * Implemented IOCTL_SERIAL_XOFF_COUNTER
+ * Fixed cancel and timeout routines
+ *
  * Revision 1.7  2006/06/21 16:23:57  vfrolov
  * Fixed possible BSOD after one port of pair removal
  *
@@ -55,47 +59,30 @@ VOID TimeoutRoutine(
     PC0C_IO_PORT pIoPort,
     IN PC0C_IRP_QUEUE pQueue)
 {
+  LIST_ENTRY queueToComplete;
   KIRQL oldIrql;
-  PIRP pIrp;
+
+  InitializeListHead(&queueToComplete);
 
   KeAcquireSpinLock(pIoPort->pIoLock, &oldIrql);
 
-  pIrp = pQueue->pCurrent;
+  if (pQueue->pCurrent) {
+    PC0C_IRP_STATE pState;
 
-  if (pIrp) {
-    PDRIVER_CANCEL pCancelRoutine;
+    pState = GetIrpState(pQueue->pCurrent);
+    HALT_UNLESS(pState);
 
-    #pragma warning(push, 3)
-    pCancelRoutine = IoSetCancelRoutine(pIrp, NULL);
-    #pragma warning(pop)
+    pState->flags |= C0C_IRP_FLAG_EXPIRED;
 
-    if (pCancelRoutine) {
-      PC0C_IRP_STATE pState;
-
-      pState = GetIrpState(pIrp);
-      HALT_UNLESS(pState);
-
-      if (pState->iQueue == C0C_QUEUE_WRITE) {
-        pIoPort->amountInWriteQueue -=
-            GetWriteLength(pIrp) - (ULONG)pIrp->IoStatus.Information;
-      }
-
-      ShiftQueue(pQueue);
-      if (pQueue->pCurrent)
-        SetIrpTimeout(pIoPort, pQueue->pCurrent);
-    } else {
-      pIrp = NULL;
-    }
+    if (pState->iQueue == C0C_QUEUE_WRITE)
+      ReadWrite(pIoPort->pIoPortRemote, FALSE, pIoPort, FALSE, &queueToComplete);
+    else
+      ReadWrite(pIoPort, FALSE, pIoPort->pIoPortRemote, FALSE, &queueToComplete);
   }
 
   KeReleaseSpinLock(pIoPort->pIoLock, oldIrql);
 
-  if (pIrp) {
-    TraceIrp("timeout", pIrp, NULL, TRACE_FLAG_RESULTS);
-
-    pIrp->IoStatus.Status = STATUS_TIMEOUT;
-    IoCompleteRequest(pIrp, IO_SERIAL_INCREMENT);
-  }
+  FdoPortCompleteQueue(&queueToComplete);
 }
 
 NTSTATUS SetReadTimeout(PC0C_IO_PORT pIoPort, PIRP pIrp)
@@ -223,6 +210,27 @@ NTSTATUS SetWriteTimeout(PC0C_IO_PORT pIoPort, PIRP pIrp)
   return STATUS_PENDING;
 }
 
+VOID SetXoffCounterTimeout(
+    PC0C_IO_PORT pIoPort,
+    PIRP pIrp)
+{
+  PSERIAL_XOFF_COUNTER pXoffCounter;
+  LARGE_INTEGER total;
+
+  KeCancelTimer(&pIoPort->timerWriteTotal);
+
+  pXoffCounter = (PSERIAL_XOFF_COUNTER)pIrp->AssociatedIrp.SystemBuffer;
+
+  if (pXoffCounter->Timeout) {
+    total.QuadPart = ((LONGLONG)pXoffCounter->Timeout) * -10000;
+
+    KeSetTimer(
+        &pIoPort->timerWriteTotal,
+        total,
+        &pIoPort->timerWriteTotalDpc);
+  }
+}
+
 VOID TimeoutReadTotal(
     IN PKDPC pDpc,
     IN PVOID deferredContext,
@@ -299,9 +307,18 @@ NTSTATUS SetIrpTimeout(
     PC0C_IO_PORT pIoPort,
     PIRP pIrp)
 {
-  switch (IoGetCurrentIrpStackLocation(pIrp)->MajorFunction) {
+  PIO_STACK_LOCATION pIrpStack = IoGetCurrentIrpStackLocation(pIrp);
+
+  switch (pIrpStack->MajorFunction) {
   case IRP_MJ_WRITE:
     return SetWriteTimeout(pIoPort, pIrp);
+  case IRP_MJ_DEVICE_CONTROL:
+    switch (pIrpStack->Parameters.DeviceIoControl.IoControlCode) {
+    case IOCTL_SERIAL_XOFF_COUNTER:
+    case IOCTL_SERIAL_IMMEDIATE_CHAR:
+      return SetWriteTimeout(pIoPort, pIrp);
+    }
+    break;
   case IRP_MJ_READ:
     return SetReadTimeout(pIoPort, pIrp);
   }

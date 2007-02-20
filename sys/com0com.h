@@ -19,6 +19,10 @@
  *
  *
  * $Log$
+ * Revision 1.33  2007/02/20 12:05:11  vfrolov
+ * Implemented IOCTL_SERIAL_XOFF_COUNTER
+ * Fixed cancel and timeout routines
+ *
  * Revision 1.32  2007/01/11 14:44:52  vfrolov
  * Defined
  *   C0C_TAG
@@ -226,6 +230,7 @@ typedef struct _C0C_IO_PORT {
   SERIAL_HANDFLOW         handFlow;
   SERIAL_CHARS            specialChars;
 
+  LONG                    xoffCounter;
   ULONG                   errors;
   ULONG                   amountInWriteQueue;
   ULONG                   waitMask;
@@ -337,11 +342,17 @@ NTSTATUS FdoPortStartIrp(
     IN UCHAR iQueue,
     IN PC0C_FDOPORT_START_ROUTINE pStartRoutine);
 
+VOID CompleteIrp(PIRP pIrp, NTSTATUS status, PLIST_ENTRY pQueueToComplete);
 VOID CancelQueue(PC0C_IRP_QUEUE pQueue, PLIST_ENTRY pQueueToComplete);
 VOID FdoPortCancelQueues(IN PC0C_IO_PORT pIoPort);
 VOID FdoPortCompleteQueue(IN PLIST_ENTRY pQueueToComplete);
 
 NTSTATUS FdoPortImmediateChar(
+    IN PC0C_IO_PORT pIoPort,
+    IN PIRP pIrp,
+    IN PIO_STACK_LOCATION pIrpStack);
+
+NTSTATUS FdoPortXoffCounter(
     IN PC0C_IO_PORT pIoPort,
     IN PIRP pIrp,
     IN PIO_STACK_LOCATION pIrpStack);
@@ -371,6 +382,7 @@ typedef struct _C0C_IRP_STATE {
 #define C0C_IRP_FLAG_IS_CURRENT        0x02
 #define C0C_IRP_FLAG_WAIT_ONE          0x04
 #define C0C_IRP_FLAG_INTERVAL_TIMEOUT  0x08
+#define C0C_IRP_FLAG_EXPIRED           0x10
 
   UCHAR                   flags;
   UCHAR                   iQueue;

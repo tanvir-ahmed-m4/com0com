@@ -19,6 +19,10 @@
  *
  *
  * $Log$
+ * Revision 1.29  2007/02/20 12:05:11  vfrolov
+ * Implemented IOCTL_SERIAL_XOFF_COUNTER
+ * Fixed cancel and timeout routines
+ *
  * Revision 1.28  2007/01/15 16:07:12  vfrolov
  * Fixed non zero Information for IOCTL_SERIAL_PURGE and IOCTL_SERIAL_LSRMST_INSERT
  *
@@ -314,6 +318,9 @@ NTSTATUS FdoPortIoCtl(
       break;
     case IOCTL_SERIAL_IMMEDIATE_CHAR:
       status = FdoPortImmediateChar(pIoPortLocal, pIrp, pIrpStack);
+      break;
+    case IOCTL_SERIAL_XOFF_COUNTER:
+      status = FdoPortXoffCounter(pIoPortLocal, pIrp, pIrpStack);
       break;
     case IOCTL_SERIAL_PURGE: {
       LIST_ENTRY queueToComplete;

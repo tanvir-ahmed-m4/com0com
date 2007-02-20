@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2004-2006 Vyacheslav Frolov
+ * Copyright (c) 2004-2007 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,10 @@
  *
  *
  * $Log$
+ * Revision 1.9  2007/02/20 12:05:11  vfrolov
+ * Implemented IOCTL_SERIAL_XOFF_COUNTER
+ * Fixed cancel and timeout routines
+ *
  * Revision 1.8  2006/06/23 11:44:52  vfrolov
  * Mass replacement pDevExt by pIoPort
  *
@@ -67,6 +71,24 @@ NTSTATUS FdoPortImmediateChar(
 {
   if (pIrpStack->Parameters.DeviceIoControl.InputBufferLength < sizeof(UCHAR))
     return STATUS_BUFFER_TOO_SMALL;
+
+  return FdoPortStartIrp(pIoPort, pIrp, C0C_QUEUE_WRITE, StartIrpWrite);
+}
+
+NTSTATUS FdoPortXoffCounter(
+    IN PC0C_IO_PORT pIoPort,
+    IN PIRP pIrp,
+    IN PIO_STACK_LOCATION pIrpStack)
+{
+  PSERIAL_XOFF_COUNTER pXoffCounter;
+
+  if (pIrpStack->Parameters.DeviceIoControl.InputBufferLength < sizeof(SERIAL_XOFF_COUNTER))
+    return STATUS_BUFFER_TOO_SMALL;
+
+  pXoffCounter = (PSERIAL_XOFF_COUNTER)pIrp->AssociatedIrp.SystemBuffer;
+
+  if (pXoffCounter->Counter <= 0)
+    return STATUS_INVALID_PARAMETER;
 
   return FdoPortStartIrp(pIoPort, pIrp, C0C_QUEUE_WRITE, StartIrpWrite);
 }
