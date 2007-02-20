@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2004-2006 Vyacheslav Frolov
+ * Copyright (c) 2004-2007 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.11  2007/02/20 11:57:59  vfrolov
+ * Added STATUS_SERIAL_COUNTER_TIMEOUT and STATUS_SERIAL_MORE_WRITES
+ *
  * Revision 1.10  2006/09/27 07:24:51  vfrolov
  * Added IRP_MN_REGINFO_EX
  *
@@ -259,6 +262,8 @@ CODE2NAME codeNameTableStatus[] = {
   TOCODE2NAME(STATUS_, OBJECT_NAME_NOT_FOUND),
   TOCODE2NAME(STATUS_, DEVICE_BUSY),
   TOCODE2NAME(STATUS_, WMI_GUID_NOT_FOUND),
+  TOCODE2NAME(STATUS_, SERIAL_COUNTER_TIMEOUT),
+  TOCODE2NAME(STATUS_, SERIAL_MORE_WRITES),
   {0, NULL}
 };
 
