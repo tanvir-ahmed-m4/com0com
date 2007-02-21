@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2004-2006 Vyacheslav Frolov
+ * Copyright (c) 2004-2007 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.3  2007/02/21 16:48:44  vfrolov
+ * Added MajorFunction checking
+ *
  * Revision 1.2  2006/07/17 10:03:54  vfrolov
  * Moved pIrpStack
  *
@@ -30,20 +33,23 @@
 
 #include "precomp.h"
 
+/*
+ * FILE_ID used by HALT_UNLESS to put it on BSOD
+ */
+#define FILE_ID 0xC
+
 NTSTATUS PdoPortPower(
     IN PC0C_PDOPORT_EXTENSION pDevExt,
     IN PIRP                   pIrp)
 {
   NTSTATUS status;
   PIO_STACK_LOCATION  pIrpStack = IoGetCurrentIrpStackLocation(pIrp);
-  POWER_STATE_TYPE    powerType = pIrpStack->Parameters.Power.Type;
-  POWER_STATE         powerState = pIrpStack->Parameters.Power.State;
 
   switch (pIrpStack->MinorFunction) {
   case IRP_MN_SET_POWER:
-    switch (powerType) {
+    switch (pIrpStack->Parameters.Power.Type) {
     case DevicePowerState:
-      PoSetPowerState(pDevExt->pDevObj, powerType, powerState);
+      PoSetPowerState(pDevExt->pDevObj, DevicePowerState, pIrpStack->Parameters.Power.State);
       status = STATUS_SUCCESS;
       break;
     case SystemPowerState:
@@ -79,9 +85,11 @@ NTSTATUS c0cPowerDispatch(IN PDEVICE_OBJECT pDevObj, IN PIRP pIrp)
   NTSTATUS status;
   PC0C_COMMON_EXTENSION pDevExt = pDevObj->DeviceExtension;
 
-  TraceIrp("c0cPowerDispatch", pIrp, NULL, TRACE_FLAG_PARAMS);
+  HALT_UNLESS2(IoGetCurrentIrpStackLocation(pIrp)->MajorFunction == IRP_MJ_POWER,
+      IoGetCurrentIrpStackLocation(pIrp)->MajorFunction,
+      IoGetCurrentIrpStackLocation(pIrp)->MinorFunction);
 
-  status = STATUS_NO_SUCH_DEVICE;
+  TraceIrp("POWER", pIrp, NULL, TRACE_FLAG_PARAMS);
 
   switch (pDevExt->doType) {
   case C0C_DOTYPE_FB:
@@ -94,6 +102,7 @@ NTSTATUS c0cPowerDispatch(IN PDEVICE_OBJECT pDevObj, IN PIRP pIrp)
     status = PdoPortPower((PC0C_PDOPORT_EXTENSION)pDevExt, pIrp);
     break;
   default:
+    status = STATUS_NO_SUCH_DEVICE;
     pIrp->IoStatus.Status = status;
     IoCompleteRequest(pIrp, IO_NO_INCREMENT);
   }
