@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.12  2007/02/21 16:52:34  vfrolov
+ * Added tracing of IRP_MJ_POWER with more details
+ *
  * Revision 1.11  2007/02/20 11:57:59  vfrolov
  * Added STATUS_SERIAL_COUNTER_TIMEOUT and STATUS_SERIAL_MORE_WRITES
  *
@@ -176,6 +179,46 @@ CODE2NAME codeNameTablePower[] = {
   TOCODE2NAME(IRP_MN_, POWER_SEQUENCE),
   TOCODE2NAME(IRP_MN_, SET_POWER),
   TOCODE2NAME(IRP_MN_, QUERY_POWER),
+  {0, NULL}
+};
+
+CODE2NAME codeNameTablePowerType[] = {
+  {SystemPowerState, "Sys"},
+  {DevicePowerState, "Dev"},
+  {0, NULL}
+};
+
+CODE2NAME codeNameTableSystemPowerState[] = {
+  TOCODE2NAME(PowerSystem, Unspecified),
+  TOCODE2NAME(PowerSystem, Working),
+  TOCODE2NAME(PowerSystem, Sleeping1),
+  TOCODE2NAME(PowerSystem, Sleeping2),
+  TOCODE2NAME(PowerSystem, Sleeping3),
+  TOCODE2NAME(PowerSystem, Hibernate),
+  TOCODE2NAME(PowerSystem, Shutdown),
+  TOCODE2NAME(PowerSystem, Maximum),
+  {0, NULL}
+};
+
+CODE2NAME codeNameTableDevicePowerState[] = {
+  TOCODE2NAME(PowerDevice, Unspecified),
+  TOCODE2NAME(PowerDevice, D0),
+  TOCODE2NAME(PowerDevice, D1),
+  TOCODE2NAME(PowerDevice, D2),
+  TOCODE2NAME(PowerDevice, D3),
+  TOCODE2NAME(PowerDevice, Maximum),
+  {0, NULL}
+};
+
+CODE2NAME codeNameTablePowerAction[] = {
+  TOCODE2NAME(PowerAction, None),
+  TOCODE2NAME(PowerAction, Reserved),
+  TOCODE2NAME(PowerAction, Sleep),
+  TOCODE2NAME(PowerAction, Hibernate),
+  TOCODE2NAME(PowerAction, Shutdown),
+  TOCODE2NAME(PowerAction, ShutdownReset),
+  TOCODE2NAME(PowerAction, ShutdownOff),
+  TOCODE2NAME(PowerAction, WarmEject),
   {0, NULL}
 };
 

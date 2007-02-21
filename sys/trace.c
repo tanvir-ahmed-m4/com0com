@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.26  2007/02/21 16:52:34  vfrolov
+ * Added tracing of IRP_MJ_POWER with more details
+ *
  * Revision 1.25  2007/02/20 12:01:47  vfrolov
  * Added result dumping SERIAL_XOFF_COUNTER
  *
@@ -123,6 +126,7 @@
 #define TRACE_ERROR_LIMIT 10
 #define TRACE_BUF_SIZE 256
 #define TRACE_BUFS_NUM 4
+#define TRACE_IRQL_BUF_SIZE 1024
 /********************************************************************/
 typedef struct _TRACE_BUFFER {
   BOOLEAN busy;
@@ -148,7 +152,7 @@ static int errorCount;
 static WCHAR traceFileNameBuf[256];
 static UNICODE_STRING traceFileName;
 static PDRIVER_OBJECT pDrvObj;
-static KSPIN_LOCK strOldLock;
+static KSPIN_LOCK irqlBufLock;
 static KSPIN_LOCK bufsLock;
 static TRACE_BUFFER traceBufs[TRACE_BUFS_NUM];
 static LONG skippedTraces;
@@ -944,9 +948,9 @@ VOID TraceOutput(
   OBJECT_ATTRIBUTES objectAttributes;
   IO_STATUS_BLOCK ioStatusBlock;
 
-  static CHAR strOld[500];
-  static LONG strOldBusyInd = 0;
-  static LONG strOldFreeInd = 0;
+  static CHAR irqlBuf[TRACE_IRQL_BUF_SIZE];
+  static LONG irqlBufBusyInd = 0;
+  static LONG irqlBufFreeInd = 0;
 
   if (errorCount > TRACE_ERROR_LIMIT) {
     if (errorCount < (TRACE_ERROR_LIMIT + 100)) {
@@ -967,14 +971,14 @@ VOID TraceOutput(
 
     GetTimeFields(&timeFields);
 
-    KeAcquireSpinLock(&strOldLock, &oldIrql);
+    KeAcquireSpinLock(&irqlBufLock, &oldIrql);
 
-    size = sizeof(strOld) - strOldFreeInd;
-    pDestStr = strOld + (sizeof(strOld) - size);
+    size = sizeof(irqlBuf) - irqlBufFreeInd;
+    pDestStr = irqlBuf + (sizeof(irqlBuf) - size);
 
     pDestStr = AnsiStrCopyTimeFields(pDestStr, &size, &timeFields);
     pDestStr = AnsiStrFormat(pDestStr, &size, " *%u* %s\r\n", (unsigned)KeGetCurrentIrql(), pStr);
-    HALT_UNLESS3(size > 0, strOldFreeInd, strOldBusyInd, sizeof(strOld));
+    HALT_UNLESS3(size > 0, irqlBufFreeInd, irqlBufBusyInd, sizeof(irqlBuf));
 
     if (size == 1) {
       pDestStr -= 6;
@@ -982,9 +986,9 @@ VOID TraceOutput(
       pDestStr = AnsiStrCopyStr(pDestStr, &size, " ...\r\n");
     }
 
-    strOldFreeInd = (LONG)(sizeof(strOld) - size);
+    irqlBufFreeInd = (LONG)(sizeof(irqlBuf) - size);
 
-    KeReleaseSpinLock(&strOldLock, oldIrql);
+    KeReleaseSpinLock(&irqlBufLock, oldIrql);
 
     return;
   }
@@ -1023,23 +1027,23 @@ VOID TraceOutput(
       size = TRACE_BUF_SIZE;
       pDestStr = pBuf->buf;
 
-      while (strOldFreeInd) {
+      while (irqlBufFreeInd) {
         SIZE_T lenBuf;
         KIRQL oldIrql;
 
-        KeAcquireSpinLock(&strOldLock, &oldIrql);
-        lenBuf = strOldFreeInd - strOldBusyInd;
+        KeAcquireSpinLock(&irqlBufLock, &oldIrql);
+        lenBuf = irqlBufFreeInd - irqlBufBusyInd;
         if (lenBuf) {
           if (lenBuf > size - 1)
             lenBuf = size - 1;
-          RtlCopyMemory(pDestStr, &strOld[strOldBusyInd], lenBuf);
+          RtlCopyMemory(pDestStr, &irqlBuf[irqlBufBusyInd], lenBuf);
           pDestStr[lenBuf] = 0;
-          strOldBusyInd += (LONG)lenBuf;
-          HALT_UNLESS3(strOldBusyInd <= strOldFreeInd, strOldFreeInd, strOldBusyInd, lenBuf);
-          if (strOldBusyInd == strOldFreeInd)
-            strOldFreeInd = strOldBusyInd = 0;
+          irqlBufBusyInd += (LONG)lenBuf;
+          HALT_UNLESS3(irqlBufBusyInd <= irqlBufFreeInd, irqlBufFreeInd, irqlBufBusyInd, lenBuf);
+          if (irqlBufBusyInd == irqlBufFreeInd)
+            irqlBufFreeInd = irqlBufBusyInd = 0;
         }
-        KeReleaseSpinLock(&strOldLock, oldIrql);
+        KeReleaseSpinLock(&irqlBufLock, oldIrql);
 
         if (lenBuf)
           TraceWrite(pIoObject, handle, pBuf->buf);
@@ -1116,7 +1120,7 @@ VOID TraceOpen(
 {
   pDrvObj = _pDrvObj;
 
-  KeInitializeSpinLock(&strOldLock);
+  KeInitializeSpinLock(&irqlBufLock);
   KeInitializeSpinLock(&bufsLock);
   skippedTraces = 0;
   RtlZeroMemory(traceBufs, sizeof(traceBufs));
@@ -1529,7 +1533,6 @@ VOID TraceIrp(
           }
           break;
         case IRP_MN_QUERY_INTERFACE:
-          pDestStr = AnsiStrCopyStr(pDestStr, &size, " ");
           pDestStr = AnsiStrFormat(pDestStr, &size,
               " GUID: %8lX-%4X-%4X-%2X%2X-%2X%2X%2X%2X%2X%2X",
               (long)pIrpStack->Parameters.QueryInterface.InterfaceType->Data1,
@@ -1552,6 +1555,47 @@ VOID TraceIrp(
 
       pDestStr = AnsiStrCopyStr(pDestStr, &size, " ");
       pDestStr = AnsiStrCopyCode(pDestStr, &size, code, codeNameTablePower, "POWER_", 10);
+
+      if ((flags & TRACE_FLAG_PARAMS) == 0)
+        break;
+
+      switch (code) {
+        case IRP_MN_SET_POWER:
+        case IRP_MN_QUERY_POWER: {
+          POWER_STATE_TYPE powerType = pIrpStack->Parameters.Power.Type;
+          POWER_STATE powerState = pIrpStack->Parameters.Power.State;
+
+          pDestStr = AnsiStrCopyStr(pDestStr, &size, " ");
+          pDestStr = AnsiStrCopyCode(pDestStr, &size, powerType, codeNameTablePowerType, "Type_", 10);
+          pDestStr = AnsiStrCopyStr(pDestStr, &size, " ");
+
+          switch (powerType) {
+            case DevicePowerState:
+              pDestStr = AnsiStrCopyCode(pDestStr, &size, powerState.DeviceState,
+                                         codeNameTableDevicePowerState, "State_", 10);
+              break;
+            case SystemPowerState:
+              pDestStr = AnsiStrCopyCode(pDestStr, &size, powerState.SystemState,
+                                         codeNameTableSystemPowerState, "State_", 10);
+              break;
+            default:
+              pDestStr = AnsiStrCopyCode(pDestStr, &size, powerState.SystemState, NULL, "State_", 10);
+              break;
+          }
+
+          pDestStr = AnsiStrCopyStr(pDestStr, &size, " ");
+          pDestStr = AnsiStrCopyCode(pDestStr, &size, pIrpStack->Parameters.Power.ShutdownType,
+                                     codeNameTablePowerAction, "Action_", 10);
+          break;
+        }
+        case IRP_MN_WAIT_WAKE: {
+          SYSTEM_POWER_STATE powerState = pIrpStack->Parameters.WaitWake.PowerState;
+
+          pDestStr = AnsiStrCopyStr(pDestStr, &size, " Sys ");
+          pDestStr = AnsiStrCopyCode(pDestStr, &size, powerState, codeNameTableSystemPowerState, "State_", 10);
+          break;
+        }
+      }
       break;
     }
     case IRP_MJ_SYSTEM_CONTROL: {
