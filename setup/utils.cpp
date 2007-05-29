@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.5  2007/05/29 15:22:00  vfrolov
+ * Fixed buffer overflow
+ *
  * Revision 1.4  2007/01/11 15:03:43  vfrolov
  * Added STRTOK_R()
  *
@@ -40,7 +43,7 @@
 ///////////////////////////////////////////////////////////////
 int VSNPRINTF(char *pBuf, int size, const char *pFmt, va_list va)
 {
-  char buf[1024];
+  char buf[1025];
 
   int res1 = wvsprintf(buf, pFmt, va);
   buf[sizeof(buf)/sizeof(buf[0]) - 1] = 0;
