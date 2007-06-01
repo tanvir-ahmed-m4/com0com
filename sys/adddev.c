@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.26  2007/06/01 16:22:40  vfrolov
+ * Implemented plug-in and exclusive modes
+ *
  * Revision 1.25  2007/06/01 08:36:26  vfrolov
  * Changed parameter type for SetWriteDelay()
  *
@@ -108,6 +111,7 @@
 #include "timeout.h"
 #include "delay.h"
 #include "strutils.h"
+#include "showport.h"
 
 /*
  * FILE_ID used by HALT_UNLESS to put it on BSOD
@@ -130,26 +134,16 @@ VOID RemoveFdoPort(IN PC0C_FDOPORT_EXTENSION pDevExt)
   if (pDevExt->pIoPortLocal) {
     FreeTimeouts(pDevExt->pIoPortLocal);
     FreeWriteDelay(pDevExt->pIoPortLocal);
+    pDevExt->pIoPortLocal->plugInMode = FALSE;
+    pDevExt->pIoPortLocal->exclusiveMode = FALSE;
     pDevExt->pIoPortLocal->pDevExt = NULL;
   }
 
-  IoWMIRegistrationControl(pDevExt->pDevObj, WMIREG_ACTION_DEREGISTER);
+  if (!HidePort(pDevExt))
+    SysLog(pDevExt->pDevObj, STATUS_UNSUCCESSFUL, L"RemoveFdoPort HidePort FAIL");
 
-  if (pDevExt->symbolicLinkName.Buffer) {
-    IoSetDeviceInterfaceState(&pDevExt->symbolicLinkName, FALSE);
-    RtlFreeUnicodeString(&pDevExt->symbolicLinkName);
-  }
-
-  if (pDevExt->ntDeviceName.Buffer) {
-    RtlDeleteRegistryValue(RTL_REGISTRY_DEVICEMAP, C0C_SERIAL_DEVICEMAP,
-                           pDevExt->ntDeviceName.Buffer);
-    StrFree(&pDevExt->ntDeviceName);
-  }
-
-  if (pDevExt->win32DeviceName.Buffer) {
-    IoDeleteSymbolicLink(&pDevExt->win32DeviceName);
-    StrFree(&pDevExt->win32DeviceName);
-  }
+  StrFree(&pDevExt->ntDeviceName);
+  StrFree(&pDevExt->win32DeviceName);
 
   if (pDevExt->pLowDevObj)
     IoDetachDevice(pDevExt->pLowDevObj);
@@ -166,7 +160,7 @@ NTSTATUS AddFdoPort(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
   PDEVICE_OBJECT pNewDevObj;
   PC0C_FDOPORT_EXTENSION pDevExt;
   PC0C_PDOPORT_EXTENSION pPhDevExt;
-  ULONG emuBR, emuOverrun;
+  ULONG emuBR, emuOverrun, plugInMode, exclusiveMode;
   UNICODE_STRING ntDeviceName;
   PWCHAR pPortName;
 
@@ -239,27 +233,46 @@ NTSTATUS AddFdoPort(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
       }
     }
 
-    emuBR = emuOverrun = 0;
+    emuBR = emuOverrun = plugInMode = exclusiveMode = 0;
 
     if (NT_SUCCESS(status)) {
-      RTL_QUERY_REGISTRY_TABLE queryTable[3];
+      RTL_QUERY_REGISTRY_TABLE queryTable[5];
       ULONG zero = 0;
+      int i;
 
       RtlZeroMemory(queryTable, sizeof(queryTable));
 
-      queryTable[0].Flags         = RTL_QUERY_REGISTRY_DIRECT;
-      queryTable[0].Name          = L"EmuBR";
-      queryTable[0].EntryContext  = &emuBR;
-      queryTable[0].DefaultType   = REG_DWORD;
-      queryTable[0].DefaultData   = &zero;
-      queryTable[0].DefaultLength = sizeof(ULONG);
+      i = 0;
+      queryTable[i].Flags         = RTL_QUERY_REGISTRY_DIRECT;
+      queryTable[i].Name          = L"EmuBR";
+      queryTable[i].EntryContext  = &emuBR;
+      queryTable[i].DefaultType   = REG_DWORD;
+      queryTable[i].DefaultData   = &zero;
+      queryTable[i].DefaultLength = sizeof(ULONG);
 
-      queryTable[1].Flags         = RTL_QUERY_REGISTRY_DIRECT;
-      queryTable[1].Name          = L"EmuOverrun";
-      queryTable[1].EntryContext  = &emuOverrun;
-      queryTable[1].DefaultType   = REG_DWORD;
-      queryTable[1].DefaultData   = &zero;
-      queryTable[1].DefaultLength = sizeof(ULONG);
+      i++;
+      queryTable[i].Flags         = RTL_QUERY_REGISTRY_DIRECT;
+      queryTable[i].Name          = L"EmuOverrun";
+      queryTable[i].EntryContext  = &emuOverrun;
+      queryTable[i].DefaultType   = REG_DWORD;
+      queryTable[i].DefaultData   = &zero;
+      queryTable[i].DefaultLength = sizeof(ULONG);
+
+      i++;
+      queryTable[i].Flags         = RTL_QUERY_REGISTRY_DIRECT;
+      queryTable[i].Name          = L"PlugInMode";
+      queryTable[i].EntryContext  = &plugInMode;
+      queryTable[i].DefaultType   = REG_DWORD;
+      queryTable[i].DefaultData   = &zero;
+      queryTable[i].DefaultLength = sizeof(ULONG);
+
+      i++;
+      queryTable[i].Flags         = RTL_QUERY_REGISTRY_DIRECT;
+      queryTable[i].Name          = L"ExclusiveMode";
+      queryTable[i].EntryContext  = &exclusiveMode;
+      queryTable[i].DefaultType   = REG_DWORD;
+      queryTable[i].DefaultData   = &zero;
+      queryTable[i].DefaultLength = sizeof(ULONG);
 
       RtlQueryRegistryValues(
           RTL_REGISTRY_ABSOLUTE,
@@ -275,30 +288,6 @@ NTSTATUS AddFdoPort(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
   if (!NT_SUCCESS(status)) {
     SysLog(pPhDevObj, status, L"AddFdoPort FAIL");
     goto clean;
-  }
-
-  {
-    HANDLE hKey;
-
-    status = IoOpenDeviceRegistryKey(pPhDevObj,
-                                     PLUGPLAY_REGKEY_DEVICE,
-                                     STANDARD_RIGHTS_READ,
-                                     &hKey);
-
-    if (status == STATUS_SUCCESS) {
-      UNICODE_STRING keyName;
-
-      RtlInitUnicodeString(&keyName, L"PortName");
-
-      status = ZwSetValueKey(hKey, &keyName, 0, REG_SZ, portName.Buffer, portName.Length + sizeof(WCHAR));
-
-      if (!NT_SUCCESS(status))
-        SysLog(pPhDevObj, status, L"ZwSetValueKey(PortName) FAIL");
-
-      ZwClose(hKey);
-    } else {
-      SysLog(pPhDevObj, status, L"IoOpenDeviceRegistryKey(PLUGPLAY_REGKEY_DEVICE) FAIL");
-    }
   }
 
   status = IoCreateDevice(pDrvObj,
@@ -317,6 +306,7 @@ NTSTATUS AddFdoPort(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
   HALT_UNLESS(pNewDevObj);
   pDevExt = pNewDevObj->DeviceExtension;
   RtlZeroMemory(pDevExt, sizeof(*pDevExt));
+  pDevExt->pIoPortLocal = pPhDevExt->pIoPortLocal;
   status = InitCommonExt((PC0C_COMMON_EXTENSION)pDevExt, pNewDevObj, C0C_DOTYPE_FP, portName.Buffer);
 
   if (!NT_SUCCESS(status)) {
@@ -324,7 +314,6 @@ NTSTATUS AddFdoPort(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
     goto clean;
   }
 
-  pDevExt->pIoPortLocal = pPhDevExt->pIoPortLocal;
   pDevExt->pIoPortLocal->pDevExt = pDevExt;
 
   if (emuBR) {
@@ -342,6 +331,22 @@ NTSTATUS AddFdoPort(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
   } else {
     pDevExt->pIoPortLocal->emuOverrun = FALSE;
     Trace0((PC0C_COMMON_EXTENSION)pDevExt, L"Disabled overrun emulation");
+  }
+
+  if (plugInMode) {
+    pDevExt->pIoPortLocal->plugInMode = TRUE;
+    Trace0((PC0C_COMMON_EXTENSION)pDevExt, L"Enabled plug-in mode");
+  } else {
+    pDevExt->pIoPortLocal->plugInMode = FALSE;
+    Trace0((PC0C_COMMON_EXTENSION)pDevExt, L"Disabled plug-in mode");
+  }
+
+  if (exclusiveMode) {
+    pDevExt->pIoPortLocal->exclusiveMode = TRUE;
+    Trace0((PC0C_COMMON_EXTENSION)pDevExt, L"Enabled exclusive mode");
+  } else {
+    pDevExt->pIoPortLocal->exclusiveMode = FALSE;
+    Trace0((PC0C_COMMON_EXTENSION)pDevExt, L"Disabled exclusive mode");
   }
 
   AllocTimeouts(pDevExt->pIoPortLocal);
@@ -363,7 +368,6 @@ NTSTATUS AddFdoPort(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
 
   SetWriteDelay(pDevExt);
 
-  pDevExt->pPhDevObj = pPhDevObj;
   pDevExt->pLowDevObj = IoAttachDeviceToDeviceStack(pNewDevObj, pPhDevObj);
 
   if (!pDevExt->pLowDevObj) {
@@ -384,27 +388,7 @@ NTSTATUS AddFdoPort(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
   StrAppendStr0(&status, &pDevExt->win32DeviceName, C0C_PREF_WIN32_DEVICE_NAME);
   StrAppendStr0(&status, &pDevExt->win32DeviceName, portName.Buffer);
 
-  if (NT_SUCCESS(status)) {
-    status = IoCreateSymbolicLink(&pDevExt->win32DeviceName, &pDevExt->ntDeviceName);
-
-    if (NT_SUCCESS(status)) {
-      status = RtlWriteRegistryValue(RTL_REGISTRY_DEVICEMAP, C0C_SERIAL_DEVICEMAP,
-                                     pDevExt->ntDeviceName.Buffer, REG_SZ,
-                                     portName.Buffer,
-                                     portName.Length + sizeof(WCHAR));
-
-      if (!NT_SUCCESS(status)) {
-        StrFree(&pDevExt->ntDeviceName);
-
-        SysLog(pPhDevObj, status, L"AddFdoPort RtlWriteRegistryValue" C0C_SERIAL_DEVICEMAP L" FAIL");
-      }
-    } else {
-      StrFree(&pDevExt->win32DeviceName);
-      StrFree(&pDevExt->ntDeviceName);
-
-      SysLog(pPhDevObj, status, L"AddFdoPort IoCreateSymbolicLink FAIL");
-    }
-  } else {
+  if (!NT_SUCCESS(status)) {
     StrFree(&pDevExt->win32DeviceName);
     StrFree(&pDevExt->ntDeviceName);
 
@@ -416,20 +400,17 @@ NTSTATUS AddFdoPort(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
                                      NULL,
                                      &pDevExt->symbolicLinkName);
 
-  if (NT_SUCCESS(status)) {
-    status = IoSetDeviceInterfaceState(&pDevExt->symbolicLinkName, TRUE);
-
-    if (!NT_SUCCESS(status))
-      SysLog(pPhDevObj, status, L"AddFdoPort IoSetDeviceInterfaceState FAIL");
-  } else {
+  if (!NT_SUCCESS(status)) {
     SysLog(pPhDevObj, status, L"AddFdoPort IoRegisterDeviceInterface FAIL");
     pDevExt->symbolicLinkName.Buffer = NULL;
   }
 
-  status = IoWMIRegistrationControl(pNewDevObj, WMIREG_ACTION_REGISTER);
-
-  if (!NT_SUCCESS(status))
-    SysLog(pPhDevObj, status, L"AddFdoPort IoWMIRegistrationControl FAIL");
+  if (!pDevExt->pIoPortLocal->plugInMode || pDevExt->pIoPortLocal->pIoPortRemote->isOpen) {
+    if (!ShowPort(pDevExt))
+      SysLog(pDevExt->pDevObj, STATUS_UNSUCCESSFUL, L"AddFdoPort ShowPort FAIL");
+  } else {
+    HidePortName(pDevExt);
+  }
 
   status = STATUS_SUCCESS;
 
@@ -496,6 +477,7 @@ NTSTATUS AddPdoPort(
   }
 
   HALT_UNLESS(pNewDevObj);
+  pIoPortLocal->pPhDevObj = pNewDevObj;
   pDevExt = (pNewDevObj)->DeviceExtension;
   RtlZeroMemory(pDevExt, sizeof(*pDevExt));
   status = InitCommonExt((PC0C_COMMON_EXTENSION)pDevExt, pNewDevObj, C0C_DOTYPE_PP, portName.Buffer);
@@ -715,7 +697,6 @@ NTSTATUS AddFdoBus(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
   }
 
   pDevExt->portNum = num;
-  pDevExt->pPhDevObj = pPhDevObj;
   pDevExt->pLowDevObj = IoAttachDeviceToDeviceStack(pNewDevObj, pPhDevObj);
 
   if (!pDevExt->pLowDevObj) {

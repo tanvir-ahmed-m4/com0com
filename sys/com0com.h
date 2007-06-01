@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.34  2007/06/01 16:22:40  vfrolov
+ * Implemented plug-in and exclusive modes
+ *
  * Revision 1.33  2007/02/20 12:05:11  vfrolov
  * Implemented IOCTL_SERIAL_XOFF_COUNTER
  * Fixed cancel and timeout routines
@@ -152,7 +155,6 @@
 
 #define FDO_EXTENSION                   \
   COMMON_EXTENSION                      \
-  PDEVICE_OBJECT          pPhDevObj;   \
   PDEVICE_OBJECT          pLowDevObj;   \
 
 #define C0C_XCHAR_ON      1
@@ -204,6 +206,7 @@ typedef struct _C0C_IO_PORT {
 
   struct _C0C_FDOPORT_EXTENSION *pDevExt;
 
+  PDEVICE_OBJECT          pPhDevObj;
   struct _C0C_IO_PORT     *pIoPortRemote;
   PKSPIN_LOCK             pIoLock;
 
@@ -253,7 +256,10 @@ typedef struct _C0C_IO_PORT {
   BOOLEAN                 sendBreak;
   BOOLEAN                 tryWrite;
 
+  BOOLEAN                 isOpen;
   BOOLEAN                 emuOverrun;
+  BOOLEAN                 plugInMode;
+  BOOLEAN                 exclusiveMode;
 } C0C_IO_PORT, *PC0C_IO_PORT;
 
 #define FDO_PORT_TO_IO_PORT(pDevObj) \
@@ -275,6 +281,7 @@ typedef struct _C0C_FDOPORT_EXTENSION {
   UNICODE_STRING          ntDeviceName;
   UNICODE_STRING          win32DeviceName;
   UNICODE_STRING          symbolicLinkName;
+  unsigned short          shown;
 
   LONG                    openCount;
 

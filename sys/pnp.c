@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.7  2007/06/01 16:22:40  vfrolov
+ * Implemented plug-in and exclusive modes
+ *
  * Revision 1.6  2007/01/11 14:50:29  vfrolov
  * Pool functions replaced by
  *   C0C_ALLOCATE_POOL()
@@ -45,8 +48,9 @@
  */
 
 #include "precomp.h"
-#include "strutils.h"
 #include <initguid.h>
+#include "strutils.h"
+#include "showport.h"
 
 /*
  * FILE_ID used by HALT_UNLESS to put it on BSOD
@@ -313,6 +317,18 @@ NTSTATUS FdoPortPnp(
   status = STATUS_SUCCESS;
 
   switch (minorFunction) {
+  case IRP_MN_QUERY_DEVICE_RELATIONS: {
+    PC0C_IO_PORT pIoPort = pDevExt->pIoPortLocal;
+
+    if ((pIoPort->exclusiveMode && pIoPort->isOpen) ||
+        (pIoPort->plugInMode && !pIoPort->pIoPortRemote->isOpen))
+    {
+      HidePort(pDevExt);
+    } else {
+      ShowPort(pDevExt);
+    }
+    break;
+  }
   case IRP_MN_QUERY_REMOVE_DEVICE:
     if (pDevExt->openCount)
       status = STATUS_DEVICE_BUSY;

@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2006 Vyacheslav Frolov
+ * Copyright (c) 2006-2007 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.4  2007/06/01 16:22:40  vfrolov
+ * Implemented plug-in and exclusive modes
+ *
  * Revision 1.3  2006/10/27 12:44:14  vfrolov
  * Fixed typecasting
  *
@@ -93,7 +96,7 @@ NTSTATUS QueryWmiRegInfo(
   *ppRegistryPath = &c0cGlobal.registryPath;
 
   *pRegFlags = WMIREG_FLAG_INSTANCE_PDO;
-  *ppPhDevObj = pDevExt->pPhDevObj;
+  *ppPhDevObj = pDevExt->pIoPortLocal->pPhDevObj;
 
   return STATUS_SUCCESS;
 }

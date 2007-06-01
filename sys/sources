@@ -8,6 +8,7 @@ MSC_WARNING_LEVEL=/W4
 SOURCES= \
         initunlo.c \
         adddev.c \
+        showport.c \
         openclos.c \
         pnp.c \
         power.c \
