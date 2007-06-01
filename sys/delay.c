@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.7  2007/06/01 16:15:02  vfrolov
+ * Fixed previous fix
+ *
  * Revision 1.6  2007/06/01 08:36:26  vfrolov
  * Changed parameter type for SetWriteDelay()
  *
@@ -160,12 +163,12 @@ VOID SetWriteDelay(PC0C_FDOPORT_EXTENSION pDevExt)
   if (!pWriteDelay)
     return;
 
-  KeAcquireSpinLock(&pDevExt->controlLock, &oldIrql);
+  KeAcquireSpinLock(pDevExt->pIoPortLocal->pIoLock, &oldIrql);
+
+  KeAcquireSpinLockAtDpcLevel(&pDevExt->controlLock);
   lineControl = pDevExt->lineControl;
   params.baudRate = pDevExt->baudRate.BaudRate;
-  KeReleaseSpinLock(&pDevExt->controlLock, oldIrql);
-
-  KeAcquireSpinLock(pDevExt->pIoPortLocal->pIoLock, &oldIrql);
+  KeReleaseSpinLockFromDpcLevel(&pDevExt->controlLock);
 
   /* Startbit + WordLength */
   params.decibits_per_frame = (1 + lineControl.WordLength) * 10;
