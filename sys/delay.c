@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.6  2007/06/01 08:36:26  vfrolov
+ * Changed parameter type for SetWriteDelay()
+ *
  * Revision 1.5  2007/01/11 14:50:29  vfrolov
  * Pool functions replaced by
  *   C0C_ALLOCATE_POOL()
@@ -145,28 +148,24 @@ VOID FreeWriteDelay(PC0C_IO_PORT pIoPort)
   }
 }
 
-VOID SetWriteDelay(PC0C_IO_PORT pIoPort)
+VOID SetWriteDelay(PC0C_FDOPORT_EXTENSION pDevExt)
 {
   PC0C_ADAPTIVE_DELAY pWriteDelay;
   KIRQL oldIrql;
   C0C_DELAY_PARAMS params;
   SERIAL_LINE_CONTROL lineControl;
-  PC0C_FDOPORT_EXTENSION pDevExt;
 
-  pWriteDelay = pIoPort->pWriteDelay;
+  pWriteDelay = pDevExt->pIoPortLocal->pWriteDelay;
 
   if (!pWriteDelay)
     return;
 
-  KeAcquireSpinLock(pIoPort->pIoLock, &oldIrql);
-
-  pDevExt = pIoPort->pDevExt;
-  HALT_UNLESS(pDevExt);
-
-  KeAcquireSpinLockAtDpcLevel(&pDevExt->controlLock);
+  KeAcquireSpinLock(&pDevExt->controlLock, &oldIrql);
   lineControl = pDevExt->lineControl;
   params.baudRate = pDevExt->baudRate.BaudRate;
-  KeReleaseSpinLockFromDpcLevel(&pDevExt->controlLock);
+  KeReleaseSpinLock(&pDevExt->controlLock, oldIrql);
+
+  KeAcquireSpinLock(pDevExt->pIoPortLocal->pIoLock, &oldIrql);
 
   /* Startbit + WordLength */
   params.decibits_per_frame = (1 + lineControl.WordLength) * 10;
@@ -206,7 +205,7 @@ VOID SetWriteDelay(PC0C_IO_PORT pIoPort)
     }
   }
 
-  KeReleaseSpinLock(pIoPort->pIoLock, oldIrql);
+  KeReleaseSpinLock(pDevExt->pIoPortLocal->pIoLock, oldIrql);
 }
 
 VOID StartWriteDelayTimer(PC0C_ADAPTIVE_DELAY pWriteDelay)

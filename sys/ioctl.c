@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.30  2007/06/01 08:36:26  vfrolov
+ * Changed parameter type for SetWriteDelay()
+ *
  * Revision 1.29  2007/02/20 12:05:11  vfrolov
  * Implemented IOCTL_SERIAL_XOFF_COUNTER
  * Fixed cancel and timeout routines
@@ -543,7 +546,7 @@ NTSTATUS FdoPortIoCtl(
       pDevExt->lineControl = *(PSERIAL_LINE_CONTROL)pIrp->AssociatedIrp.SystemBuffer;
       KeReleaseSpinLock(&pDevExt->controlLock, oldIrql);
 
-      SetWriteDelay(pIoPortLocal);
+      SetWriteDelay(pDevExt);
       break;
     case IOCTL_SERIAL_GET_LINE_CONTROL:
       if (pIrpStack->Parameters.DeviceIoControl.OutputBufferLength < sizeof(SERIAL_LINE_CONTROL)) {
@@ -568,7 +571,7 @@ NTSTATUS FdoPortIoCtl(
       pDevExt->baudRate = *(PSERIAL_BAUD_RATE)pIrp->AssociatedIrp.SystemBuffer;
       KeReleaseSpinLock(&pDevExt->controlLock, oldIrql);
 
-      SetWriteDelay(pIoPortLocal);
+      SetWriteDelay(pDevExt);
       break;
     case IOCTL_SERIAL_GET_BAUD_RATE:
       if (pIrpStack->Parameters.DeviceIoControl.OutputBufferLength < sizeof(SERIAL_BAUD_RATE)) {

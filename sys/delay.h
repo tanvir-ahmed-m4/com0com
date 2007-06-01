@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2005-2006 Vyacheslav Frolov
+ * Copyright (c) 2005-2007 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.4  2007/06/01 08:36:26  vfrolov
+ * Changed parameter type for SetWriteDelay()
+ *
  * Revision 1.3  2006/06/23 11:44:52  vfrolov
  * Mass replacement pDevExt by pIoPort
  *
@@ -53,7 +56,7 @@ typedef struct _C0C_ADAPTIVE_DELAY {
 NTSTATUS AllocWriteDelay(PC0C_IO_PORT pIoPort);
 VOID FreeWriteDelay(PC0C_IO_PORT pIoPort);
 SIZE_T GetWriteLimit(PC0C_ADAPTIVE_DELAY pWriteDelay);
-VOID SetWriteDelay(PC0C_IO_PORT pIoPort);
+VOID SetWriteDelay(PC0C_FDOPORT_EXTENSION pDevExt);
 VOID StartWriteDelayTimer(PC0C_ADAPTIVE_DELAY pWriteDelay);
 VOID StopWriteDelayTimer(PC0C_ADAPTIVE_DELAY pWriteDelay);
 

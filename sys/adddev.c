@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.25  2007/06/01 08:36:26  vfrolov
+ * Changed parameter type for SetWriteDelay()
+ *
  * Revision 1.24  2007/01/11 14:50:28  vfrolov
  * Pool functions replaced by
  *   C0C_ALLOCATE_POOL()
@@ -358,7 +361,7 @@ NTSTATUS AddFdoPort(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
   pDevExt->lineControl.StopBits      = STOP_BIT_1;
   pDevExt->baudRate.BaudRate         = 1200;
 
-  SetWriteDelay(pDevExt->pIoPortLocal);
+  SetWriteDelay(pDevExt);
 
   pDevExt->pPhDevObj = pPhDevObj;
   pDevExt->pLowDevObj = IoAttachDeviceToDeviceStack(pNewDevObj, pPhDevObj);
