@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2006 Vyacheslav Frolov
+ * Copyright (c) 2006-2007 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.3  2007/06/01 16:32:04  vfrolov
+ * Implemented plug-in and exclusive modes
+ *
  * Revision 1.2  2006/10/27 13:11:58  vfrolov
  * Added PortParameters::FillPortName()
  *
@@ -48,14 +51,19 @@ class PortParameters {
   protected:
     BOOL FillParametersKey(char *pRegKey, int size);
     BOOL SetPortName(const char *pNewPortName);
-    BOOL SetEmuBR(const char *pNewEmuBR);
-    BOOL SetEmuOverrun(const char *pNewEmuOverrun);
+    DWORD *GetFlagPtr(DWORD bit);
+    const char *GetBitName(DWORD bit);
+    BOOL SetFlag(const char *pNewFlag, DWORD bit);
+    void LoadFlag(HKEY hKey, DWORD bit);
+    LONG SaveFlag(HKEY hKey, DWORD bit);
 
     DWORD maskChanged;
     DWORD maskExplicit;
     char portName[20];
     DWORD emuBR;
     DWORD emuOverrun;
+    DWORD plugInMode;
+    DWORD exclusiveMode;
 
     char service[20];
     char phPortName[20];

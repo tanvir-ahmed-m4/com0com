@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.5  2007/06/01 16:32:04  vfrolov
+ * Implemented plug-in and exclusive modes
+ *
  * Revision 1.4  2007/01/11 15:05:03  vfrolov
  * Replaced strtok() by STRTOK_R()
  *
@@ -40,9 +43,18 @@
 
 ///////////////////////////////////////////////////////////////
 enum {
-  m_portName    = 0x0001,
-  m_emuBR       = 0x0002,
-  m_emuOverrun  = 0x0004,
+  m_portName       = 0x0001,
+  m_emuBR          = 0x0002,
+  m_emuOverrun     = 0x0004,
+  m_plugInMode     = 0x0008,
+  m_exclusiveMode  = 0x0010,
+};
+///////////////////////////////////////////////////////////////
+static DWORD flagBits[] = {
+  m_emuBR,
+  m_emuOverrun,
+  m_plugInMode,
+  m_exclusiveMode
 };
 ///////////////////////////////////////////////////////////////
 PortParameters::PortParameters(const char *pService, const char *pPhPortName)
@@ -58,6 +70,8 @@ void PortParameters::Init()
   SNPRINTF(portName, sizeof(portName), "%s", phPortName);
   emuBR = 0;
   emuOverrun = 0;
+  plugInMode = 0;
+  exclusiveMode = 0;
 
   maskChanged = 0;
   maskExplicit = 0;
@@ -90,85 +104,73 @@ BOOL PortParameters::SetPortName(const char *pNewPortName)
   return TRUE;
 }
 ///////////////////////////////////////////////////////////////
-BOOL PortParameters::SetEmuBR(const char *pNewEmuBR)
+DWORD *PortParameters::GetFlagPtr(DWORD bit)
 {
-  if (!lstrcmpi(pNewEmuBR, "*"))
-    return TRUE;
-
-  DWORD newEmuBR;
-
-  if (!lstrcmpi(pNewEmuBR, "yes")) {
-    newEmuBR = 0xFFFFFFFF;
-  }
-  else
-  if (!lstrcmpi(pNewEmuBR, "no")) {
-    newEmuBR = 0;
-  }
-  else
-  if (!lstrcmpi(pNewEmuBR, "-")) {
-    newEmuBR = 0;
-  }
-  else {
-    return FALSE;
+  switch (bit) {
+    case m_emuBR:          return &emuBR;
+    case m_emuOverrun:     return &emuOverrun;
+    case m_plugInMode:     return &plugInMode;
+    case m_exclusiveMode:  return &exclusiveMode;
   }
 
-  if (lstrcmpi("-", pNewEmuBR)) {
-    if ((maskExplicit & m_emuBR) == 0) {
-      maskExplicit |= m_emuBR;
-      maskChanged |= m_emuBR;
-    }
-  } else {
-    if (maskExplicit & m_emuBR) {
-      maskExplicit &= ~m_emuBR;
-      maskChanged |= m_emuBR;
-    }
-  }
-
-  if (emuBR != newEmuBR) {
-    emuBR = newEmuBR;
-    maskChanged |= m_emuBR;
-  }
-
-  return TRUE;
+  return NULL;
 }
 ///////////////////////////////////////////////////////////////
-BOOL PortParameters::SetEmuOverrun(const char *pNewEmuOverrun)
+const char *PortParameters::GetBitName(DWORD bit)
 {
-  if (!lstrcmpi(pNewEmuOverrun, "*"))
+  switch (bit) {
+    case m_portName:       return "PortName";
+    case m_emuBR:          return "EmuBR";
+    case m_emuOverrun:     return "EmuOverrun";
+    case m_plugInMode:     return "PlugInMode";
+    case m_exclusiveMode:  return "ExclusiveMode";
+  }
+
+  return NULL;
+}
+///////////////////////////////////////////////////////////////
+BOOL PortParameters::SetFlag(const char *pNewFlag, DWORD bit)
+{
+  if (!lstrcmpi(pNewFlag, "*"))
     return TRUE;
 
-  DWORD newEmuOverrun;
+  DWORD newFlag;
 
-  if (!lstrcmpi(pNewEmuOverrun, "yes")) {
-    newEmuOverrun = 0xFFFFFFFF;
+  if (!lstrcmpi(pNewFlag, "yes")) {
+    newFlag = 0xFFFFFFFF;
   }
   else
-  if (!lstrcmpi(pNewEmuOverrun, "no")) {
-    newEmuOverrun = 0;
+  if (!lstrcmpi(pNewFlag, "no")) {
+    newFlag = 0;
   }
   else
-  if (!lstrcmpi(pNewEmuOverrun, "-")) {
-    newEmuOverrun = 0;
+  if (!lstrcmpi(pNewFlag, "-")) {
+    newFlag = 0;
   }
   else {
     return FALSE;
   }
 
-  if (lstrcmpi("-", pNewEmuOverrun)) {
-    if ((maskExplicit & m_emuOverrun) == 0) {
-      maskExplicit |= m_emuOverrun;
-      maskChanged |= m_emuOverrun;
+  DWORD *pFlag = GetFlagPtr(bit);
+
+  if (pFlag == NULL)
+    return FALSE;
+
+  if (lstrcmpi("-", pNewFlag)) {
+    if ((maskExplicit & bit) == 0) {
+      maskExplicit |= bit;
+      maskChanged |= bit;
     }
   } else {
-    if (maskExplicit & m_emuOverrun) {
-      maskExplicit &= ~m_emuOverrun;
-      maskChanged |= m_emuOverrun;
+    if (maskExplicit & bit) {
+      maskExplicit &= ~bit;
+      maskChanged |= bit;
     }
   }
 
-  if (emuOverrun != newEmuOverrun) {
-    emuOverrun = newEmuOverrun;
-    maskChanged |= m_emuOverrun;
+  if (*pFlag != newFlag) {
+    *pFlag = newFlag;
+    maskChanged |= bit;
   }
 
   return TRUE;
@@ -183,6 +185,67 @@ BOOL PortParameters::FillParametersKey(char *pRegKey, int size)
   //Trace("%s\n", pRegKey);
 
   return len >= 0;
+}
+///////////////////////////////////////////////////////////////
+void PortParameters::LoadFlag(HKEY hKey, DWORD bit)
+{
+  DWORD *pFlag = GetFlagPtr(bit);
+  const char *pName = GetBitName(bit);
+
+  if (pFlag == NULL || pName == NULL)
+    return;
+
+  DWORD buf;
+  DWORD len = sizeof(buf);
+
+  LONG err = RegQueryValueEx(hKey,
+                             pName,
+                             NULL,
+                             NULL,
+                             (PBYTE)&buf,
+                             &len);
+
+  if (err == ERROR_SUCCESS) {
+    *pFlag = buf;
+    maskExplicit |= bit;
+
+    //Trace("  %s=0x%lX\n", pName, (unsigned long)*pFlag);
+  }
+}
+///////////////////////////////////////////////////////////////
+LONG PortParameters::SaveFlag(HKEY hKey, DWORD bit)
+{
+  if (maskChanged & bit) {
+    DWORD *pFlag = GetFlagPtr(bit);
+    const char *pName = GetBitName(bit);
+
+    if (pFlag == NULL || pName == NULL)
+      return ERROR_BAD_COMMAND;
+
+    LONG err;
+
+    if (maskExplicit & bit) {
+      err = RegSetValueEx(hKey,
+                          pName,
+                          NULL,
+                          REG_DWORD,
+                          (PBYTE)pFlag,
+                          sizeof(*pFlag));
+    } else {
+      err = RegDeleteValue(hKey, pName);
+
+      if (err == ERROR_FILE_NOT_FOUND)
+        err = ERROR_SUCCESS;
+    }
+
+    if (err != ERROR_SUCCESS)
+      return err;
+
+    maskChanged &= ~bit;
+    //Trace("  New %s=0x%lX\n", pName, (unsigned long)*pFlag);
+  }
+
+  return ERROR_SUCCESS;
 }
 ///////////////////////////////////////////////////////////////
 LONG PortParameters::Load()
@@ -227,37 +290,8 @@ LONG PortParameters::Load()
     //Trace("  PortName=%s\n", portName);
   }
 
-  len = sizeof(buf);
-
-  err = RegQueryValueEx(hKey,
-                        "EmuBR",
-                        NULL,
-                        NULL,
-                        (PBYTE)buf,
-                        &len);
-
-  if (err == ERROR_SUCCESS) {
-    emuBR = *(PDWORD)buf;
-    maskExplicit |= m_emuBR;
-
-    //Trace("  EmuBR=0x%lX\n", (unsigned long)emuBR);
-  }
-
-  len = sizeof(buf);
-
-  err = RegQueryValueEx(hKey,
-                        "EmuOverrun",
-                        NULL,
-                        NULL,
-                        (PBYTE)buf,
-                        &len);
-
-  if (err == ERROR_SUCCESS) {
-    emuOverrun = *(PDWORD)buf;
-    maskExplicit |= m_emuOverrun;
-
-    //Trace("  EmuOverrun=0x%lX\n", (unsigned long)emuOverrun);
-  }
+  for (int i = 0 ; i < sizeof(flagBits)/sizeof(flagBits[0]) ; i++)
+    LoadFlag(hKey, flagBits[i]);
 
   RegCloseKey(hKey);
 
@@ -313,48 +347,9 @@ LONG PortParameters::Save()
     //Trace("  New PortName=%s\n", portName);
   }
 
-  if (maskChanged & m_emuBR) {
-    if (maskExplicit & m_emuBR) {
-      err = RegSetValueEx(hKey,
-                          "EmuBR",
-                          NULL,
-                          REG_DWORD,
-                          (PBYTE)&emuBR,
-                          sizeof(emuBR));
-    } else {
-      err = RegDeleteValue(hKey, "EmuBR");
-
-      if (err == ERROR_FILE_NOT_FOUND)
-        err = ERROR_SUCCESS;
-    }
-
-    if (err != ERROR_SUCCESS)
+  for (int i = 0 ; i < sizeof(flagBits)/sizeof(flagBits[0]) ; i++) {
+    if (SaveFlag(hKey, flagBits[i]) != ERROR_SUCCESS)
       goto err;
-
-    maskChanged &= ~m_emuBR;
-    //Trace("  New EmuBR=0x%lX\n", (unsigned long)emuBR);
-  }
-
-  if (maskChanged & m_emuOverrun) {
-    if (maskExplicit & m_emuOverrun) {
-      err = RegSetValueEx(hKey,
-                          "EmuOverrun",
-                          NULL,
-                          REG_DWORD,
-                          (PBYTE)&emuOverrun,
-                          sizeof(emuOverrun));
-    } else {
-      err = RegDeleteValue(hKey, "EmuOverrun");
-
-      if (err == ERROR_FILE_NOT_FOUND)
-        err = ERROR_SUCCESS;
-    }
-
-    if (err != ERROR_SUCCESS)
-      goto err;
-
-    maskChanged &= ~m_emuOverrun;
-    //Trace("  New EmuOverrun=0x%lX\n", (unsigned long)emuOverrun);
   }
 
 err:
@@ -371,12 +366,13 @@ BOOL PortParameters::ParseParametersStr(const char *pParameters)
   if (!lstrcmpi(pParameters, "-") || !lstrcmpi(pParameters, "*")) {
     if (!tmp.SetPortName(pParameters))
       return FALSE;
-    if (!tmp.SetEmuBR(pParameters))
-      return FALSE;
-    if (!tmp.SetEmuOverrun(pParameters))
-      return FALSE;
+
+    for (int i = 0 ; i < sizeof(flagBits)/sizeof(flagBits[0]) ; i++) {
+      if (!tmp.SetFlag(pParameters, flagBits[i]))
+        return FALSE;
+    }
   } else {
-    char pars[100];
+    char pars[200];
 
     lstrcpyn(pars, pParameters, sizeof(pars));
     pars[sizeof(pars) - 1] = 0;
@@ -396,19 +392,25 @@ BOOL PortParameters::ParseParametersStr(const char *pParameters)
       if (!lstrcmpi(pKey, "PortName")) {
         if (!tmp.SetPortName(pVal))
           return FALSE;
-      }
-      else
-      if (!lstrcmpi(pKey, "EmuBR")) {
-        if (!tmp.SetEmuBR(pVal))
+      } else {
+        int i;
+
+        for (i = 0 ; i < sizeof(flagBits)/sizeof(flagBits[0]) ; i++) {
+          DWORD bit = flagBits[i];
+          DWORD *pFlag = GetFlagPtr(bit);
+          const char *pName = GetBitName(bit);
+
+          if (pFlag == NULL || pName == NULL)
+            continue;
+
+          if (!lstrcmpi(pKey, pName)) {
+            if (!tmp.SetFlag(pVal, bit))
+              return FALSE;
+            break;
+          }
+        }
+        if (i >= sizeof(flagBits)/sizeof(flagBits[0]))
           return FALSE;
-      }
-      else
-      if (!lstrcmpi(pKey, "EmuOverrun")) {
-        if (!tmp.SetEmuOverrun(pVal))
-          return FALSE;
-      }
-      else {
-        return FALSE;
       }
     }
   }
@@ -422,12 +424,35 @@ BOOL PortParameters::FillParametersStr(char *pParameters, int size)
 {
   int len;
 
-  len = SNPRINTF(pParameters, size, "PortName=%s,EmuBR=%s,EmuOverrun=%s",
-                 (maskExplicit & m_portName) ? (portName) : "-",
-                 (maskExplicit & m_emuBR) ? (emuBR ? "yes" : "no") : "-",
-                 (maskExplicit & m_emuOverrun) ? (emuOverrun ? "yes" : "no") : "-");
+  len = SNPRINTF(pParameters, size, "PortName=%s", (maskExplicit & m_portName) ? (portName) : "-");
 
-  return len >= 0;
+  if (len < 0)
+    return FALSE;
+
+  pParameters += len;
+  size -= len;
+
+  for (int i = 0 ; i < sizeof(flagBits)/sizeof(flagBits[0]) ; i++) {
+    DWORD bit = flagBits[i];
+
+    if ((maskExplicit & bit) != 0) {
+      DWORD *pFlag = GetFlagPtr(bit);
+      const char *pName = GetBitName(bit);
+
+      if (pFlag == NULL || pName == NULL)
+        continue;
+
+      len = SNPRINTF(pParameters, size, ",%s=%s", pName, *pFlag ? "yes" : "no");
+
+      if (len < 0)
+        return FALSE;
+
+      pParameters += len;
+      size -= len;
+    }
+  }
+
+  return TRUE;
 }
 ///////////////////////////////////////////////////////////////
 BOOL PortParameters::FillPortName(char *pPortName, int size)
@@ -451,10 +476,14 @@ const char *PortParameters::GetHelp()
     "Parameters:\n"
     "  PortName=<name>         - set port name to <name>\n"
     "                            (port identifier by default)\n"
-    "  EmuBR={yes|no}          - enable/disable baud rate emulation\n"
-    "                            (disabled by default)\n"
-    "  EmuOverrun={yes|no}     - enable/disable buffer overrun\n"
-    "                            (disabled by default)\n"
+    "  EmuBR={yes|no}          - enable/disable baud rate emulation in the direction\n"
+    "                            to the paired port (disabled by default)\n"
+    "  EmuOverrun={yes|no}     - enable/disable buffer overrun (disabled by default)\n"
+    "  PlugInMode={yes|no}     - enable/disable plug-in mode (disabled by default),\n"
+    "                            the plug-in mode port is hidden and can't be open if\n"
+    "                            the paired port is not open\n"
+    "  ExclusiveMode={yes|no}  - enable/disable exclusive mode (disabled by default),\n"
+    "                            the exclusive mode port is hidden if it is open\n"
     "\n"
     "Special values:\n"
     "  -                       - use driver's default value\n"
