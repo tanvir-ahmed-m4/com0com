@@ -86,8 +86,8 @@ HINT: To uninstall the old version of com0com (distributed w/o installer)
 install the new one and then uninstall it.
 
 
-FAQ
-===
+FAQ & HOWTO
+===========
 
 Q. Is it possible to change the names CNCA0 and CNCB0 to COM2 and COM3?
 A. Yes, it's possible. To change the names:
@@ -127,3 +127,16 @@ A. Your application can hang because receive buffer overrun is disabled by
 
        command> change CNCB0 EmuOverrun=yes
        command> change CNCA0 EmuBR=yes
+
+Q. I have to write an application connected to one side of the com0com port pair,
+   and I don't want users to 'see' all the virtual ports created by com0com, but
+   only the really available ones.
+A. if your application use port CNCB0 and other (used by users) paired port is CNCA0,
+   then CNCB0 can be 'hidden' and CNCA0 can be 'shown' on opening CNCB0 by your
+   application. To enable it:
+
+  1. Launch the Setup Command Prompt shortcut.
+  2. Enter the change commands:
+
+       command> change CNCB0 ExclusiveMode=yes
+       command> change CNCA0 PlugInMode=yes
