@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.8  2007/06/04 15:24:33  vfrolov
+ * Fixed open reject just after close in exclusiveMode
+ *
  * Revision 1.7  2007/06/01 16:22:40  vfrolov
  * Implemented plug-in and exclusive modes
  *
@@ -318,6 +321,8 @@ NTSTATUS FdoPortPnp(
 
   switch (minorFunction) {
   case IRP_MN_QUERY_DEVICE_RELATIONS: {
+    LIST_ENTRY queueToComplete;
+    KIRQL oldIrql;
     PC0C_IO_PORT pIoPort = pDevExt->pIoPortLocal;
 
     if ((pIoPort->exclusiveMode && pIoPort->isOpen) ||
@@ -327,6 +332,20 @@ NTSTATUS FdoPortPnp(
     } else {
       ShowPort(pDevExt);
     }
+
+    /* complete pending CLOSE IRPs */
+
+    InitializeListHead(&queueToComplete);
+
+    KeAcquireSpinLock(pIoPort->pIoLock, &oldIrql);
+    FdoPortIo(C0C_IO_TYPE_CLOSE_COMPLETE,
+              NULL,
+              pIoPort,
+              &pIoPort->irpQueues[C0C_QUEUE_CLOSE],
+              &queueToComplete);
+    KeReleaseSpinLock(pIoPort->pIoLock, oldIrql);
+
+    FdoPortCompleteQueue(&queueToComplete);
     break;
   }
   case IRP_MN_QUERY_REMOVE_DEVICE:

@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.18  2007/06/04 15:24:32  vfrolov
+ * Fixed open reject just after close in exclusiveMode
+ *
  * Revision 1.17  2007/06/01 16:22:40  vfrolov
  * Implemented plug-in and exclusive modes
  *
@@ -82,6 +85,7 @@
 #include "handflow.h"
 #include "bufutils.h"
 #include "strutils.h"
+#include "timeout.h"
 
 NTSTATUS FdoPortOpen(IN PC0C_FDOPORT_EXTENSION pDevExt)
 {
@@ -173,8 +177,30 @@ NTSTATUS FdoPortOpen(IN PC0C_FDOPORT_EXTENSION pDevExt)
   return STATUS_SUCCESS;
 }
 
-NTSTATUS FdoPortClose(IN PC0C_FDOPORT_EXTENSION pDevExt)
+NTSTATUS StartIrpClose(
+    IN PC0C_IO_PORT pIoPort,
+    IN PLIST_ENTRY pQueueToComplete)
 {
+  UNREFERENCED_PARAMETER(pQueueToComplete);
+
+  if (!pIoPort->exclusiveMode) {
+    PIRP pIrp;
+
+    InterlockedDecrement(&pIoPort->pDevExt->openCount);
+    pIrp = pIoPort->irpQueues[C0C_QUEUE_CLOSE].pCurrent;
+    pIrp->IoStatus.Information = 0;
+    return STATUS_SUCCESS;
+  }
+
+  IoInvalidateDeviceRelations(pIoPort->pPhDevObj, BusRelations);
+  SetCloseTimeout(pIoPort);
+
+  return STATUS_PENDING;
+}
+
+NTSTATUS FdoPortClose(IN PC0C_FDOPORT_EXTENSION pDevExt, IN PIRP pIrp)
+{
+  NTSTATUS status;
   LIST_ENTRY queueToComplete;
   KIRQL oldIrql;
   PC0C_IO_PORT pIoPort;
@@ -198,14 +224,16 @@ NTSTATUS FdoPortClose(IN PC0C_FDOPORT_EXTENSION pDevExt)
 
   KeReleaseSpinLock(pIoPort->pIoLock, oldIrql);
 
-  if (pIoPort->exclusiveMode)
-    IoInvalidateDeviceRelations(pIoPort->pPhDevObj, BusRelations);
-
   FdoPortCompleteQueue(&queueToComplete);
 
-  InterlockedDecrement(&pDevExt->openCount);
+  status = FdoPortStartIrp(pIoPort, pIrp, C0C_QUEUE_CLOSE, StartIrpClose);
 
-  return STATUS_SUCCESS;
+  if (status != STATUS_PENDING) {
+    pIrp->IoStatus.Status = status;
+    IoCompleteRequest(pIrp, IO_NO_INCREMENT);
+  }
+
+  return status;
 }
 
 NTSTATUS c0cOpen(IN PDEVICE_OBJECT pDevObj, IN PIRP pIrp)
@@ -225,8 +253,10 @@ NTSTATUS c0cOpen(IN PDEVICE_OBJECT pDevObj, IN PIRP pIrp)
 
   pIrp->IoStatus.Information = 0;
 
+#if DBG
   if (!NT_SUCCESS(status))
     TraceIrp("c0cOpen", pIrp, &status, TRACE_FLAG_RESULTS);
+#endif /* DBG */
 
   pIrp->IoStatus.Status = status;
   IoCompleteRequest(pIrp, IO_NO_INCREMENT);
@@ -239,23 +269,27 @@ NTSTATUS c0cClose(IN PDEVICE_OBJECT pDevObj, IN PIRP pIrp)
   NTSTATUS status;
   PC0C_COMMON_EXTENSION pDevExt = pDevObj->DeviceExtension;
 
+#if DBG
+  ULONG code = IoGetCurrentIrpStackLocation(pIrp)->MajorFunction;
+#endif /* DBG */
+
   TraceIrp("--- Close ---", pIrp, NULL, TRACE_FLAG_PARAMS);
 
   switch (pDevExt->doType) {
   case C0C_DOTYPE_FP:
-    status = FdoPortClose((PC0C_FDOPORT_EXTENSION)pDevExt);
+    status = FdoPortClose((PC0C_FDOPORT_EXTENSION)pDevExt, pIrp);
     break;
   default:
     status = STATUS_INVALID_DEVICE_REQUEST;
+    pIrp->IoStatus.Information = 0;
+    pIrp->IoStatus.Status = status;
+    IoCompleteRequest(pIrp, IO_NO_INCREMENT);
   }
 
-  pIrp->IoStatus.Information = 0;
-
-  if (!NT_SUCCESS(status))
-    TraceIrp("c0cClose", pIrp, &status, TRACE_FLAG_RESULTS);
-
-  pIrp->IoStatus.Status = status;
-  IoCompleteRequest(pIrp, IO_NO_INCREMENT);
+#if DBG
+  if (status != STATUS_SUCCESS)
+    TraceCode(pDevExt, "IRP_MJ_", codeNameTableIrpMj, code, &status);
+#endif /* DBG */
 
   return status;
 }

@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.6  2007/06/04 15:24:33  vfrolov
+ * Fixed open reject just after close in exclusiveMode
+ *
  * Revision 1.5  2007/02/20 12:05:11  vfrolov
  * Implemented IOCTL_SERIAL_XOFF_COUNTER
  * Fixed cancel and timeout routines
@@ -45,6 +48,8 @@ VOID AllocTimeouts(PC0C_IO_PORT pIoPort);
 VOID FreeTimeouts(PC0C_IO_PORT pIoPort);
 
 VOID SetIntervalTimeout(PC0C_IO_PORT pIoPort);
+
+VOID SetCloseTimeout(PC0C_IO_PORT pIoPort);
 
 VOID SetXoffCounterTimeout(
     PC0C_IO_PORT pIoPort,

@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.9  2007/06/04 15:24:33  vfrolov
+ * Fixed open reject just after close in exclusiveMode
+ *
  * Revision 1.8  2007/02/20 12:05:11  vfrolov
  * Implemented IOCTL_SERIAL_XOFF_COUNTER
  * Fixed cancel and timeout routines
@@ -74,10 +77,21 @@ VOID TimeoutRoutine(
 
     pState->flags |= C0C_IRP_FLAG_EXPIRED;
 
-    if (pState->iQueue == C0C_QUEUE_WRITE)
-      ReadWrite(pIoPort->pIoPortRemote, FALSE, pIoPort, FALSE, &queueToComplete);
-    else
-      ReadWrite(pIoPort, FALSE, pIoPort->pIoPortRemote, FALSE, &queueToComplete);
+    switch (pState->iQueue) {
+      case C0C_QUEUE_WRITE:
+        ReadWrite(pIoPort->pIoPortRemote, FALSE, pIoPort, FALSE, &queueToComplete);
+        break;
+      case C0C_QUEUE_READ:
+        ReadWrite(pIoPort, FALSE, pIoPort->pIoPortRemote, FALSE, &queueToComplete);
+        break;
+      case C0C_QUEUE_CLOSE:
+        FdoPortIo(C0C_IO_TYPE_CLOSE_COMPLETE,
+                  NULL,
+                  pIoPort,
+                  &pIoPort->irpQueues[C0C_QUEUE_CLOSE],
+                  &queueToComplete);
+        break;
+    }
   }
 
   KeReleaseSpinLock(pIoPort->pIoLock, oldIrql);
@@ -276,15 +290,32 @@ VOID TimeoutWriteTotal(
   TimeoutRoutine(pIoPort, &pIoPort->irpQueues[C0C_QUEUE_WRITE]);
 }
 
+VOID TimeoutClose(
+    IN PKDPC pDpc,
+    IN PVOID deferredContext,
+    IN PVOID systemArgument1,
+    IN PVOID systemArgument2)
+{
+  PC0C_IO_PORT pIoPort = (PC0C_IO_PORT)deferredContext;
+
+  UNREFERENCED_PARAMETER(pDpc);
+  UNREFERENCED_PARAMETER(systemArgument1);
+  UNREFERENCED_PARAMETER(systemArgument2);
+
+  TimeoutRoutine(pIoPort, &pIoPort->irpQueues[C0C_QUEUE_CLOSE]);
+}
+
 VOID AllocTimeouts(PC0C_IO_PORT pIoPort)
 {
   KeInitializeTimer(&pIoPort->timerReadTotal);
   KeInitializeTimer(&pIoPort->timerReadInterval);
   KeInitializeTimer(&pIoPort->timerWriteTotal);
+  KeInitializeTimer(&pIoPort->timerClose);
 
   KeInitializeDpc(&pIoPort->timerReadTotalDpc, TimeoutReadTotal, pIoPort);
   KeInitializeDpc(&pIoPort->timerReadIntervalDpc, TimeoutReadInterval, pIoPort);
   KeInitializeDpc(&pIoPort->timerWriteTotalDpc, TimeoutWriteTotal, pIoPort);
+  KeInitializeDpc(&pIoPort->timerCloseDpc, TimeoutClose, pIoPort);
 }
 
 VOID FreeTimeouts(PC0C_IO_PORT pIoPort)
@@ -292,15 +323,26 @@ VOID FreeTimeouts(PC0C_IO_PORT pIoPort)
     KeCancelTimer(&pIoPort->timerReadTotal);
     KeCancelTimer(&pIoPort->timerReadInterval);
     KeCancelTimer(&pIoPort->timerWriteTotal);
+    KeCancelTimer(&pIoPort->timerClose);
 
     KeRemoveQueueDpc(&pIoPort->timerReadTotalDpc);
     KeRemoveQueueDpc(&pIoPort->timerReadIntervalDpc);
     KeRemoveQueueDpc(&pIoPort->timerWriteTotalDpc);
+    KeRemoveQueueDpc(&pIoPort->timerCloseDpc);
 }
 
 VOID SetIntervalTimeout(PC0C_IO_PORT pIoPort)
 {
   KeSetTimer(&pIoPort->timerReadInterval, pIoPort->timeoutInterval, &pIoPort->timerReadIntervalDpc);
+}
+
+VOID SetCloseTimeout(PC0C_IO_PORT pIoPort)
+{
+  LARGE_INTEGER total;
+
+  total.QuadPart = ((LONGLONG)1000) * -10000;
+
+  KeSetTimer(&pIoPort->timerClose, total, &pIoPort->timerCloseDpc);
 }
 
 NTSTATUS SetIrpTimeout(

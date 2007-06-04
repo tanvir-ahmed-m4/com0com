@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.17  2007/06/04 15:24:33  vfrolov
+ * Fixed open reject just after close in exclusiveMode
+ *
  * Revision 1.16  2007/02/20 12:05:11  vfrolov
  * Implemented IOCTL_SERIAL_XOFF_COUNTER
  * Fixed cancel and timeout routines
@@ -99,6 +102,7 @@ PC0C_IRP_STATE GetIrpState(IN PIRP pIrp)
     }
     break;
   case IRP_MJ_FLUSH_BUFFERS:
+  case IRP_MJ_CLOSE:
     return (PC0C_IRP_STATE)&pIrpStack->Parameters.Others.Argument1;
   }
 

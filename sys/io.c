@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.31  2007/06/04 15:24:32  vfrolov
+ * Fixed open reject just after close in exclusiveMode
+ *
  * Revision 1.30  2007/02/20 12:05:11  vfrolov
  * Implemented IOCTL_SERIAL_XOFF_COUNTER
  * Fixed cancel and timeout routines
@@ -674,10 +677,8 @@ NTSTATUS FdoPortIo(
   BOOLEAN firstCurrent;
   PIRP pIrpCurrent;
   PDRIVER_CANCEL pCancelRoutineCurrent;
-  SIZE_T done;
 
   first = TRUE;
-  done = 0;
 
   status = STATUS_PENDING;
 
@@ -699,6 +700,11 @@ NTSTATUS FdoPortIo(
     case C0C_IO_TYPE_INSERT:
       HALT_UNLESS(pParam);
       InsertDirect((PC0C_RAW_DATA)pParam, pIrpCurrent, &status, &statusCurrent, &doneCurrent);
+      break;
+    case C0C_IO_TYPE_CLOSE_COMPLETE:
+      InterlockedDecrement(&pIoPort->pDevExt->openCount);
+      pIrpCurrent->IoStatus.Information = 0;
+      statusCurrent = STATUS_SUCCESS;
       break;
     }
 
