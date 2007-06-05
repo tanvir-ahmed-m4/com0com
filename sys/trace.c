@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.27  2007/06/05 12:26:38  vfrolov
+ * Allocate trace buffers only if trace enabled
+ *
  * Revision 1.26  2007/02/21 16:52:34  vfrolov
  * Added tracing of IRP_MJ_POWER with more details
  *
@@ -125,39 +128,53 @@
 /********************************************************************/
 #define TRACE_ERROR_LIMIT 10
 #define TRACE_BUF_SIZE 256
-#define TRACE_BUFS_NUM 4
+#define TRACE_BUFS_NUM 8
 #define TRACE_IRQL_BUF_SIZE 1024
 /********************************************************************/
 typedef struct _TRACE_BUFFER {
   BOOLEAN busy;
   CHAR buf[TRACE_BUF_SIZE];
 } TRACE_BUFFER, *PTRACE_BUFFER;
-/********************************************************************/
-#define TRACE_ENABLE_IRP       0x00000001
-#define TRACE_ENABLE_DUMP      0x00000002
 
-#define TRACE_ENABLE_ALL       0xFFFFFFFF
+typedef struct _TRACE_DATA {
+  UNICODE_STRING traceFileName;
 
-static struct {
-  ULONG read;
-  ULONG write;
-  ULONG getTimeouts;
-  ULONG setTimeouts;
-  ULONG getCommStatus;
-  ULONG getModemStatus;
-  ULONG modemStatus;
-} traceEnable;
+  struct {
+    KSPIN_LOCK lock;
+    TRACE_BUFFER bufs[TRACE_BUFS_NUM];
+  } bufs;
+
+  struct {
+    KSPIN_LOCK lock;
+    CHAR buf[TRACE_IRQL_BUF_SIZE];
+    LONG busyInd;
+    LONG freeInd;
+  } irqlBuf;
+
+  #define TRACE_ENABLE_IRP       0x00000001
+  #define TRACE_ENABLE_DUMP      0x00000002
+
+  #define TRACE_ENABLE_ALL       0xFFFFFFFF
+
+  struct {
+    ULONG read;
+    ULONG write;
+    ULONG getTimeouts;
+    ULONG setTimeouts;
+    ULONG getCommStatus;
+    ULONG getModemStatus;
+    ULONG modemStatus;
+  } traceEnable;
+
+  int errorCount;
+  LONG skippedTraces;
+
+} TRACE_DATA, *PTRACE_DATA;
 /********************************************************************/
-static int errorCount;
-static WCHAR traceFileNameBuf[256];
-static UNICODE_STRING traceFileName;
+static PTRACE_DATA pTraceData = NULL;
 static PDRIVER_OBJECT pDrvObj;
-static KSPIN_LOCK irqlBufLock;
-static KSPIN_LOCK bufsLock;
-static TRACE_BUFFER traceBufs[TRACE_BUFS_NUM];
-static LONG skippedTraces;
 /********************************************************************/
-#define TRACE_FILE_OK (traceFileName.Buffer != NULL)
+#define TRACE_FILE_OK (pTraceData != NULL)
 /********************************************************************/
 
 VOID QueryRegistryTrace(IN PUNICODE_STRING pRegistryPath)
@@ -179,13 +196,14 @@ VOID QueryRegistryTrace(IN PUNICODE_STRING pRegistryPath)
 
   RtlZeroMemory(queryTable, sizeof(queryTable));
 
-  traceFileName.Length = 0;
-  traceFileName.MaximumLength = sizeof(traceFileNameBuf);
-  traceFileName.Buffer = traceFileNameBuf;
+  if (pTraceData->traceFileName.Buffer) {
+    RtlFreeUnicodeString(&pTraceData->traceFileName);
+    RtlInitUnicodeString(&pTraceData->traceFileName, NULL);
+  }
 
   queryTable[0].Flags         = RTL_QUERY_REGISTRY_DIRECT | RTL_QUERY_REGISTRY_REQUIRED;
   queryTable[0].Name          = L"TraceFile";
-  queryTable[0].EntryContext  = &traceFileName;
+  queryTable[0].EntryContext  = &pTraceData->traceFileName;
 
   status = RtlQueryRegistryValues(
       RTL_REGISTRY_ABSOLUTE,
@@ -197,7 +215,7 @@ VOID QueryRegistryTrace(IN PUNICODE_STRING pRegistryPath)
   StrFree(&traceRegistryPath);
 
   if (!NT_SUCCESS(status))
-    RtlInitUnicodeString(&traceFileName, NULL);
+    RtlInitUnicodeString(&pTraceData->traceFileName, NULL);
 }
 
 VOID QueryRegistryTraceEnable(IN PUNICODE_STRING pRegistryPath)
@@ -207,7 +225,7 @@ VOID QueryRegistryTraceEnable(IN PUNICODE_STRING pRegistryPath)
   RTL_QUERY_REGISTRY_TABLE queryTable[8];
   ULONG zero = 0;
 
-  RtlZeroMemory(&traceEnable, sizeof(traceEnable));
+  RtlZeroMemory(&pTraceData->traceEnable, sizeof(pTraceData->traceEnable));
 
   status = STATUS_SUCCESS;
 
@@ -224,49 +242,49 @@ VOID QueryRegistryTraceEnable(IN PUNICODE_STRING pRegistryPath)
 
   queryTable[0].Flags         = RTL_QUERY_REGISTRY_DIRECT;
   queryTable[0].Name          = L"Read";
-  queryTable[0].EntryContext  = &traceEnable.read;
+  queryTable[0].EntryContext  = &pTraceData->traceEnable.read;
   queryTable[0].DefaultType   = REG_DWORD;
   queryTable[0].DefaultData   = &zero;
   queryTable[0].DefaultLength = sizeof(ULONG);
 
   queryTable[1].Flags         = RTL_QUERY_REGISTRY_DIRECT;
   queryTable[1].Name          = L"Write";
-  queryTable[1].EntryContext  = &traceEnable.write;
+  queryTable[1].EntryContext  = &pTraceData->traceEnable.write;
   queryTable[1].DefaultType   = REG_DWORD;
   queryTable[1].DefaultData   = &zero;
   queryTable[1].DefaultLength = sizeof(ULONG);
 
   queryTable[2].Flags         = RTL_QUERY_REGISTRY_DIRECT;
   queryTable[2].Name          = L"GetTimeouts";
-  queryTable[2].EntryContext  = &traceEnable.getTimeouts;
+  queryTable[2].EntryContext  = &pTraceData->traceEnable.getTimeouts;
   queryTable[2].DefaultType   = REG_DWORD;
   queryTable[2].DefaultData   = &zero;
   queryTable[2].DefaultLength = sizeof(ULONG);
 
   queryTable[3].Flags         = RTL_QUERY_REGISTRY_DIRECT;
   queryTable[3].Name          = L"SetTimeouts";
-  queryTable[3].EntryContext  = &traceEnable.setTimeouts;
+  queryTable[3].EntryContext  = &pTraceData->traceEnable.setTimeouts;
   queryTable[3].DefaultType   = REG_DWORD;
   queryTable[3].DefaultData   = &zero;
   queryTable[3].DefaultLength = sizeof(ULONG);
 
   queryTable[4].Flags         = RTL_QUERY_REGISTRY_DIRECT;
   queryTable[4].Name          = L"GetCommStatus";
-  queryTable[4].EntryContext  = &traceEnable.getCommStatus;
+  queryTable[4].EntryContext  = &pTraceData->traceEnable.getCommStatus;
   queryTable[4].DefaultType   = REG_DWORD;
   queryTable[4].DefaultData   = &zero;
   queryTable[4].DefaultLength = sizeof(ULONG);
 
   queryTable[5].Flags         = RTL_QUERY_REGISTRY_DIRECT;
   queryTable[5].Name          = L"GetModemStatus";
-  queryTable[5].EntryContext  = &traceEnable.getModemStatus;
+  queryTable[5].EntryContext  = &pTraceData->traceEnable.getModemStatus;
   queryTable[5].DefaultType   = REG_DWORD;
   queryTable[5].DefaultData   = &zero;
   queryTable[5].DefaultLength = sizeof(ULONG);
 
   queryTable[6].Flags         = RTL_QUERY_REGISTRY_DIRECT;
   queryTable[6].Name          = L"ModemStatus";
-  queryTable[6].EntryContext  = &traceEnable.modemStatus;
+  queryTable[6].EntryContext  = &pTraceData->traceEnable.modemStatus;
   queryTable[6].DefaultType   = REG_DWORD;
   queryTable[6].DefaultData   = &zero;
   queryTable[6].DefaultLength = sizeof(ULONG);
@@ -290,18 +308,18 @@ PTRACE_BUFFER AllocTraceBuf()
 
   pBuf = NULL;
 
-  KeAcquireSpinLock(&bufsLock, &oldIrql);
+  KeAcquireSpinLock(&pTraceData->bufs.lock, &oldIrql);
   for (i = 0 ; i < TRACE_BUFS_NUM ; i++) {
-    if (!traceBufs[i].busy) {
-      traceBufs[i].busy = TRUE;
-      pBuf = &traceBufs[i];
+    if (!pTraceData->bufs.bufs[i].busy) {
+      pTraceData->bufs.bufs[i].busy = TRUE;
+      pBuf = &pTraceData->bufs.bufs[i];
       break;
     }
   }
-  KeReleaseSpinLock(&bufsLock, oldIrql);
+  KeReleaseSpinLock(&pTraceData->bufs.lock, oldIrql);
 
   if (!pBuf)
-    InterlockedIncrement(&skippedTraces);
+    InterlockedIncrement(&pTraceData->skippedTraces);
 
   return pBuf;
 }
@@ -931,7 +949,7 @@ NTSTATUS TraceWrite(
       NULL);
 
   if (!NT_SUCCESS(status)) {
-    errorCount++;
+    pTraceData->errorCount++;
     SysLog(pIoObject, status, L"TraceWrite ZwWriteFile FAIL");
   }
 
@@ -948,13 +966,9 @@ VOID TraceOutput(
   OBJECT_ATTRIBUTES objectAttributes;
   IO_STATUS_BLOCK ioStatusBlock;
 
-  static CHAR irqlBuf[TRACE_IRQL_BUF_SIZE];
-  static LONG irqlBufBusyInd = 0;
-  static LONG irqlBufFreeInd = 0;
-
-  if (errorCount > TRACE_ERROR_LIMIT) {
-    if (errorCount < (TRACE_ERROR_LIMIT + 100)) {
-      errorCount += 100;
+  if (pTraceData->errorCount > TRACE_ERROR_LIMIT) {
+    if (pTraceData->errorCount < (TRACE_ERROR_LIMIT + 100)) {
+      pTraceData->errorCount += 100;
       SysLog(pDrvObj, STATUS_SUCCESS, L"Trace disabled");
     }
     return;
@@ -971,14 +985,15 @@ VOID TraceOutput(
 
     GetTimeFields(&timeFields);
 
-    KeAcquireSpinLock(&irqlBufLock, &oldIrql);
+    KeAcquireSpinLock(&pTraceData->irqlBuf.lock, &oldIrql);
 
-    size = sizeof(irqlBuf) - irqlBufFreeInd;
-    pDestStr = irqlBuf + (sizeof(irqlBuf) - size);
+    size = sizeof(pTraceData->irqlBuf.buf) - pTraceData->irqlBuf.freeInd;
+    pDestStr = pTraceData->irqlBuf.buf + (sizeof(pTraceData->irqlBuf.buf) - size);
 
     pDestStr = AnsiStrCopyTimeFields(pDestStr, &size, &timeFields);
     pDestStr = AnsiStrFormat(pDestStr, &size, " *%u* %s\r\n", (unsigned)KeGetCurrentIrql(), pStr);
-    HALT_UNLESS3(size > 0, irqlBufFreeInd, irqlBufBusyInd, sizeof(irqlBuf));
+    HALT_UNLESS3(size > 0, pTraceData->irqlBuf.freeInd,
+                 pTraceData->irqlBuf.busyInd, sizeof(pTraceData->irqlBuf.buf));
 
     if (size == 1) {
       pDestStr -= 6;
@@ -986,9 +1001,9 @@ VOID TraceOutput(
       pDestStr = AnsiStrCopyStr(pDestStr, &size, " ...\r\n");
     }
 
-    irqlBufFreeInd = (LONG)(sizeof(irqlBuf) - size);
+    pTraceData->irqlBuf.freeInd = (LONG)(sizeof(pTraceData->irqlBuf.buf) - size);
 
-    KeReleaseSpinLock(&irqlBufLock, oldIrql);
+    KeReleaseSpinLock(&pTraceData->irqlBuf.lock, oldIrql);
 
     return;
   }
@@ -999,7 +1014,12 @@ VOID TraceOutput(
     pIoObject = pDrvObj;
 
   HALT_UNLESS(TRACE_FILE_OK);
-  InitializeObjectAttributes(&objectAttributes, &traceFileName, 0, NULL, NULL);
+  InitializeObjectAttributes(
+      &objectAttributes,
+      &pTraceData->traceFileName,
+      OBJ_KERNEL_HANDLE,
+      NULL,
+      NULL);
 
   status = ZwCreateFile(
       &handle,
@@ -1027,29 +1047,30 @@ VOID TraceOutput(
       size = TRACE_BUF_SIZE;
       pDestStr = pBuf->buf;
 
-      while (irqlBufFreeInd) {
+      while (pTraceData->irqlBuf.freeInd) {
         SIZE_T lenBuf;
         KIRQL oldIrql;
 
-        KeAcquireSpinLock(&irqlBufLock, &oldIrql);
-        lenBuf = irqlBufFreeInd - irqlBufBusyInd;
+        KeAcquireSpinLock(&pTraceData->irqlBuf.lock, &oldIrql);
+        lenBuf = pTraceData->irqlBuf.freeInd - pTraceData->irqlBuf.busyInd;
         if (lenBuf) {
           if (lenBuf > size - 1)
             lenBuf = size - 1;
-          RtlCopyMemory(pDestStr, &irqlBuf[irqlBufBusyInd], lenBuf);
+          RtlCopyMemory(pDestStr, &pTraceData->irqlBuf.buf[pTraceData->irqlBuf.busyInd], lenBuf);
           pDestStr[lenBuf] = 0;
-          irqlBufBusyInd += (LONG)lenBuf;
-          HALT_UNLESS3(irqlBufBusyInd <= irqlBufFreeInd, irqlBufFreeInd, irqlBufBusyInd, lenBuf);
-          if (irqlBufBusyInd == irqlBufFreeInd)
-            irqlBufFreeInd = irqlBufBusyInd = 0;
+          pTraceData->irqlBuf.busyInd += (LONG)lenBuf;
+          HALT_UNLESS3(pTraceData->irqlBuf.busyInd <= pTraceData->irqlBuf.freeInd,
+                       pTraceData->irqlBuf.freeInd, pTraceData->irqlBuf.busyInd, lenBuf);
+          if (pTraceData->irqlBuf.busyInd == pTraceData->irqlBuf.freeInd)
+            pTraceData->irqlBuf.freeInd = pTraceData->irqlBuf.busyInd = 0;
         }
-        KeReleaseSpinLock(&irqlBufLock, oldIrql);
+        KeReleaseSpinLock(&pTraceData->irqlBuf.lock, oldIrql);
 
         if (lenBuf)
           TraceWrite(pIoObject, handle, pBuf->buf);
       }
 
-      skipped = InterlockedExchange(&skippedTraces, 0);
+      skipped = InterlockedExchange(&pTraceData->skippedTraces, 0);
 
       if (skipped) {
         SIZE_T tmp_size = size;
@@ -1075,12 +1096,12 @@ VOID TraceOutput(
     status = ZwClose(handle);
 
     if (!NT_SUCCESS(status)) {
-      errorCount++;
+      pTraceData->errorCount++;
       SysLog(pIoObject, status, L"TraceOutput ZwClose FAIL");
     }
   }
   else {
-    errorCount++;
+    pTraceData->errorCount++;
     SysLog(pIoObject, status, L"TraceOutput ZwCreateFile FAIL");
   }
 }
@@ -1113,6 +1134,16 @@ VOID TraceF(
   FreeTraceBuf(pBuf);
 }
 /********************************************************************/
+VOID TraceDisable()
+{
+  if (pTraceData) {
+    if (pTraceData->traceFileName.Buffer)
+      RtlFreeUnicodeString(&pTraceData->traceFileName);
+
+    C0C_FREE_POOL(pTraceData);
+    pTraceData = NULL;
+  }
+}
 
 VOID TraceOpen(
     IN PDRIVER_OBJECT _pDrvObj,
@@ -1120,16 +1151,23 @@ VOID TraceOpen(
 {
   pDrvObj = _pDrvObj;
 
-  KeInitializeSpinLock(&irqlBufLock);
-  KeInitializeSpinLock(&bufsLock);
-  skippedTraces = 0;
-  RtlZeroMemory(traceBufs, sizeof(traceBufs));
+  pTraceData = (PTRACE_DATA)C0C_ALLOCATE_POOL(NonPagedPool, sizeof(*pTraceData));
 
-  RtlInitUnicodeString(&traceFileName, NULL);
-  errorCount = 0;
+  if (!pTraceData) {
+    SysLog(pDrvObj, STATUS_INSUFFICIENT_RESOURCES, L"TraceEnable C0C_ALLOCATE_POOL FAIL");
+    return;
+  }
+
+  RtlZeroMemory(pTraceData, sizeof(*pTraceData));
+
+  KeInitializeSpinLock(&pTraceData->bufs.lock);
+  KeInitializeSpinLock(&pTraceData->irqlBuf.lock);
 
   QueryRegistryTrace(pRegistryPath);
   QueryRegistryTraceEnable(pRegistryPath);
+
+  if (!pTraceData->traceFileName.Buffer)
+    TraceDisable();
 
   if (TRACE_FILE_OK) {
     UNICODE_STRING msg;
@@ -1139,7 +1177,7 @@ VOID TraceOpen(
 
     RtlInitUnicodeString(&msg, NULL);
     StrAppendStr0(&status, &msg, L"Trace enabled. See ");
-    StrAppendStr(&status, &msg, traceFileName.Buffer, traceFileName.Length);
+    StrAppendStr(&status, &msg, pTraceData->traceFileName.Buffer, pTraceData->traceFileName.Length);
 
     if (NT_SUCCESS(status))
       SysLog(pDrvObj, status, msg.Buffer);
@@ -1149,8 +1187,8 @@ VOID TraceOpen(
     TraceF(NULL, "===== BEGIN =====");
     TraceF(NULL, "VERSION " C0C_VERSION_STR " (" __DATE__ " " __TIME__ ")");
 
-    if (errorCount) {
-      RtlInitUnicodeString(&traceFileName, NULL);
+    if (pTraceData->errorCount) {
+      TraceDisable();
       SysLog(pDrvObj, STATUS_SUCCESS, L"Trace disabled");
     }
   }
@@ -1163,7 +1201,7 @@ VOID TraceClose()
 
   TraceF(NULL, "===== END =====");
 
-  RtlInitUnicodeString(&traceFileName, NULL);
+  TraceDisable();
 }
 
 VOID Trace0(
@@ -1250,7 +1288,7 @@ VOID TraceModemStatus(IN PC0C_IO_PORT pIoPort)
   if (!TRACE_FILE_OK)
     return;
 
-  if (!traceEnable.modemStatus)
+  if (!pTraceData->traceEnable.modemStatus)
     return;
 
   TraceMask(
@@ -1285,24 +1323,24 @@ VOID TraceIrp(
 
   switch (major) {
     case IRP_MJ_WRITE:
-      enableMask = traceEnable.write;
+      enableMask = pTraceData->traceEnable.write;
       break;
     case IRP_MJ_READ:
-      enableMask = traceEnable.read;
+      enableMask = pTraceData->traceEnable.read;
       break;
     case IRP_MJ_DEVICE_CONTROL:
       switch (pIrpStack->Parameters.DeviceIoControl.IoControlCode) {
         case IOCTL_SERIAL_GET_TIMEOUTS:
-          enableMask = traceEnable.getTimeouts;
+          enableMask = pTraceData->traceEnable.getTimeouts;
           break;
         case IOCTL_SERIAL_SET_TIMEOUTS:
-          enableMask = traceEnable.setTimeouts;
+          enableMask = pTraceData->traceEnable.setTimeouts;
           break;
         case IOCTL_SERIAL_GET_COMMSTATUS:
-          enableMask = traceEnable.getCommStatus;
+          enableMask = pTraceData->traceEnable.getCommStatus;
           break;
         case IOCTL_SERIAL_GET_MODEMSTATUS:
-          enableMask = traceEnable.getModemStatus;
+          enableMask = pTraceData->traceEnable.getModemStatus;
           break;
       }
       break;
