@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.27  2007/06/05 12:15:08  vfrolov
+ * Fixed memory leak
+ *
  * Revision 1.26  2007/06/01 16:22:40  vfrolov
  * Implemented plug-in and exclusive modes
  *
@@ -141,6 +144,9 @@ VOID RemoveFdoPort(IN PC0C_FDOPORT_EXTENSION pDevExt)
 
   if (!HidePort(pDevExt))
     SysLog(pDevExt->pDevObj, STATUS_UNSUCCESSFUL, L"RemoveFdoPort HidePort FAIL");
+
+  if (pDevExt->symbolicLinkName.Buffer)
+    RtlFreeUnicodeString(&pDevExt->symbolicLinkName);
 
   StrFree(&pDevExt->ntDeviceName);
   StrFree(&pDevExt->win32DeviceName);
