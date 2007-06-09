@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.33  2007/06/09 08:49:47  vfrolov
+ * Improved baudrate emulation
+ *
  * Revision 1.32  2007/06/07 14:51:47  vfrolov
  * Added check for NULL of pIrpXoffCounter
  *
@@ -944,8 +947,10 @@ NTSTATUS TryReadWrite(
                             &doneRead, &done);
 
             if (done) {
-              if (pWriteDelay)
+              if (pWriteDelay) {
                 pWriteDelay->sentFrames += done;
+                pWriteDelay->idleCount = 0;
+              }
             }
           }
         }
@@ -982,8 +987,10 @@ NTSTATUS TryReadWrite(
                 doneWrite += done;
                 wasWrite = TRUE;
 
-                if (pWriteDelay)
+                if (pWriteDelay) {
                   pWriteDelay->sentFrames += done;
+                  pWriteDelay->idleCount = 0;
+                }
               }
             }
           }
@@ -1101,8 +1108,10 @@ NTSTATUS TryReadWrite(
         }
 
         if (done) {
-          if (pWriteDelay)
+          if (pWriteDelay) {
             pWriteDelay->sentFrames += done;
+            pWriteDelay->idleCount = 0;
+          }
         }
       }
       else
@@ -1179,8 +1188,10 @@ NTSTATUS TryReadWrite(
             doneWrite += done;
             wasWrite = TRUE;
 
-            if (pWriteDelay)
+            if (pWriteDelay) {
               pWriteDelay->sentFrames += done;
+              pWriteDelay->idleCount = 0;
+            }
           }
         }
         else

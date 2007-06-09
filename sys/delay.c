@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.8  2007/06/09 08:49:47  vfrolov
+ * Improved baudrate emulation
+ *
  * Revision 1.7  2007/06/01 16:15:02  vfrolov
  * Fixed previous fix
  *
@@ -89,8 +92,12 @@ VOID WriteDelayRoutine(
           pIoPort, FALSE,
           &queueToComplete);
 
-      if (status != STATUS_PENDING)
-        StopWriteDelayTimer(pWriteDelay);
+      if (status != STATUS_PENDING) {
+        if (++pWriteDelay->idleCount > 3)
+          StopWriteDelayTimer(pWriteDelay);
+      } else {
+        pWriteDelay->idleCount = 0;
+      }
     }
 
     KeReleaseSpinLock(pIoPort->pIoLock, oldIrql);
@@ -225,6 +232,7 @@ VOID StartWriteDelayTimer(PC0C_ADAPTIVE_DELAY pWriteDelay)
 
   pWriteDelay->startTime = KeQueryInterruptTime();
   pWriteDelay->sentFrames = 0;
+  pWriteDelay->idleCount = 0;
 
   /* 100-nanosecond intervals per frame */
   intervals_100ns = (pWriteDelay->params.decibits_per_frame * 1000000L)/pWriteDelay->params.baudRate;

@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.5  2007/06/09 08:49:47  vfrolov
+ * Improved baudrate emulation
+ *
  * Revision 1.4  2007/06/01 08:36:26  vfrolov
  * Changed parameter type for SetWriteDelay()
  *
@@ -50,6 +53,7 @@ typedef struct _C0C_ADAPTIVE_DELAY {
 
   ULONGLONG               startTime;
   ULONGLONG               sentFrames;
+  short                   idleCount;
   BOOLEAN                 started;
 } C0C_ADAPTIVE_DELAY, *PC0C_ADAPTIVE_DELAY;
 
