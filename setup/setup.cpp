@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.14  2007/06/14 16:14:19  vfrolov
+ * Added test for "in use" in the COM port database
+ *
  * Revision 1.13  2007/05/29 15:30:41  vfrolov
  * Fixed big hepl text interrupt
  *
@@ -73,6 +76,7 @@
 #include "msg.h"
 #include "utils.h"
 #include "portnum.h"
+#include <msports.h>
 
 #define TEXT_PREF
 #include "../include/com0com.h"
@@ -129,8 +133,71 @@ static BOOL IsValidPortName(
     char phDevName[80];
 
     if (!QueryDosDevice(pPortName, phDevName, sizeof(phDevName)/sizeof(phDevName[0]))) {
-      if (GetLastError() != ERROR_INSUFFICIENT_BUFFER)
-        break;
+      if (GetLastError() != ERROR_INSUFFICIENT_BUFFER) {
+        if ((pPortName[0] == 'C' || pPortName[0] == 'c') &&
+            (pPortName[1] == 'O' || pPortName[1] == 'o') &&
+            (pPortName[2] == 'M' || pPortName[2] == 'm'))
+        {
+          int num;
+
+          if (StrToInt(pPortName + 3, &num) && num > 0) {
+            HCOMDB  hComDB;
+            LONG err;
+
+            err = ComDBOpen(&hComDB);
+
+            if (err != ERROR_SUCCESS) {
+              res = ShowLastError(MB_CANCELTRYCONTINUE, "ComDBOpen()");
+              continue;
+            }
+
+            DWORD maxPortsReported;
+
+            err = ComDBGetCurrentPortUsage(hComDB, NULL, 0, CDB_REPORT_BYTES, &maxPortsReported);
+
+            if (err != ERROR_SUCCESS) {
+              ComDBClose(hComDB);
+              res = ShowError(MB_CANCELTRYCONTINUE, err, "ComDBGetCurrentPortUsage()");
+              continue;
+            }
+
+            if (maxPortsReported < (DWORD)num) {
+              ComDBClose(hComDB);
+              continue;
+            }
+
+            if (maxPortsReported > (DWORD)num)
+              maxPortsReported = num;
+
+            BYTE *pBuf = (BYTE *)LocalAlloc(LPTR, maxPortsReported);
+
+            if (!pBuf) {
+              err = GetLastError();
+              ComDBClose(hComDB);
+              res = ShowError(MB_CANCELTRYCONTINUE, err, "LocalAlloc(%lu)", (unsigned long)maxPortsReported);
+              continue;
+            }
+
+            err = ComDBGetCurrentPortUsage(hComDB, pBuf, num, CDB_REPORT_BYTES, &maxPortsReported);
+            ComDBClose(hComDB);
+
+            if (err != ERROR_SUCCESS) {
+              LocalFree(pBuf);
+              res = ShowError(MB_CANCELTRYCONTINUE, err, "ComDBGetCurrentPortUsage()");
+              continue;
+            }
+
+            if (pBuf[num - 1])
+              res = ShowMsg(MB_CANCELTRYCONTINUE,
+                            "The port name %s is already logged as \"in use\"\n"
+                            "in the COM port database.",
+                            pPortName);
+
+            LocalFree(pBuf);
+          }
+        }
+        continue;
+      }
 
       phDevName[0] = 0;
     }
