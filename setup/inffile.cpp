@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2006 Vyacheslav Frolov
+ * Copyright (c) 2006-2007 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.3  2007/06/14 16:11:01  vfrolov
+ * Added Scan INF files progress indication
+ *
  * Revision 1.2  2006/10/19 13:28:48  vfrolov
  * Added InfFile::UninstallAllInfFiles()
  *
@@ -401,25 +404,43 @@ BOOL InfFile::UninstallAllInfFiles(
     const char *_pClass,
     const char *_pProvider)
 {
+  Trace("Scan INF files .");
+
   DWORD size;
 
   if (!SetupGetInfFileList(NULL, INF_STYLE_WIN4, NULL, 0, &size)) {
-    ShowLastError(MB_OK|MB_ICONSTOP, "SetupGetInfFileList()");
+    DWORD err = GetLastError();
+
+    Trace("\n");
+
+    ShowError(MB_OK|MB_ICONSTOP, err, "SetupGetInfFileList()");
     return FALSE;
   }
+
+  Trace("...");
 
   char *pList = (char *)LocalAlloc(LPTR, size*sizeof(pList[0]));
 
   if (pList) {
     if (!SetupGetInfFileList(NULL, INF_STYLE_WIN4, pList, size, NULL)) {
-      ShowLastError(MB_OK|MB_ICONSTOP, "SetupGetInfFileList()");
+      DWORD err = GetLastError();
+
+      Trace("\n");
+
+      ShowError(MB_OK|MB_ICONSTOP, err, "SetupGetInfFileList()");
       LocalFree(pList);
       return FALSE;
     }
   } else {
-    ShowLastError(MB_OK|MB_ICONSTOP, "LocalAlloc()");
+    DWORD err = GetLastError();
+
+    Trace("\n");
+
+    ShowError(MB_OK|MB_ICONSTOP, err, "LocalAlloc()");
     return FALSE;
   }
+
+  Trace(".");
 
   char windir[MAX_PATH];
 
@@ -435,8 +456,29 @@ BOOL InfFile::UninstallAllInfFiles(
   }
 
   char *p = pList;
+  int i;
+  int m;
+
+  p = pList;
+  i = 0;
 
   do {
+    i++;
+    p += lstrlen(p) + 1;
+  } while (*p);
+
+  m = i/3;
+
+  if (m == 0)
+    m = 1;
+
+  p = pList;
+  i = 0;
+
+  do {
+    if (++i%m == 0)
+      Trace(".");
+
     char infPath[MAX_PATH];
 
     if (SNPRINTF(infPath, sizeof(infPath)/sizeof(infPath[0]), "%s\\inf\\%s", windir, p) > 0) {
@@ -458,6 +500,7 @@ BOOL InfFile::UninstallAllInfFiles(
             infFile.Class(FALSE),
             infFile.Provider(FALSE)) == IDYES)
         {
+          Trace("\n");
           UninstallInf(infFile.Path());
         }
       }
@@ -465,6 +508,8 @@ BOOL InfFile::UninstallAllInfFiles(
 
     p += lstrlen(p) + 1;
   } while (*p);
+
+  Trace(" done.\n");
 
   LocalFree(pList);
 
