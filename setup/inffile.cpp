@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.4  2007/06/15 09:45:50  vfrolov
+ * Increased list size for SetupGetInfFileList()
+ *
  * Revision 1.3  2007/06/14 16:11:01  vfrolov
  * Added Scan INF files progress indication
  *
@@ -419,6 +422,7 @@ BOOL InfFile::UninstallAllInfFiles(
 
   Trace("...");
 
+  size += 256; // possible new INF files were added since
   char *pList = (char *)LocalAlloc(LPTR, size*sizeof(pList[0]));
 
   if (pList) {
@@ -427,7 +431,7 @@ BOOL InfFile::UninstallAllInfFiles(
 
       Trace("\n");
 
-      ShowError(MB_OK|MB_ICONSTOP, err, "SetupGetInfFileList()");
+      ShowError(MB_OK|MB_ICONSTOP, err, "SetupGetInfFileList(%lu)", (unsigned long)size);
       LocalFree(pList);
       return FALSE;
     }
@@ -436,7 +440,7 @@ BOOL InfFile::UninstallAllInfFiles(
 
     Trace("\n");
 
-    ShowError(MB_OK|MB_ICONSTOP, err, "LocalAlloc()");
+    ShowError(MB_OK|MB_ICONSTOP, err, "LocalAlloc(%lu)", (unsigned long)size);
     return FALSE;
   }
 
