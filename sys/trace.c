@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.28  2007/06/20 10:32:44  vfrolov
+ * Added PID tracing on IRP_MJ_CREATE
+ *
  * Revision 1.27  2007/06/05 12:26:38  vfrolov
  * Allocate trace buffers only if trace enabled
  *
@@ -1377,6 +1380,10 @@ VOID TraceIrp(
   inform = pIrp->IoStatus.Information;
 
   switch (major) {
+    case IRP_MJ_CREATE:
+      if (flags & TRACE_FLAG_PARAMS)
+        pDestStr = AnsiStrFormat(pDestStr, &size, ", PID:%lu", PtrToUlong(PsGetCurrentProcessId()));
+      break;
     case IRP_MJ_WRITE:
     case IRP_MJ_READ:
       if (flags & TRACE_FLAG_PARAMS) {
