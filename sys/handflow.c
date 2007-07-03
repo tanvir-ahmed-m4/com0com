@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2005-2006 Vyacheslav Frolov
+ * Copyright (c) 2005-2007 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.8  2007/07/03 14:35:17  vfrolov
+ * Implemented pinout customization
+ *
  * Revision 1.7  2006/06/21 16:23:57  vfrolov
  * Fixed possible BSOD after one port of pair removal
  *
@@ -58,7 +61,7 @@ NTSTATUS SetHandFlow(
     PSERIAL_HANDFLOW pHandFlow,
     PLIST_ENTRY pQueueToComplete)
 {
-  ULONG bits, mask;
+  UCHAR bits, mask;
   PC0C_BUFFER pReadBuf;
   PSERIAL_HANDFLOW pNewHandFlow;
   BOOLEAN setModemStatusHolding;
@@ -105,29 +108,29 @@ NTSTATUS SetHandFlow(
     switch (pNewHandFlow->FlowReplace & SERIAL_RTS_MASK) {
     case 0:
       pIoPort->writeHoldingRemote &= ~SERIAL_TX_WAITING_FOR_CTS;
-      mask |= C0C_MSB_CTS; // Turn off CTS on remote side if RTS is disabled
+      mask |= C0C_MCR_RTS;
       break;
     case SERIAL_RTS_CONTROL:
       pIoPort->writeHoldingRemote &= ~SERIAL_TX_WAITING_FOR_CTS;
-      bits |= C0C_MSB_CTS;
-      mask |= C0C_MSB_CTS;
+      bits |= C0C_MCR_RTS;
+      mask |= C0C_MCR_RTS;
       break;
     case SERIAL_RTS_HANDSHAKE:
       if (C0C_BUFFER_BUSY(pReadBuf) > (C0C_BUFFER_SIZE(pReadBuf) - pNewHandFlow->XoffLimit)) {
         pIoPort->writeHoldingRemote |= SERIAL_TX_WAITING_FOR_CTS;
-        mask |= C0C_MSB_CTS;
+        mask |= C0C_MCR_RTS;
       }
       else
       if (pIoPort->writeHoldingRemote & SERIAL_TX_WAITING_FOR_CTS) {
         if (C0C_BUFFER_BUSY(pReadBuf) <= (SIZE_T)pNewHandFlow->XonLimit) {
           pIoPort->writeHoldingRemote &= ~SERIAL_TX_WAITING_FOR_CTS;
-          bits |= C0C_MSB_CTS;
-          mask |= C0C_MSB_CTS;
+          bits |= C0C_MCR_RTS;
+          mask |= C0C_MCR_RTS;
         }
       }
       else {
-        bits |= C0C_MSB_CTS;
-        mask |= C0C_MSB_CTS;
+        bits |= C0C_MCR_RTS;
+        mask |= C0C_MCR_RTS;
       }
     }
   }
@@ -139,29 +142,29 @@ NTSTATUS SetHandFlow(
     switch (pNewHandFlow->ControlHandShake & SERIAL_DTR_MASK) {
     case 0:
       pIoPort->writeHoldingRemote &= ~SERIAL_TX_WAITING_FOR_DSR;
-      mask |= C0C_MSB_DSR; // Turn off DSR on remote side if DTR is disabled
+      mask |= C0C_MCR_DTR;
       break;
     case SERIAL_DTR_CONTROL:
       pIoPort->writeHoldingRemote &= ~SERIAL_TX_WAITING_FOR_DSR;
-      bits |= C0C_MSB_DSR;
-      mask |= C0C_MSB_DSR;
+      bits |= C0C_MCR_DTR;
+      mask |= C0C_MCR_DTR;
       break;
     case SERIAL_DTR_HANDSHAKE:
       if (C0C_BUFFER_BUSY(pReadBuf) > (C0C_BUFFER_SIZE(pReadBuf) - pNewHandFlow->XoffLimit)) {
         pIoPort->writeHoldingRemote |= SERIAL_TX_WAITING_FOR_DSR;
-        mask |= C0C_MSB_DSR;
+        mask |= C0C_MCR_DTR;
       }
       else
       if (pIoPort->writeHoldingRemote & SERIAL_TX_WAITING_FOR_DSR) {
         if (C0C_BUFFER_BUSY(pReadBuf) <= (SIZE_T)pNewHandFlow->XonLimit) {
           pIoPort->writeHoldingRemote &= ~SERIAL_TX_WAITING_FOR_DSR;
-          bits |= C0C_MSB_DSR;
-          mask |= C0C_MSB_DSR;
+          bits |= C0C_MCR_DTR;
+          mask |= C0C_MCR_DTR;
         }
       }
       else {
-        bits |= C0C_MSB_DSR;
-        mask |= C0C_MSB_DSR;
+        bits |= C0C_MCR_DTR;
+        mask |= C0C_MCR_DTR;
       }
     }
   }
@@ -201,7 +204,7 @@ NTSTATUS SetHandFlow(
     SetModemStatusHolding(pIoPort);
 
   if (mask)
-    SetModemStatus(pIoPort->pIoPortRemote, bits, mask, pQueueToComplete);
+    SetModemControl(pIoPort, bits, mask, pQueueToComplete);
 
   UpdateTransmitToggle(pIoPort, pQueueToComplete);
 
@@ -230,7 +233,7 @@ VOID UpdateHandFlow(
     BOOLEAN freed,
     PLIST_ENTRY pQueueToComplete)
 {
-  ULONG bits, mask;
+  UCHAR bits, mask;
   PC0C_BUFFER pReadBuf;
   PSERIAL_HANDFLOW pHandFlowLocal, pHandFlowRemote;
 
@@ -244,12 +247,12 @@ VOID UpdateHandFlow(
     if (!freed && C0C_BUFFER_BUSY(pReadBuf) > (C0C_BUFFER_SIZE(pReadBuf) - pHandFlowLocal->XoffLimit)) {
       if ((pHandFlowLocal->FlowReplace & SERIAL_RTS_MASK) == SERIAL_RTS_HANDSHAKE) {
         pIoPort->writeHoldingRemote |= SERIAL_TX_WAITING_FOR_CTS;
-        mask |= C0C_MSB_CTS;
+        mask |= C0C_MCR_RTS;
       }
 
       if ((pHandFlowLocal->ControlHandShake & SERIAL_DTR_MASK) == SERIAL_DTR_HANDSHAKE) {
         pIoPort->writeHoldingRemote |= SERIAL_TX_WAITING_FOR_DSR;
-        mask |= C0C_MSB_DSR;
+        mask |= C0C_MCR_DTR;
       }
 
       if (pHandFlowLocal->FlowReplace & SERIAL_AUTO_RECEIVE) {
@@ -264,14 +267,14 @@ VOID UpdateHandFlow(
     if (freed && C0C_BUFFER_BUSY(pReadBuf) <= (SIZE_T)pHandFlowLocal->XonLimit) {
       if ((pHandFlowLocal->FlowReplace & SERIAL_RTS_MASK) == SERIAL_RTS_HANDSHAKE) {
         pIoPort->writeHoldingRemote &= ~SERIAL_TX_WAITING_FOR_CTS;
-        bits |= C0C_MSB_CTS;
-        mask |= C0C_MSB_CTS;
+        bits |= C0C_MCR_RTS;
+        mask |= C0C_MCR_RTS;
       }
 
       if ((pHandFlowLocal->ControlHandShake & SERIAL_DTR_MASK) == SERIAL_DTR_HANDSHAKE) {
         pIoPort->writeHoldingRemote &= ~SERIAL_TX_WAITING_FOR_DSR;
-        bits |= C0C_MSB_DSR;
-        mask |= C0C_MSB_DSR;
+        bits |= C0C_MCR_DTR;
+        mask |= C0C_MCR_DTR;
       }
 
       if (pHandFlowLocal->FlowReplace & SERIAL_AUTO_RECEIVE) {
@@ -284,7 +287,7 @@ VOID UpdateHandFlow(
   }
 
   if (mask)
-    SetModemStatus(pIoPort->pIoPortRemote, bits, mask, pQueueToComplete);
+    SetModemControl(pIoPort, bits, mask, pQueueToComplete);
 }
 
 VOID UpdateTransmitToggle(
@@ -292,17 +295,17 @@ VOID UpdateTransmitToggle(
     PLIST_ENTRY pQueueToComplete)
 {
   if ((pIoPort->handFlow.FlowReplace & SERIAL_RTS_MASK) == SERIAL_TRANSMIT_TOGGLE) {
-    ULONG bits;
+    UCHAR bits;
 
     if ((pIoPort->writeHolding & SERIAL_TX_WAITING_ON_BREAK) == 0 &&
         (pIoPort->sendXonXoff || pIoPort->irpQueues[C0C_QUEUE_WRITE].pCurrent))
     {
-      bits = C0C_MSB_CTS;
+      bits = C0C_MCR_RTS;
     } else {
       bits = 0;
     }
 
-    SetModemStatus(pIoPort->pIoPortRemote, bits, C0C_MSB_CTS, pQueueToComplete);
+    SetModemControl(pIoPort, bits, C0C_MCR_RTS, pQueueToComplete);
   }
 }
 

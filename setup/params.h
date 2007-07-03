@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.4  2007/07/03 14:39:49  vfrolov
+ * Implemented pinout customization
+ *
  * Revision 1.3  2007/06/01 16:32:04  vfrolov
  * Implemented plug-in and exclusive modes
  *
@@ -51,11 +54,12 @@ class PortParameters {
   protected:
     BOOL FillParametersKey(char *pRegKey, int size);
     BOOL SetPortName(const char *pNewPortName);
-    DWORD *GetFlagPtr(DWORD bit);
+    DWORD *GetDwPtr(DWORD bit);
     const char *GetBitName(DWORD bit);
-    BOOL SetFlag(const char *pNewFlag, DWORD bit);
-    void LoadFlag(HKEY hKey, DWORD bit);
-    LONG SaveFlag(HKEY hKey, DWORD bit);
+    BOOL SetFlag(const char *pNewVal, DWORD bit);
+    BOOL SetPin(const char *pNewVal, DWORD bit);
+    void LoadDw(HKEY hKey, DWORD bit);
+    LONG SaveDw(HKEY hKey, DWORD bit);
 
     DWORD maskChanged;
     DWORD maskExplicit;
@@ -64,6 +68,10 @@ class PortParameters {
     DWORD emuOverrun;
     DWORD plugInMode;
     DWORD exclusiveMode;
+    DWORD pinCTS;
+    DWORD pinDSR;
+    DWORD pinDCD;
+    DWORD pinRI;
 
     char service[20];
     char phPortName[20];

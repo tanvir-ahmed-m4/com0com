@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.28  2007/07/03 14:35:17  vfrolov
+ * Implemented pinout customization
+ *
  * Revision 1.27  2007/06/05 12:15:08  vfrolov
  * Fixed memory leak
  *
@@ -167,6 +170,7 @@ NTSTATUS AddFdoPort(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
   PC0C_FDOPORT_EXTENSION pDevExt;
   PC0C_PDOPORT_EXTENSION pPhDevExt;
   ULONG emuBR, emuOverrun, plugInMode, exclusiveMode;
+  ULONG pinCTS, pinDSR, pinDCD, pinRI;
   UNICODE_STRING ntDeviceName;
   PWCHAR pPortName;
 
@@ -240,45 +244,53 @@ NTSTATUS AddFdoPort(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
     }
 
     emuBR = emuOverrun = plugInMode = exclusiveMode = 0;
+    pinCTS = pinDSR = pinDCD = pinRI = 0;
 
     if (NT_SUCCESS(status)) {
-      RTL_QUERY_REGISTRY_TABLE queryTable[5];
+      RTL_QUERY_REGISTRY_TABLE queryTable[9];
       ULONG zero = 0;
       int i;
 
       RtlZeroMemory(queryTable, sizeof(queryTable));
 
+      for (i = 0 ; i < (sizeof(queryTable)/sizeof(queryTable[0]) - 1) ; i++) {
+        queryTable[i].Flags         = RTL_QUERY_REGISTRY_DIRECT;
+        queryTable[i].DefaultType   = REG_DWORD;
+        queryTable[i].DefaultData   = &zero;
+        queryTable[i].DefaultLength = sizeof(ULONG);
+      }
+
       i = 0;
-      queryTable[i].Flags         = RTL_QUERY_REGISTRY_DIRECT;
       queryTable[i].Name          = L"EmuBR";
       queryTable[i].EntryContext  = &emuBR;
-      queryTable[i].DefaultType   = REG_DWORD;
-      queryTable[i].DefaultData   = &zero;
-      queryTable[i].DefaultLength = sizeof(ULONG);
 
       i++;
-      queryTable[i].Flags         = RTL_QUERY_REGISTRY_DIRECT;
       queryTable[i].Name          = L"EmuOverrun";
       queryTable[i].EntryContext  = &emuOverrun;
-      queryTable[i].DefaultType   = REG_DWORD;
-      queryTable[i].DefaultData   = &zero;
-      queryTable[i].DefaultLength = sizeof(ULONG);
 
       i++;
-      queryTable[i].Flags         = RTL_QUERY_REGISTRY_DIRECT;
       queryTable[i].Name          = L"PlugInMode";
       queryTable[i].EntryContext  = &plugInMode;
-      queryTable[i].DefaultType   = REG_DWORD;
-      queryTable[i].DefaultData   = &zero;
-      queryTable[i].DefaultLength = sizeof(ULONG);
 
       i++;
-      queryTable[i].Flags         = RTL_QUERY_REGISTRY_DIRECT;
       queryTable[i].Name          = L"ExclusiveMode";
       queryTable[i].EntryContext  = &exclusiveMode;
-      queryTable[i].DefaultType   = REG_DWORD;
-      queryTable[i].DefaultData   = &zero;
-      queryTable[i].DefaultLength = sizeof(ULONG);
+
+      i++;
+      queryTable[i].Name          = L"cts";
+      queryTable[i].EntryContext  = &pinCTS;
+
+      i++;
+      queryTable[i].Name          = L"dsr";
+      queryTable[i].EntryContext  = &pinDSR;
+
+      i++;
+      queryTable[i].Name          = L"dcd";
+      queryTable[i].EntryContext  = &pinDCD;
+
+      i++;
+      queryTable[i].Name          = L"ri";
+      queryTable[i].EntryContext  = &pinRI;
 
       RtlQueryRegistryValues(
           RTL_REGISTRY_ABSOLUTE,
@@ -373,6 +385,10 @@ NTSTATUS AddFdoPort(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
   pDevExt->baudRate.BaudRate         = 1200;
 
   SetWriteDelay(pDevExt);
+
+  pDevExt->pIoPortLocal->modemControl |= C0C_MCR_OUT2;
+
+  PinMap(pDevExt->pIoPortLocal, pinCTS, pinDSR, pinDCD, pinRI);
 
   pDevExt->pLowDevObj = IoAttachDeviceToDeviceStack(pNewDevObj, pPhDevObj);
 

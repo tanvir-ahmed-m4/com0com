@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.36  2007/07/03 14:35:17  vfrolov
+ * Implemented pinout customization
+ *
  * Revision 1.35  2007/06/04 15:24:32  vfrolov
  * Fixed open reject just after close in exclusiveMode
  *
@@ -205,6 +208,13 @@ typedef struct _C0C_BUFFER {
 struct _C0C_FDOPORT_EXTENSION;
 struct _C0C_ADAPTIVE_DELAY;
 
+typedef struct _C0C_PIN_OUTS {
+  struct {
+    UCHAR positive;
+    UCHAR negative;
+  } remote, local;
+} C0C_PIN_OUTS, *PC0C_PIN_OUTS;
+
 typedef struct _C0C_IO_PORT {
 
   struct _C0C_FDOPORT_EXTENSION *pDevExt;
@@ -237,6 +247,12 @@ typedef struct _C0C_IO_PORT {
 
   struct _C0C_ADAPTIVE_DELAY *pWriteDelay;
 
+  #define C0C_PIN_OUTS_RTS  0
+  #define C0C_PIN_OUTS_DTR  1
+  #define C0C_PIN_OUTS_OUT1 2
+
+  C0C_PIN_OUTS            pinOuts[3];
+
   SERIAL_HANDFLOW         handFlow;
   SERIAL_CHARS            specialChars;
 
@@ -253,7 +269,15 @@ typedef struct _C0C_IO_PORT {
   #define C0C_MSB_RING    0x40
   #define C0C_MSB_RLSD    0x80
 
-  ULONG                   modemStatus;
+  UCHAR                   modemStatus;
+
+  #define C0C_MCR_DTR     0x01
+  #define C0C_MCR_RTS     0x02
+  #define C0C_MCR_OUT1    0x04
+  #define C0C_MCR_OUT2    0x08
+  #define C0C_MCR_LOOP    0x10
+
+  UCHAR                   modemControl;
 
   C0C_BUFFER              readBuf;
 
@@ -425,9 +449,22 @@ NTSTATUS ReadWrite(
 
 VOID SetModemStatus(
     IN PC0C_IO_PORT pIoPort,
-    IN ULONG bits,
-    IN ULONG mask,
+    IN UCHAR bits,
+    IN UCHAR mask,
     PLIST_ENTRY pQueueToComplete);
+
+VOID SetModemControl(
+    IN PC0C_IO_PORT pIoPort,
+    IN UCHAR bits,
+    IN UCHAR mask,
+    PLIST_ENTRY pQueueToComplete);
+
+VOID PinMap(
+    IN PC0C_IO_PORT pIoPort,
+    IN ULONG pinCTS,
+    IN ULONG pinDSR,
+    IN ULONG pinDCD,
+    IN ULONG pinRI);
 
 #define C0C_TAG 'c0c'
 #define C0C_ALLOCATE_POOL(PoolType, NumberOfBytes) \

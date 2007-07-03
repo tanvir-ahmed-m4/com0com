@@ -20,6 +20,7 @@ SOURCES= \
         wait.c \
         fileinfo.c \
         io.c \
+        pinouts.c \
         handflow.c \
         startirp.c \
         timeout.c \
