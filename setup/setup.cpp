@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.15  2007/07/03 14:42:10  vfrolov
+ * Added friendly name setting for bus device
+ *
  * Revision 1.14  2007/06/14 16:14:19  vfrolov
  * Added test for "in use" in the COM port database
  *
@@ -217,6 +220,37 @@ static BOOL IsValidPortName(
   return TRUE;
 }
 ///////////////////////////////////////////////////////////////
+static VOID SetFriendlyName(
+    HDEVINFO hDevInfo,
+    PSP_DEVINFO_DATA pDevInfoData,
+    int num)
+{
+  char portName[2][20];
+
+  for (int j = 0 ; j < 2 ; j++) {
+    char phPortName[20];
+
+    SNPRINTF(phPortName, sizeof(phPortName)/sizeof(phPortName[0]), "%s%d",
+             j ? C0C_PREF_PORT_NAME_B : C0C_PREF_PORT_NAME_A, num);
+
+    PortParameters portParameters(C0C_SERVICE, phPortName);
+
+    if (portParameters.Load() == ERROR_SUCCESS)
+      portParameters.FillPortName(portName[j], sizeof(portName[j])/sizeof(portName[j][0]));
+    else
+      SNPRINTF(portName[j], sizeof(portName[j])/sizeof(portName[j][0]), "%s", phPortName);
+  }
+
+  char friendlyName[80];
+
+  SNPRINTF(friendlyName, sizeof(friendlyName)/sizeof(friendlyName[0]),
+           "com0com - bus for serial port pair emulator (%s <-> %s)",
+           portName[0], portName[1]);
+
+  SetupDiSetDeviceRegistryProperty(hDevInfo, pDevInfoData, SPDRP_FRIENDLYNAME,
+                                  (LPBYTE)friendlyName, (lstrlen(friendlyName) + 1) * sizeof(*friendlyName));
+}
+///////////////////////////////////////////////////////////////
 struct ChangeDeviceParams {
   ChangeDeviceParams(InfFile &_infFile, const char *_pPhPortName, const char *_pParameters)
     : pInfFile(&_infFile), pPhPortName(_pPhPortName), pParameters(_pParameters) {}
@@ -274,6 +308,8 @@ static BOOL ChangeDevice(
             if (err == ERROR_SUCCESS) {
               portParameters.FillParametersStr(buf, sizeof(buf)/sizeof(buf[0]));
               Trace("change %s %s\n", phPortName, buf);
+
+              SetFriendlyName(hDevInfo, pDevInfoData, i);
 
               DevProperties devProperties;
               devProperties.pDevId = C0C_PORT_DEVICE_ID;
@@ -420,19 +456,22 @@ static BOOL SetPortNum(
     void *pParam)
 {
   int res;
+  int num = *(int *)pParam;
 
   do {
     res = IDCONTINUE;
 
-    LONG err = SetPortNum(hDevInfo, pDevInfoData, *(int *)pParam);
+    LONG err = SetPortNum(hDevInfo, pDevInfoData, num);
 
     if (err != ERROR_SUCCESS)
-      res = ShowError(MB_CANCELTRYCONTINUE, err, "SetPortNum(%d)", *(int *)pParam);
+      res = ShowError(MB_CANCELTRYCONTINUE, err, "SetPortNum(%d)", num);
 
   } while (res == IDTRYAGAIN);
 
   if (res != IDCONTINUE)
     return FALSE;
+
+  SetFriendlyName(hDevInfo, pDevInfoData, num);
 
   return TRUE;
 }
