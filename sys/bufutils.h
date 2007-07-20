@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2005-2006 Vyacheslav Frolov
+ * Copyright (c) 2005-2007 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.6  2007/07/20 08:00:22  vfrolov
+ * Implemented TX buffer
+ *
  * Revision 1.5  2006/05/17 15:28:03  vfrolov
  * Implemented SERIAL_DSR_SENSITIVITY
  *
@@ -74,7 +77,8 @@ SIZE_T WriteToBuffer(
     PC0C_BUFFER pBuf,
     PVOID pWrite,
     SIZE_T writeLength,
-    PC0C_FLOW_FILTER pFlowFilter);
+    PC0C_FLOW_FILTER pFlowFilter,
+    PSIZE_T pOverrun);
 VOID WriteMandatoryToBuffer(PC0C_BUFFER pBuf, UCHAR mandatoryChar);
 NTSTATUS WriteRawDataToBuffer(PC0C_RAW_DATA pRawData, PC0C_BUFFER pBuf);
 SIZE_T WriteRawData(PC0C_RAW_DATA pRawData, PNTSTATUS pStatus, PVOID pReadBuf, SIZE_T readLength);
@@ -83,5 +87,23 @@ VOID PurgeBuffer(PC0C_BUFFER pBuf);
 VOID InitBuffer(PC0C_BUFFER pBuf, PUCHAR pBase, SIZE_T size);
 VOID FreeBuffer(PC0C_BUFFER pBuf);
 VOID SetBufferLimit(PC0C_BUFFER pBuf, SIZE_T limit);
+SIZE_T ReadFromTxBuffer(
+    PC0C_BUFFER pBuf,
+    PC0C_FLOW_FILTER pFlowFilter,
+    PVOID pRead, SIZE_T readLength,
+    PC0C_TX_BUFFER pTxBuf, SIZE_T txLimit,
+    PSIZE_T pWriteDone);
+SIZE_T WriteToTxBuffer(
+    PC0C_TX_BUFFER pTxBuf,
+    PVOID pWrite,
+    SIZE_T writeLength);
+SIZE_T MoveFromTxBuffer(
+    PC0C_BUFFER pBuf,
+    PC0C_TX_BUFFER pTxBuf,
+    SIZE_T txLimit,
+    PC0C_FLOW_FILTER pFlowFilter,
+    PSIZE_T pOverrun);
+VOID SetTxBuffer(PC0C_TX_BUFFER pTxBuf, SIZE_T size, BOOLEAN cleanFifo);
+VOID FreeTxBuffer(PC0C_TX_BUFFER pTxBuf);
 
 #endif /* _C0C_BUFUTILS_H_ */

@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.9  2007/07/20 08:00:22  vfrolov
+ * Implemented TX buffer
+ *
  * Revision 1.8  2007/01/11 14:50:29  vfrolov
  * Pool functions replaced by
  *   C0C_ALLOCATE_POOL()
@@ -252,7 +255,7 @@ SIZE_T ReadFromBuffer(PC0C_BUFFER pBuf, PVOID pRead, SIZE_T readLength)
 
   while (readLength) {
     SIZE_T length, writeLength;
-    PVOID pWriteBuf;
+    PUCHAR pWriteBuf;
 
     if (!pBuf->busy) {
       if (pBuf->escape) {
@@ -283,10 +286,10 @@ SIZE_T ReadFromBuffer(PC0C_BUFFER pBuf, PVOID pRead, SIZE_T readLength)
 
     HALT_UNLESS(pBuf->pBase);
 
-    writeLength = pBuf->pFree <= pBuf->pBusy ?
-        pBuf->pEnd - pBuf->pBusy : pBuf->busy;
-
     pWriteBuf = pBuf->pBusy;
+
+    writeLength = pBuf->pFree <= pWriteBuf ?
+        pBuf->pEnd - pWriteBuf : pBuf->busy;
 
     length = writeLength < readLength ? writeLength : readLength;
 
@@ -308,7 +311,8 @@ SIZE_T WriteToBuffer(
     PC0C_BUFFER pBuf,
     PVOID pWrite,
     SIZE_T writeLength,
-    PC0C_FLOW_FILTER pFlowFilter)
+    PC0C_FLOW_FILTER pFlowFilter,
+    PSIZE_T pOverrun)
 {
   PUCHAR pWriteBuf = (PUCHAR)pWrite;
 
@@ -317,8 +321,24 @@ SIZE_T WriteToBuffer(
     SIZE_T readLength;
     PUCHAR pReadBuf;
 
-    if (pBuf->limit <= pBuf->busy)
+    if (pBuf->limit <= pBuf->busy) {
+      if (pOverrun) {
+        if (pBuf->busy >= C0C_BUFFER_SIZE(pBuf)) {
+          writeDone = readDone = writeLength;
+
+          CopyCharsWithEscape(
+              pBuf, pFlowFilter,
+              NULL, 0,
+              pWriteBuf, writeLength,
+              &writeDone, pOverrun);
+
+          pWriteBuf += writeDone;
+        } else {
+          *pOverrun = 0;
+        }
+      }
       break;
+    }
 
     pReadBuf = pBuf->pFree;
 
@@ -517,5 +537,166 @@ VOID SetBufferLimit(PC0C_BUFFER pBuf, SIZE_T limit)
     limit = C0C_BUFFER_SIZE(pBuf);
 
   pBuf->limit = limit;
+}
+/********************************************************************/
+SIZE_T ReadFromTxBuffer(
+    PC0C_BUFFER pBuf,
+    PC0C_FLOW_FILTER pFlowFilter,
+    PVOID pRead, SIZE_T readLength,
+    PC0C_TX_BUFFER pTxBuf, SIZE_T txLimit,
+    PSIZE_T pWriteDone)
+{
+  PUCHAR pReadBuf = (PUCHAR)pRead;
+
+  *pWriteDone = 0;
+
+  while (readLength) {
+    SIZE_T writeLength;
+    SIZE_T readDone, writeDone;
+    PUCHAR pWriteBuf;
+
+    pWriteBuf = pTxBuf->pBusy;
+
+    if (pTxBuf->busy) {
+      writeLength = pTxBuf->pFree <= pWriteBuf ?
+          pTxBuf->pEnd - pWriteBuf : pTxBuf->busy;
+
+      if (writeLength > txLimit)
+        writeLength = txLimit;
+    } else {
+      writeLength = 0;
+    }
+
+    CopyCharsWithEscape(pBuf, pFlowFilter,
+                       pReadBuf, readLength,
+                       pWriteBuf, writeLength,
+                       &readDone, &writeDone);
+
+    pTxBuf->busy -= writeDone;
+    pTxBuf->pBusy += writeDone;
+    if (pTxBuf->pBusy == pTxBuf->pEnd)
+      pTxBuf->pBusy = pTxBuf->pBase;
+
+    *pWriteDone += writeDone;
+
+    if (readDone == 0)
+      break;
+
+    pReadBuf += readDone;
+    readLength -= readDone;
+    txLimit -= writeDone;
+  }
+
+  return pReadBuf - (PUCHAR)pRead;
+}
+
+SIZE_T WriteToTxBuffer(
+    PC0C_TX_BUFFER pTxBuf,
+    PVOID pWrite,
+    SIZE_T writeLength)
+{
+  PUCHAR pWriteBuf = (PUCHAR)pWrite;
+
+  while (writeLength && pTxBuf->busy < C0C_TX_BUFFER_SIZE(pTxBuf)) {
+    SIZE_T readLength;
+    PUCHAR pReadBuf;
+
+    pReadBuf = pTxBuf->pFree;
+
+    readLength = pTxBuf->pBusy <= pReadBuf ?
+        pTxBuf->pEnd - pReadBuf : pTxBuf->pBusy - pReadBuf;
+
+    if (readLength > writeLength)
+      readLength = writeLength;
+
+    RtlCopyMemory(pReadBuf, pWriteBuf, readLength);
+
+    pTxBuf->busy += readLength;
+    pTxBuf->pFree += readLength;
+    if (pTxBuf->pFree == pTxBuf->pEnd)
+      pTxBuf->pFree = pTxBuf->pBase;
+
+    pWriteBuf += readLength;
+    writeLength -= readLength;
+  }
+
+  return pWriteBuf - (PUCHAR)pWrite;
+}
+
+SIZE_T MoveFromTxBuffer(
+    PC0C_BUFFER pBuf,
+    PC0C_TX_BUFFER pTxBuf,
+    SIZE_T txLimit,
+    PC0C_FLOW_FILTER pFlowFilter,
+    PSIZE_T pOverrun)
+{
+  SIZE_T done = 0;
+
+  if (pOverrun)
+    *pOverrun = 0;
+
+  while (pTxBuf->busy) {
+    SIZE_T writeLength;
+    SIZE_T writeDone;
+    PUCHAR pWriteBuf;
+
+    pWriteBuf = pTxBuf->pBusy;
+
+    writeLength = pTxBuf->pFree <= pWriteBuf ?
+        pTxBuf->pEnd - pWriteBuf : pTxBuf->busy;
+
+    if (writeLength > txLimit)
+      writeLength = txLimit;
+
+    if (writeLength == 0)
+      break;
+
+    if (pOverrun) {
+      SIZE_T overrun;
+
+      writeDone = WriteToBuffer(pBuf, pWriteBuf, writeLength, pFlowFilter, &overrun);
+
+      *pOverrun += overrun;
+    } else {
+      writeDone = WriteToBuffer(pBuf, pWriteBuf, writeLength, pFlowFilter, NULL);
+    }
+
+    if (writeDone == 0)
+      break;
+
+    pTxBuf->busy -= writeDone;
+    pTxBuf->pBusy += writeDone;
+    if (pTxBuf->pBusy == pTxBuf->pEnd)
+      pTxBuf->pBusy = pTxBuf->pBase;
+
+    done += writeDone;
+    txLimit -= writeDone;
+  }
+
+  return done;
+}
+
+VOID SetTxBuffer(PC0C_TX_BUFFER pTxBuf, SIZE_T size, BOOLEAN cleanFifo)
+{
+  PUCHAR pBase;
+
+  UNREFERENCED_PARAMETER(cleanFifo);
+
+  size = 1;
+
+  size += 1;  /* add shift register */
+  pBase = pTxBuf->leastBuf;
+
+  pTxBuf->pFree = pTxBuf->pBusy = pTxBuf->pBase = pBase;
+  pTxBuf->pEnd = pTxBuf->pBase + size;
+  pTxBuf->busy = 0;
+}
+
+VOID FreeTxBuffer(PC0C_TX_BUFFER pTxBuf)
+{
+  if (pTxBuf->pBase && pTxBuf->pBase != pTxBuf->leastBuf)
+    C0C_FREE_POOL(pTxBuf->pBase);
+
+  RtlZeroMemory(pTxBuf, sizeof(*pTxBuf));
 }
 /********************************************************************/
