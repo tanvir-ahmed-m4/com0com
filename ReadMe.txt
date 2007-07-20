@@ -40,6 +40,9 @@ If you'd like to build a binary from source yourself then:
 INSTALLING
 ==========
 
+NOTE: Before installing/uninstalling the com0com driver or adding/removing/changing
+ports on Windows Vista the User Account Control (UAC) should be turned off.
+
 Simply run the installer (setup.exe). An installation wizard will guide
 you through the required steps.
 If the Found New Hardware Wizard will pop up then
