@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.9  2007/07/20 07:59:20  vfrolov
+ * Fixed idleCount
+ *
  * Revision 1.8  2007/06/09 08:49:47  vfrolov
  * Improved baudrate emulation
  *
@@ -85,19 +88,15 @@ VOID WriteDelayRoutine(
     KeAcquireSpinLock(pIoPort->pIoLock, &oldIrql);
 
     if (pWriteDelay->started) {
-      NTSTATUS status;
+      pWriteDelay->idleCount++;
 
-      status = ReadWrite(
+      ReadWrite(
           pIoPort->pIoPortRemote, FALSE,
           pIoPort, FALSE,
           &queueToComplete);
 
-      if (status != STATUS_PENDING) {
-        if (++pWriteDelay->idleCount > 3)
+      if (pWriteDelay->idleCount > 3)
           StopWriteDelayTimer(pWriteDelay);
-      } else {
-        pWriteDelay->idleCount = 0;
-      }
     }
 
     KeReleaseSpinLock(pIoPort->pIoLock, oldIrql);
