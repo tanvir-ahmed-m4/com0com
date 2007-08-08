@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.6  2007/08/08 14:15:16  vfrolov
+ * Added missing SetOutPath
+ *
  * Revision 1.5  2007/01/22 17:10:32  vfrolov
  * Partially added support for non i386 CPUs
  *
@@ -207,6 +210,9 @@ SectionEnd
 ; Uninstaller
 
 Section "Uninstall"
+
+  ; Set output path to the installation directory.
+  SetOutPath $INSTDIR
 
   GetTempFileName $0
   ExecWait "RunDll32 setup,RunDll --output $0 uninstall"
