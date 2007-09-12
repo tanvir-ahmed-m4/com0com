@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.36  2007/09/12 12:32:53  vfrolov
+ * Fixed TX buffer
+ *
  * Revision 1.35  2007/07/20 08:00:22  vfrolov
  * Implemented TX buffer
  *
@@ -1169,18 +1172,16 @@ NTSTATUS TryReadWrite(
    ******************************************************************************/
 
   if (dataChar.data.chr.isChr) {
-    if (!pWriteLimit || *pWriteLimit) {
-      if (CAN_WRITE_RW_DATA_CHR(pIoPortWrite, dataChar)) {
-        SIZE_T done = 0;
+    if (CAN_WRITE_RW_DATA_CHR(pIoPortWrite, dataChar)) {
+      SIZE_T done = 0;
 
-        WriteToBuffers(&dataChar, pIoPortRead,
-                       pQueueToComplete, pWriteLimit, pWriteDelay, &done, &doneSend);
-      }
-      else
-      if (pWriteDelay) {
-        pWriteDelay->sentFrames += *pWriteLimit;
-        *pWriteLimit = 0;
-      }
+      WriteToBuffers(&dataChar, pIoPortRead,
+                     pQueueToComplete, pWriteLimit, pWriteDelay, &done, &doneSend);
+    }
+    else
+    if (pWriteDelay) {
+      pWriteDelay->sentFrames += *pWriteLimit;
+      *pWriteLimit = 0;
     }
   }
 
@@ -1224,16 +1225,14 @@ NTSTATUS TryReadWrite(
     } else {
       dataIrpWrite.data.irp.status = STATUS_PENDING;
 
-      if (!pWriteLimit || *pWriteLimit) {
-        if (!pIoPortWrite->writeHolding) {
-          WriteToBuffers(&dataIrpWrite, pIoPortRead,
-                         pQueueToComplete, pWriteLimit, pWriteDelay, &doneWrite, &doneSend);
-        }
-        else
-        if (pWriteDelay) {
-          pWriteDelay->sentFrames += *pWriteLimit;
-          *pWriteLimit = 0;
-        }
+      if (!pIoPortWrite->writeHolding) {
+        WriteToBuffers(&dataIrpWrite, pIoPortRead,
+                       pQueueToComplete, pWriteLimit, pWriteDelay, &doneWrite, &doneSend);
+      }
+      else
+      if (pWriteDelay) {
+        pWriteDelay->sentFrames += *pWriteLimit;
+        *pWriteLimit = 0;
       }
     }
 
