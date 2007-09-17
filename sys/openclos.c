@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.20  2007/09/17 14:31:06  vfrolov
+ * Implemented pseudo pin OPEN
+ *
  * Revision 1.19  2007/07/03 14:35:17  vfrolov
  * Implemented pinout customization
  *
@@ -167,6 +170,7 @@ NTSTATUS FdoPortOpen(IN PC0C_FDOPORT_EXTENSION pDevExt)
   pIoPort->handFlow.XonLimit = size >> 1;
 
   SetHandFlow(pIoPort, NULL, &queueToComplete);
+  SetModemControl(pIoPort, C0C_MCR_OPEN, C0C_MCR_OPEN, &queueToComplete);
 
   KeReleaseSpinLock(pIoPort->pIoLock, oldIrql);
 
@@ -221,7 +225,7 @@ NTSTATUS FdoPortClose(IN PC0C_FDOPORT_EXTENSION pDevExt, IN PIRP pIrp)
 
   pIoPort->writeHoldingRemote = 0;
   pIoPort->sendXonXoff = 0;
-  SetModemControl(pIoPort, 0, C0C_MCR_RTS | C0C_MCR_DTR, &queueToComplete);
+  SetModemControl(pIoPort, 0, C0C_MCR_RTS | C0C_MCR_DTR | C0C_MCR_OPEN, &queueToComplete);
   FreeBuffer(&pIoPort->readBuf);
   SetBreakHolding(pIoPort, FALSE);
 

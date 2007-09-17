@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.33  2007/09/17 14:31:06  vfrolov
+ * Implemented pseudo pin OPEN
+ *
  * Revision 1.32  2007/07/09 11:15:42  vfrolov
  * Implemented IOCTL_SERIAL_SET_MODEM_CONTROL
  *
@@ -244,7 +247,7 @@ NTSTATUS FdoPortIoCtl(
       SetModemControl(
         pIoPortLocal,
         (UCHAR)*(PULONG)pIrp->AssociatedIrp.SystemBuffer,
-        (UCHAR)~0,
+        (UCHAR)C0C_MCR_MASK,
         &queueToComplete);
 
       if (pIoPortLocal->pIoPortRemote->tryWrite) {
@@ -275,7 +278,7 @@ NTSTATUS FdoPortIoCtl(
       }
 
       KeAcquireSpinLock(pIoPortLocal->pIoLock, &oldIrql);
-      modemControl = pIoPortLocal->modemControl;
+      modemControl = pIoPortLocal->modemControl & C0C_MCR_MASK;
       KeReleaseSpinLock(pIoPortLocal->pIoLock, oldIrql);
 
       if (code == IOCTL_SERIAL_GET_DTRRTS)

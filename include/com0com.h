@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.5  2007/09/17 14:28:07  vfrolov
+ * Implemented pseudo pin OPEN
+ *
  * Revision 1.4  2007/07/03 14:25:12  vfrolov
  * Implemented pinout customization
  *
@@ -53,9 +56,11 @@
 #define C0C_PIN_RRTS                0x00000001
 #define C0C_PIN_RDTR                0x00000002
 #define C0C_PIN_ROUT1               0x00000004
+#define C0C_PIN_ROPEN               0x00000080
 #define C0C_PIN_LRTS                0x00000100
 #define C0C_PIN_LDTR                0x00000200
 #define C0C_PIN_LOUT1               0x00000400
+#define C0C_PIN_LOPEN               0x00008000
 #define C0C_PIN_ON                  0x10000000
 #define C0C_PIN_NEGATIVE            0x80000000
 
