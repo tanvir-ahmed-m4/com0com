@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2006 Vyacheslav Frolov
+ * Copyright (c) 2006-2007 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.4  2007/09/17 14:35:06  vfrolov
+ * Fixed typo
+ *
  * Revision 1.3  2006/11/10 14:07:40  vfrolov
  * Implemented remove command
  *
@@ -36,7 +39,7 @@
 ///////////////////////////////////////////////////////////////
 
 struct DevProperties {
-  DevProperties() : pDevId(), pPhObjName(), pLocation() {}
+  DevProperties() : pDevId(NULL), pPhObjName(NULL), pLocation(NULL) {}
 
   const char *pDevId;
   const char *pPhObjName;
