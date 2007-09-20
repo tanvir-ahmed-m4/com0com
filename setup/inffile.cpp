@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.5  2007/09/20 12:39:59  vfrolov
+ * Added SetLastError(ERROR_NOT_ENOUGH_MEMORY)
+ *
  * Revision 1.4  2007/06/15 09:45:50  vfrolov
  * Increased list size for SetupGetInfFileList()
  *
@@ -75,7 +78,8 @@ static BOOL GetVersionInfo(const char *pInfPath, const char *pKey, char **ppValu
       return FALSE;
     }
   } else {
-    ShowLastError(MB_OK|MB_ICONSTOP, "LocalAlloc()");
+    SetLastError(ERROR_NOT_ENOUGH_MEMORY);
+    ShowLastError(MB_OK|MB_ICONSTOP, "LocalAlloc(%lu)", (unsigned long)(size*sizeof(*ppValue[0])));
     return FALSE;
   }
 
@@ -140,10 +144,12 @@ InfFile::InfFile(const char *pInfName, const char *pNearPath)
 
     pPath = (char *)LocalAlloc(LPTR, (len + 1)*sizeof(path[0]));
 
-    if (pPath)
+    if (pPath) {
       lstrcpy(pPath, path);
-    else
-      ShowLastError(MB_OK|MB_ICONSTOP, "LocalAlloc()");
+    } else {
+      SetLastError(ERROR_NOT_ENOUGH_MEMORY);
+      ShowLastError(MB_OK|MB_ICONSTOP, "LocalAlloc(%lu)", (unsigned long)(sizeof(path)/sizeof(path[0])));
+    }
   }
 }
 ///////////////////////////////////////////////////////////////
@@ -436,11 +442,10 @@ BOOL InfFile::UninstallAllInfFiles(
       return FALSE;
     }
   } else {
-    DWORD err = GetLastError();
-
     Trace("\n");
 
-    ShowError(MB_OK|MB_ICONSTOP, err, "LocalAlloc(%lu)", (unsigned long)size);
+    SetLastError(ERROR_NOT_ENOUGH_MEMORY);
+    ShowLastError(MB_OK|MB_ICONSTOP, "LocalAlloc(%lu)", (unsigned long)size);
     return FALSE;
   }
 

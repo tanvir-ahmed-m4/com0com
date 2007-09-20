@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.6  2007/09/20 12:37:06  vfrolov
+ * Added SetLastError(ERROR_NOT_ENOUGH_MEMORY)
+ *
  * Revision 1.5  2007/05/29 15:22:00  vfrolov
  * Fixed buffer overflow
  *
@@ -170,6 +173,7 @@ BOOL BusyMask::AddNum(int num)
       pBusyMask = pNewBusyMask;
       busyMaskLen = newBusyMaskLen;
     } else {
+      SetLastError(ERROR_NOT_ENOUGH_MEMORY);
       return FALSE;
     }
   }
