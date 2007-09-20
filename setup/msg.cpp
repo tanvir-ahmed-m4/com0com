@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2006 Vyacheslav Frolov
+ * Copyright (c) 2006-2007 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.5  2007/09/20 12:29:03  vfrolov
+ * Added return value to SetOutputFile()
+ *
  * Revision 1.4  2006/11/21 11:34:55  vfrolov
  * Added
  *   ConsoleWrite()
@@ -241,10 +244,10 @@ BOOL IsConsoleOpen()
 ///////////////////////////////////////////////////////////////
 void SetTitle(const char *pTitle)
 {
-  lstrcpyn(title, pTitle, sizeof(title)/sizeof(title[0]));
+  SNPRINTF(title, sizeof(title)/sizeof(title[0]), "%s", pTitle);
 }
 ///////////////////////////////////////////////////////////////
-void SetOutputFile(const char *pFile)
+BOOL SetOutputFile(const char *pFile)
 {
   if (pOutputFile) {
     LocalFree(pOutputFile);
@@ -252,11 +255,20 @@ void SetOutputFile(const char *pFile)
   }
 
   if (pFile) {
-    pOutputFile = (char *)LocalAlloc(LPTR, (lstrlen(pFile) + 1)*sizeof(*pFile));
+    DWORD size = (lstrlen(pFile) + 1)*sizeof(*pFile);
 
-    if (pOutputFile)
+    pOutputFile = (char *)LocalAlloc(LPTR, size);
+
+    if (pOutputFile) {
       lstrcpy(pOutputFile, pFile);
+    } else {
+      SetLastError(ERROR_NOT_ENOUGH_MEMORY);
+      ShowLastError(MB_OK|MB_ICONSTOP, "LocalAlloc(%lu)", (unsigned long)size);
+      return FALSE;
+    }
   }
+
+  return TRUE;
 }
 ///////////////////////////////////////////////////////////////
 const char *GetOutputFile()
