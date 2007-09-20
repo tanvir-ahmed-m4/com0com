@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.8  2007/09/20 12:43:03  vfrolov
+ * Added parameters string length check
+ *
  * Revision 1.7  2007/09/17 14:33:38  vfrolov
  * Implemented pseudo pin OPEN
  *
@@ -79,15 +82,15 @@ static DWORD pinBits[] = {
 ///////////////////////////////////////////////////////////////
 PortParameters::PortParameters(const char *pService, const char *pPhPortName)
 {
-  SNPRINTF(service, sizeof(service), "%s", pService);
-  SNPRINTF(phPortName, sizeof(phPortName), "%s", pPhPortName);
+  SNPRINTF(service, sizeof(service)/sizeof(service[0]), "%s", pService);
+  SNPRINTF(phPortName, sizeof(phPortName)/sizeof(phPortName[0]), "%s", pPhPortName);
 
   Init();
 }
 ///////////////////////////////////////////////////////////////
 void PortParameters::Init()
 {
-  SNPRINTF(portName, sizeof(portName), "%s", phPortName);
+  SNPRINTF(portName, sizeof(portName)/sizeof(portName[0]), "%s", phPortName);
   emuBR = 0;
   emuOverrun = 0;
   plugInMode = 0;
@@ -121,8 +124,7 @@ BOOL PortParameters::SetPortName(const char *pNewPortName)
   }
 
   if (lstrcmpi(portName, pNewPortName)) {
-    lstrcpyn(portName, pNewPortName, sizeof(portName));
-    portName[sizeof(portName) - 1] = 0;
+    SNPRINTF(portName, sizeof(portName)/sizeof(portName[0]), "%s", pNewPortName);
     maskChanged |= m_portName;
   }
 
@@ -371,7 +373,7 @@ LONG PortParameters::Load()
 
   char reqKey[100];
 
-  FillParametersKey(reqKey, sizeof(reqKey));
+  FillParametersKey(reqKey, sizeof(reqKey)/sizeof(reqKey[0]));
 
   LONG err;
   HKEY hKey;
@@ -388,7 +390,7 @@ LONG PortParameters::Load()
   if (err != ERROR_SUCCESS)
     return err;
 
-  char buf[20];
+  BYTE buf[sizeof(portName)];
   DWORD len;
 
   len = sizeof(buf);
@@ -397,11 +399,11 @@ LONG PortParameters::Load()
                         "PortName",
                         NULL,
                         NULL,
-                        (PBYTE)buf,
+                        buf,
                         &len);
 
   if (err == ERROR_SUCCESS) {
-    SNPRINTF(portName, sizeof(portName), "%s", buf);
+    SNPRINTF(portName, sizeof(portName)/sizeof(portName[0]), "%s", (char *)buf);
     maskExplicit |= m_portName;
 
     //Trace("  PortName=%s\n", portName);
@@ -428,7 +430,7 @@ LONG PortParameters::Save()
 
   char reqKey[100];
 
-  FillParametersKey(reqKey, sizeof(reqKey));
+  FillParametersKey(reqKey, sizeof(reqKey)/sizeof(reqKey[0]));
 
   LONG err;
   HKEY hKey;
@@ -510,8 +512,10 @@ BOOL PortParameters::ParseParametersStr(const char *pParameters)
   } else {
     char pars[200];
 
-    lstrcpyn(pars, pParameters, sizeof(pars));
-    pars[sizeof(pars) - 1] = 0;
+    if (SNPRINTF(pars, sizeof(pars)/sizeof(pars[0]), "%s", pParameters) < 0) {
+      Trace("The parameters string '%s' is too long\n", pParameters);
+      return FALSE;
+    }
 
     char *pSave1;
 
