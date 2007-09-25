@@ -19,6 +19,10 @@
  *
  *
  * $Log$
+ * Revision 1.7  2007/09/25 12:42:49  vfrolov
+ * Fixed update command (bug if multiple pairs active)
+ * Fixed uninstall command (restore active ports on cancell)
+ *
  * Revision 1.6  2007/09/14 12:58:44  vfrolov
  * Removed INSTALLFLAG_FORCE
  * Added UpdateDriverForPlugAndPlayDevices() retrying
@@ -51,13 +55,14 @@
 ///////////////////////////////////////////////////////////////
 struct EnumParams {
   EnumParams() {
+    pDevProperties = NULL;
     pParam1 = NULL;
     pParam2 = NULL;
     count = 0;
     pRebootRequired = NULL;
   }
 
-  DevProperties devProperties;
+  PCDevProperties pDevProperties;
   void *pParam1;
   void *pParam2;
   int count;
@@ -76,6 +81,46 @@ struct DevParams {
 };
 
 typedef DevParams *PDevParams;
+
+///////////////////////////////////////////////////////////////
+static const char *SetStr(char **ppDst, const char *pSrc)
+{
+  if (*ppDst) {
+    LocalFree(*ppDst);
+    *ppDst = NULL;
+  }
+
+  if (pSrc) {
+    int len = lstrlen(pSrc) + 1;
+
+    *ppDst = (char *)LocalAlloc(LPTR, len * sizeof(pSrc[0]));
+
+    if (*ppDst) {
+      SNPRINTF(*ppDst, len, "%s", pSrc);
+    } else {
+      SetLastError(ERROR_NOT_ENOUGH_MEMORY);
+      ShowLastError(MB_OK|MB_ICONSTOP, "LocalAlloc(%lu)", (unsigned long)(len * sizeof(pSrc[0])));
+    }
+  }
+
+  return *ppDst;
+}
+
+
+const char *DevProperties::DevId(const char *_pDevId)
+{
+  return SetStr(&pDevId, _pDevId);
+}
+
+const char *DevProperties::PhObjName(const char *_pPhObjName)
+{
+  return SetStr(&pPhObjName, _pPhObjName);
+}
+
+const char *DevProperties::Location(const char *_pLocation)
+{
+  return SetStr(&pLocation, _pLocation);
+}
 ///////////////////////////////////////////////////////////////
 static int EnumDevices(
     InfFile &infFile,
@@ -119,33 +164,48 @@ static int EnumDevices(
 
     char hwid[40];
 
-    if (SetupDiGetDeviceRegistryProperty(hDevInfo, &devInfoData, SPDRP_HARDWAREID, NULL, (PBYTE)hwid, sizeof(hwid), NULL))
-      devParams.devProperties.pDevId = hwid;
+    if (SetupDiGetDeviceRegistryProperty(hDevInfo, &devInfoData, SPDRP_HARDWAREID, NULL, (PBYTE)hwid, sizeof(hwid), NULL)) {
+      if (!devParams.devProperties.DevId(hwid)) {
+        res = IDCANCEL;
+        break;
+      }
+    }
 
-    if (pEnumParams->devProperties.pDevId && (!devParams.devProperties.pDevId ||
-        lstrcmpi(devParams.devProperties.pDevId, pEnumParams->devProperties.pDevId)))
+    if (pEnumParams->pDevProperties &&
+        pEnumParams->pDevProperties->DevId() && (!devParams.devProperties.DevId() ||
+        lstrcmpi(devParams.devProperties.DevId(), pEnumParams->pDevProperties->DevId())))
     {
       continue;
     }
 
     char location[40];
 
-    if (SetupDiGetDeviceRegistryProperty(hDevInfo, &devInfoData, SPDRP_LOCATION_INFORMATION, NULL, (PBYTE)location, sizeof(location), NULL))
-      devParams.devProperties.pLocation = location;
+    if (SetupDiGetDeviceRegistryProperty(hDevInfo, &devInfoData, SPDRP_LOCATION_INFORMATION, NULL, (PBYTE)location, sizeof(location), NULL)) {
+      if (!devParams.devProperties.Location(location)) {
+        res = IDCANCEL;
+        break;
+      }
+    }
 
-    if (pEnumParams->devProperties.pLocation && (!devParams.devProperties.pLocation ||
-        lstrcmpi(devParams.devProperties.pLocation, pEnumParams->devProperties.pLocation)))
+    if (pEnumParams->pDevProperties &&
+        pEnumParams->pDevProperties->Location() && (!devParams.devProperties.Location() ||
+        lstrcmpi(devParams.devProperties.Location(), pEnumParams->pDevProperties->Location())))
     {
       continue;
     }
 
     char name[40];
 
-    if (SetupDiGetDeviceRegistryProperty(hDevInfo, &devInfoData, SPDRP_PHYSICAL_DEVICE_OBJECT_NAME, NULL, (PBYTE)name, sizeof(name), NULL))
-      devParams.devProperties.pPhObjName = name;
+    if (SetupDiGetDeviceRegistryProperty(hDevInfo, &devInfoData, SPDRP_PHYSICAL_DEVICE_OBJECT_NAME, NULL, (PBYTE)name, sizeof(name), NULL)) {
+      if (!devParams.devProperties.PhObjName(name)) {
+        res = IDCANCEL;
+        break;
+      }
+    }
 
-    if (pEnumParams->devProperties.pPhObjName && (!devParams.devProperties.pPhObjName ||
-        lstrcmpi(devParams.devProperties.pPhObjName, pEnumParams->devProperties.pPhObjName)))
+    if (pEnumParams->pDevProperties &&
+        pEnumParams->pDevProperties->PhObjName() && (!devParams.devProperties.PhObjName() ||
+        lstrcmpi(devParams.devProperties.PhObjName(), pEnumParams->pDevProperties->PhObjName())))
     {
       continue;
     }
@@ -212,13 +272,24 @@ static BOOL ChangeState(HDEVINFO hDevInfo, PSP_DEVINFO_DATA pDevInfoData, DWORD 
   return TRUE;
 }
 ///////////////////////////////////////////////////////////////
+static BOOL IsDisabled(PSP_DEVINFO_DATA pDevInfoData)
+{
+  ULONG status = 0;
+  ULONG problem = 0;
+
+  if (CM_Get_DevNode_Status(&status, &problem, pDevInfoData->DevInst, 0) != CR_SUCCESS)
+    return FALSE;
+
+  return (status & DN_HAS_PROBLEM) != 0 && problem == CM_PROB_DISABLED;
+}
+///////////////////////////////////////////////////////////////
 static int EnumDevice(HDEVINFO hDevInfo, PSP_DEVINFO_DATA pDevInfoData, PDevParams pDevParams)
 {
   /*
   Trace("Enumerated %s %s %s\n",
-        pDevParams->devProperties.pLocation,
-        pDevParams->devProperties.pDevId,
-        pDevParams->devProperties.pPhObjName);
+        pDevParams->devProperties.Location(),
+        pDevParams->devProperties.DevId(),
+        pDevParams->devProperties.PhObjName());
   */
 
   int res = IDCONTINUE;
@@ -248,9 +319,7 @@ int EnumDevices(
 {
   EnumParams enumParams;
 
-  if (pDevProperties)
-    enumParams.devProperties = *pDevProperties;
-
+  enumParams.pDevProperties = pDevProperties;
   enumParams.pRebootRequired = pRebootRequired;
   enumParams.pParam1 = pDevCallBack;
   enumParams.pParam2 = pCallBackParam;
@@ -265,15 +334,19 @@ int DisableDevice(
     HDEVINFO hDevInfo,
     PSP_DEVINFO_DATA pDevInfoData,
     PCDevProperties pDevProperties,
-    BOOL *pRebootRequired)
+    BOOL *pRebootRequired,
+    Stack *pDevPropertiesStack)
 {
+  if (IsDisabled(pDevInfoData))
+    return IDCONTINUE;
+
   if (!ChangeState(hDevInfo, pDevInfoData, DICS_DISABLE))
     return IDCANCEL;
 
   Trace("Disabled %s %s %s\n",
-        pDevProperties->pLocation,
-        pDevProperties->pDevId,
-        pDevProperties->pPhObjName);
+        pDevProperties->Location(),
+        pDevProperties->DevId(),
+        pDevProperties->PhObjName());
 
   if (pRebootRequired && !*pRebootRequired) {
     BOOL rebootRequired = FALSE;
@@ -286,18 +359,18 @@ int DisableDevice(
                         "Can't disable device %s %s %s.\n"
                         "Close application that use this device and Try Again.\n"
                         "Or Continue and then reboot system.\n",
-                        pDevProperties->pLocation,
-                        pDevProperties->pDevId,
-                        pDevProperties->pPhObjName);
+                        pDevProperties->Location(),
+                        pDevProperties->DevId(),
+                        pDevProperties->PhObjName());
 
       if (res != IDCONTINUE) {
         if (!ChangeState(hDevInfo, pDevInfoData, DICS_ENABLE))
           return IDCANCEL;
 
         Trace("Enabled %s %s %s\n",
-              pDevProperties->pLocation,
-              pDevProperties->pDevId,
-              pDevProperties->pPhObjName);
+              pDevProperties->Location(),
+              pDevProperties->DevId(),
+              pDevProperties->PhObjName());
 
         return res;
       }
@@ -306,14 +379,31 @@ int DisableDevice(
     }
   }
 
+  if (pDevPropertiesStack) {
+    DevProperties *pDevProp = new DevProperties(*pDevProperties);
+
+    if (pDevProp) {
+      StackEl *pElem = new StackEl(pDevProp);
+
+      if (pElem)
+        pDevPropertiesStack->Push(pElem);
+      else
+        delete pDevProp;
+    }
+  }
+
   return IDCONTINUE;
 }
 ///////////////////////////////////////////////////////////////
 static int DisableDevice(HDEVINFO hDevInfo, PSP_DEVINFO_DATA pDevInfoData, PDevParams pDevParams)
 {
-  int res = DisableDevice(hDevInfo, pDevInfoData, &pDevParams->devProperties, pDevParams->pEnumParams->pRebootRequired);
+  int res = DisableDevice(hDevInfo,
+                          pDevInfoData,
+                          &pDevParams->devProperties,
+                          pDevParams->pEnumParams->pRebootRequired,
+                          (Stack *)pDevParams->pEnumParams->pParam1);
 
-  if (res != IDCONTINUE)
+  if (res == IDCONTINUE)
     pDevParams->pEnumParams->count++;
 
   return res;
@@ -322,15 +412,16 @@ static int DisableDevice(HDEVINFO hDevInfo, PSP_DEVINFO_DATA pDevInfoData, PDevP
 BOOL DisableDevices(
     InfFile &infFile,
     PCDevProperties pDevProperties,
-    BOOL *pRebootRequired)
+    BOOL *pRebootRequired,
+    Stack *pDevPropertiesStack)
 {
   EnumParams enumParams;
 
   int res;
 
   enumParams.pRebootRequired = pRebootRequired;
-  if (pDevProperties)
-    enumParams.devProperties = *pDevProperties;
+  enumParams.pDevProperties = pDevProperties;
+  enumParams.pParam1 = pDevPropertiesStack;
 
   do {
     res = EnumDevices(infFile, DIGCF_PRESENT, DisableDevice, &enumParams);
@@ -340,6 +431,40 @@ BOOL DisableDevices(
     return FALSE;
 
   Sleep(1000);
+
+  return TRUE;
+}
+///////////////////////////////////////////////////////////////
+static int EnableDevice(HDEVINFO hDevInfo, PSP_DEVINFO_DATA pDevInfoData, PDevParams pDevParams)
+{
+  if (ChangeState(hDevInfo, pDevInfoData, DICS_ENABLE)) {
+    Trace("Enabled %s %s %s\n",
+          pDevParams->devProperties.Location(),
+          pDevParams->devProperties.DevId(),
+          pDevParams->devProperties.PhObjName());
+  }
+
+  return IDCONTINUE;
+}
+
+BOOL EnableDevices(
+    InfFile &infFile,
+    PCDevProperties pDevProperties,
+    BOOL *pRebootRequired)
+{
+  EnumParams enumParams;
+
+  int res;
+
+  enumParams.pRebootRequired = pRebootRequired;
+  enumParams.pDevProperties = pDevProperties;
+
+  do {
+    res = EnumDevices(infFile, DIGCF_PRESENT, EnableDevice, &enumParams);
+  } while (res == IDTRYAGAIN);
+
+  if (res != IDCONTINUE)
+    return FALSE;
 
   return TRUE;
 }
@@ -360,9 +485,9 @@ static int RestartDevice(HDEVINFO hDevInfo, PSP_DEVINFO_DATA pDevInfoData, PDevP
                         "Can't reastart device %s %s %s.\n"
                         "Close application that use this device and Try Again.\n"
                         "Or Continue and then reboot system.\n",
-                        pDevParams->devProperties.pLocation,
-                        pDevParams->devProperties.pDevId,
-                        pDevParams->devProperties.pPhObjName);
+                        pDevParams->devProperties.Location(),
+                        pDevParams->devProperties.DevId(),
+                        pDevParams->devProperties.PhObjName());
 
       if (res != IDCONTINUE) {
         if (!ChangeState(hDevInfo, pDevInfoData, DICS_ENABLE))
@@ -377,9 +502,9 @@ static int RestartDevice(HDEVINFO hDevInfo, PSP_DEVINFO_DATA pDevInfoData, PDevP
 
   if (!pDevParams->pEnumParams->pRebootRequired || !*pDevParams->pEnumParams->pRebootRequired) {
     Trace("Restarted %s %s %s\n",
-        pDevParams->devProperties.pLocation,
-        pDevParams->devProperties.pDevId,
-        pDevParams->devProperties.pPhObjName);
+        pDevParams->devProperties.Location(),
+        pDevParams->devProperties.DevId(),
+        pDevParams->devProperties.PhObjName());
 
     pDevParams->pEnumParams->count++;
   }
@@ -397,8 +522,7 @@ BOOL RestartDevices(
   int res;
 
   enumParams.pRebootRequired = pRebootRequired;
-  if (pDevProperties)
-    enumParams.devProperties = *pDevProperties;
+  enumParams.pDevProperties = pDevProperties;
 
   do {
     res = EnumDevices(infFile, DIGCF_PRESENT, RestartDevice, &enumParams);
@@ -418,11 +542,11 @@ BOOL RemoveDevice(
 {
   if (!SetupDiCallClassInstaller(DIF_REMOVE, hDevInfo, pDevInfoData)) {
     ShowLastError(MB_OK|MB_ICONSTOP, "SetupDiCallClassInstaller(DIF_REMOVE, %s, %s)",
-                  pDevProperties->pDevId, pDevProperties->pPhObjName);
+                  pDevProperties->DevId(), pDevProperties->PhObjName());
     return FALSE;
   }
 
-  Trace("Removed %s %s %s\n", pDevProperties->pLocation, pDevProperties->pDevId, pDevProperties->pPhObjName);
+  Trace("Removed %s %s %s\n", pDevProperties->Location(), pDevProperties->DevId(), pDevProperties->PhObjName());
 
   return UpdateRebootRequired(hDevInfo, pDevInfoData, pRebootRequired);
 }
@@ -447,8 +571,7 @@ BOOL RemoveDevices(
   int res;
 
   enumParams.pRebootRequired = pRebootRequired;
-  if (pDevProperties)
-    enumParams.devProperties = *pDevProperties;
+  enumParams.pDevProperties = pDevProperties;
 
   do {
     res = EnumDevices(infFile, 0, RemoveDevice, &enumParams);
@@ -475,7 +598,7 @@ static int TryInstallDevice(
 
   updateErr = ERROR_SUCCESS;
 
-  if (!SetupDiGetINFClass(infFile.Path(), &classGUID, className, sizeof(className), 0)) {
+  if (!SetupDiGetINFClass(infFile.Path(), &classGUID, className, sizeof(className)/sizeof(className[0]), 0)) {
     ShowLastError(MB_OK|MB_ICONSTOP, "SetupDiGetINFClass(%s)", infFile.Path());
     return IDCANCEL;
   }
@@ -505,15 +628,15 @@ static int TryInstallDevice(
 
   char hardwareId[MAX_DEVICE_ID_LEN + 1 + 1];
 
-  memset(hardwareId, 0, sizeof(hardwareId));
-  lstrcpyn(hardwareId, pDevId, sizeof(hardwareId) - 1 - 1);
+  SNPRINTF(hardwareId, sizeof(hardwareId)/sizeof(hardwareId[0]) - 1, "%s", pDevId);
 
-  int hardwareIdSize;
+  int hardwareIdLen;
 
-  hardwareIdSize = (lstrlen(hardwareId) + 1 + 1) * sizeof(hardwareId[0]);
+  hardwareIdLen = lstrlen(hardwareId) + 1 + 1;
+  hardwareId[hardwareIdLen - 1] = 0;
 
   res = SetupDiSetDeviceRegistryProperty(hDevInfo, &devInfoData, SPDRP_HARDWAREID,
-                                         (LPBYTE)hardwareId, hardwareIdSize);
+                                         (LPBYTE)hardwareId, hardwareIdLen * sizeof(hardwareId[0]));
   if (!res) {
     ShowLastError(MB_OK|MB_ICONSTOP, "SetupDiSetDeviceRegistryProperty()");
     goto err;
@@ -529,7 +652,10 @@ static int TryInstallDevice(
   if (pDevCallBack) {
     DevProperties devProperties;
 
-    devProperties.pDevId = pDevId;
+    if (!devProperties.DevId(pDevId)) {
+      res = FALSE;
+      goto err1;
+    }
 
     res = pDevCallBack(hDevInfo, &devInfoData, &devProperties, NULL, pCallBackParam);
 

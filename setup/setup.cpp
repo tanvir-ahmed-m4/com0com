@@ -19,6 +19,10 @@
  *
  *
  * $Log$
+ * Revision 1.16  2007/09/25 12:42:49  vfrolov
+ * Fixed update command (bug if multiple pairs active)
+ * Fixed uninstall command (restore active ports on cancell)
+ *
  * Revision 1.15  2007/07/03 14:42:10  vfrolov
  * Added friendly name setting for bus device
  *
@@ -175,9 +179,10 @@ static BOOL IsValidPortName(
             BYTE *pBuf = (BYTE *)LocalAlloc(LPTR, maxPortsReported);
 
             if (!pBuf) {
-              err = GetLastError();
               ComDBClose(hComDB);
-              res = ShowError(MB_CANCELTRYCONTINUE, err, "LocalAlloc(%lu)", (unsigned long)maxPortsReported);
+
+              SetLastError(ERROR_NOT_ENOUGH_MEMORY);
+              res = ShowLastError(MB_CANCELTRYCONTINUE, "LocalAlloc(%lu)", (unsigned long)maxPortsReported);
               continue;
             }
 
@@ -251,6 +256,27 @@ static VOID SetFriendlyName(
                                   (LPBYTE)friendlyName, (lstrlen(friendlyName) + 1) * sizeof(*friendlyName));
 }
 ///////////////////////////////////////////////////////////////
+static VOID CleanDevPropertiesStack(InfFile &infFile, Stack &stack, BOOL enable, BOOL *pRebootRequired)
+{
+  for (;;) {
+    StackEl *pElem = stack.Pop();
+
+    if (!pElem)
+      break;
+
+    DevProperties *pDevProperties = (DevProperties *)pElem->pData;
+
+    delete pElem;
+
+    if (pDevProperties) {
+      if (enable && pDevProperties->PhObjName())
+        EnableDevices(infFile, pDevProperties, pRebootRequired);
+
+      delete pDevProperties;
+    }
+  }
+}
+///////////////////////////////////////////////////////////////
 struct ChangeDeviceParams {
   ChangeDeviceParams(InfFile &_infFile, const char *_pPhPortName, const char *_pParameters)
     : pInfFile(&_infFile), pPhPortName(_pPhPortName), pParameters(_pParameters) {}
@@ -312,8 +338,10 @@ static BOOL ChangeDevice(
               SetFriendlyName(hDevInfo, pDevInfoData, i);
 
               DevProperties devProperties;
-              devProperties.pDevId = C0C_PORT_DEVICE_ID;
-              devProperties.pPhObjName = phDevName;
+              if (!devProperties.DevId(C0C_PORT_DEVICE_ID))
+                return FALSE;
+              if (!devProperties.PhObjName(phDevName))
+                return FALSE;
 
               RestartDevices(infFile, &devProperties, pRebootRequired);
             } else {
@@ -336,7 +364,8 @@ int Change(InfFile &infFile, const char *pPhPortName, const char *pParameters)
   ChangeDeviceParams params(infFile, pPhPortName, pParameters);
 
   DevProperties devProperties;
-  devProperties.pDevId = C0C_BUS_DEVICE_ID;
+  if (!devProperties.DevId(C0C_BUS_DEVICE_ID))
+    return 1;
 
   EnumDevices(infFile, &devProperties, &rebootRequired, ChangeDevice, &params);
 
@@ -364,7 +393,7 @@ static BOOL RemoveDevice(
 
   if (i == ((RemoveDeviceParams *)pParam)->num) {
     ((RemoveDeviceParams *)pParam)->res =
-        DisableDevice(hDevInfo, pDevInfoData, pDevProperties, pRebootRequired);
+        DisableDevice(hDevInfo, pDevInfoData, pDevProperties, pRebootRequired, NULL);
 
     if (((RemoveDeviceParams *)pParam)->res != IDCONTINUE)
       return FALSE;
@@ -384,7 +413,8 @@ int Remove(InfFile &infFile, int num)
     RemoveDeviceParams removeDeviceParams(num);
 
     DevProperties devProperties;
-    devProperties.pDevId = C0C_BUS_DEVICE_ID;
+    if (!devProperties.DevId(C0C_BUS_DEVICE_ID))
+      return 1;
 
     EnumDevices(infFile, &devProperties, &rebootRequired, RemoveDevice, &removeDeviceParams);
 
@@ -401,8 +431,10 @@ int Remove(InfFile &infFile, int num)
 
       DevProperties devProperties;
 
-      devProperties.pDevId = C0C_PORT_DEVICE_ID;
-      devProperties.pLocation = phPortName;
+      if (!devProperties.DevId(C0C_PORT_DEVICE_ID))
+        return 1;
+      if (!devProperties.Location(phPortName))
+        return 1;
 
       RemoveDevices(infFile, &devProperties, NULL);
     }
@@ -442,8 +474,29 @@ int Preinstall(InfFile &infFile)
 ///////////////////////////////////////////////////////////////
 int Update(InfFile &infFile)
 {
-  if (!UpdateDriverForPlugAndPlayDevices(0, C0C_BUS_DEVICE_ID, infFile.Path(), INSTALLFLAG_FORCE, NULL))
+  Stack stack;
+  BOOL rebootRequired = FALSE;
+
+  DevProperties devProperties;
+  if (!devProperties.DevId(C0C_BUS_DEVICE_ID))
     return 1;
+
+  if (!DisableDevices(infFile, &devProperties, &rebootRequired, &stack)) {
+    CleanDevPropertiesStack(infFile, stack, TRUE, &rebootRequired);
+    return 1;
+  }
+
+  BOOL rr;
+
+  if (!UpdateDriverForPlugAndPlayDevices(0, C0C_BUS_DEVICE_ID, infFile.Path(), INSTALLFLAG_FORCE, &rr)) {
+    CleanDevPropertiesStack(infFile, stack, TRUE, &rebootRequired);
+    return 1;
+  }
+
+  CleanDevPropertiesStack(infFile, stack, TRUE, &rebootRequired);
+
+  if (rebootRequired || rr)
+    SetupPromptReboot(NULL, NULL, FALSE);
 
   return  0;
 }
@@ -505,7 +558,8 @@ static int AllocPortNum(InfFile &infFile, int num)
   BusyMask busyMask;
 
   DevProperties devProperties;
-  devProperties.pDevId = C0C_BUS_DEVICE_ID;
+  if (!devProperties.DevId(C0C_BUS_DEVICE_ID))
+    return -1;
 
   if (EnumDevices(infFile, &devProperties, NULL, AddDeviceToBusyMask, &busyMask) < 0)
     return -1;
@@ -600,13 +654,21 @@ int Uninstall(InfFile &infFile)
   DevProperties devProperties;
 
   devProperties = DevProperties();
-  devProperties.pDevId = C0C_PORT_DEVICE_ID;
-
-  if (!DisableDevices(infFile, &devProperties, &rebootRequired))
+  if (!devProperties.DevId(C0C_PORT_DEVICE_ID))
     return 1;
 
+  Stack stack;
+
+  if (!DisableDevices(infFile, &devProperties, &rebootRequired, &stack)) {
+    CleanDevPropertiesStack(infFile, stack, TRUE, &rebootRequired);
+    return 1;
+  }
+
+  CleanDevPropertiesStack(infFile, stack, FALSE, &rebootRequired);
+
   devProperties = DevProperties();
-  devProperties.pDevId = C0C_BUS_DEVICE_ID;
+  if (!devProperties.DevId(C0C_BUS_DEVICE_ID))
+    return 1;
 
   if (!RemoveDevices(infFile, &devProperties, &rebootRequired))
     return 1;
@@ -844,7 +906,7 @@ int Help(const char *pCmdPref)
   while (*pStr) {
     char buf[100];
 
-    lstrcpyn(buf, pStr, sizeof(buf)/sizeof(buf[0]));
+    SNPRINTF(buf, sizeof(buf)/sizeof(buf[0]), "%s", pStr);
     pStr += lstrlen(buf);
 
     ConsoleWrite("%s", buf);
@@ -886,14 +948,16 @@ int Help(const char *pCmdPref)
 ///////////////////////////////////////////////////////////////
 int Main(int argc, const char* argv[])
 {
-  SetOutputFile(NULL);
+  if (!SetOutputFile(NULL))
+    return 1;
 
   while (argc > 1) {
     if (*argv[1] != '-')
       break;
 
     if (!strcmp(argv[1], "--output") && argc > 2) {
-      SetOutputFile(argv[2]);
+      if (!SetOutputFile(argv[2]))
+        return 1;
       argv[2] = argv[0];
       argv += 2;
       argc -= 2;
@@ -1008,7 +1072,7 @@ int CALLBACK RunDllA(HWND /*hWnd*/, HINSTANCE /*hInst*/, LPSTR pCmdLine, int /*n
 
   char cmd[200];
 
-  lstrcpyn(cmd, pCmdLine, sizeof(cmd)/sizeof(cmd[0]));
+  SNPRINTF(cmd, sizeof(cmd)/sizeof(cmd[0]), "%s", pCmdLine);
 
   int argc;
   const char* argv[10];

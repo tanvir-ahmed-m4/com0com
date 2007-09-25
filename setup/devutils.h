@@ -19,6 +19,10 @@
  *
  *
  * $Log$
+ * Revision 1.5  2007/09/25 12:42:49  vfrolov
+ * Fixed update command (bug if multiple pairs active)
+ * Fixed uninstall command (restore active ports on cancell)
+ *
  * Revision 1.4  2007/09/17 14:35:06  vfrolov
  * Fixed typo
  *
@@ -38,17 +42,37 @@
 
 ///////////////////////////////////////////////////////////////
 
-struct DevProperties {
-  DevProperties() : pDevId(NULL), pPhObjName(NULL), pLocation(NULL) {}
+class DevProperties {
+  public:
+    DevProperties() : pDevId(NULL), pPhObjName(NULL), pLocation(NULL) {}
+    DevProperties(const DevProperties &o)
+      : pDevId(NULL), pPhObjName(NULL), pLocation(NULL) { *this = o; }
+    ~DevProperties() { DevId(NULL); PhObjName(NULL); Location(NULL); }
 
-  const char *pDevId;
-  const char *pPhObjName;
-  const char *pLocation;
+    DevProperties &operator=(const DevProperties &o)
+    {
+      DevId(o.DevId()); PhObjName(o.PhObjName()); Location(o.Location());
+      return *this;
+    }
+
+    const char *DevId(const char *_pDevId);
+    const char *PhObjName(const char *_pPhObjName);
+    const char *Location(const char *_pLocation);
+
+    const char *DevId() const { return pDevId; }
+    const char *PhObjName() const { return pPhObjName; }
+    const char *Location() const { return pLocation; }
+
+  private:
+    char *pDevId;
+    char *pPhObjName;
+    char *pLocation;
 };
 
 typedef const DevProperties *PCDevProperties;
 
 class InfFile;
+class Stack;
 
 typedef BOOL (* PDEVCALLBACK)(
     HDEVINFO hDevInfo,
@@ -70,9 +94,16 @@ int DisableDevice(
     HDEVINFO hDevInfo,
     PSP_DEVINFO_DATA pDevInfoData,
     PCDevProperties pDevProperties,
-    BOOL *pRebootRequired);
+    BOOL *pRebootRequired,
+    Stack *pDevPropertiesStack);
 
 BOOL DisableDevices(
+    InfFile &infFile,
+    PCDevProperties pDevProperties,
+    BOOL *pRebootRequired,
+    Stack *pDevPropertiesStack);
+
+BOOL EnableDevices(
     InfFile &infFile,
     PCDevProperties pDevProperties,
     BOOL *pRebootRequired);
