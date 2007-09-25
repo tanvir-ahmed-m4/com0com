@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.5  2007/09/25 12:28:22  vfrolov
+ * Implemented Stack class
+ *
  * Revision 1.4  2007/01/11 15:03:43  vfrolov
  * Added STRTOK_R()
  *
@@ -53,6 +56,40 @@ public:
 private:
   PBYTE pBusyMask;
   SIZE_T busyMaskLen;
+};
+
+class StackEl {
+public:
+  StackEl(PVOID _pData) : pData(_pData), pNext(NULL) {}
+  PVOID pData;
+private:
+  StackEl *pNext;
+
+  friend class Stack;
+};
+
+class Stack {
+public:
+  Stack() : pFirst(NULL) {}
+  BOOL Push(StackEl *pElem)
+  {
+    if (!pElem)
+      return FALSE;
+    pElem->pNext = pFirst;
+    pFirst = pElem;
+    return TRUE;
+  }
+  StackEl *Pop()
+  {
+    StackEl *pTop = pFirst;
+    if (pTop) {
+      pFirst = pTop->pNext;
+      pTop->pNext = NULL;
+    }
+    return pTop;
+  }
+private:
+  StackEl *pFirst;
 };
 
 #endif /* _C0C_UTILS_H_ */
