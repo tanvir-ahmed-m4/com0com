@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.30  2007/09/26 10:12:13  vfrolov
+ * Added checks of DeviceExtension for zero
+ *
  * Revision 1.29  2007/07/20 08:00:22  vfrolov
  * Implemented TX buffer
  *
@@ -193,7 +196,7 @@ NTSTATUS AddFdoPort(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
 
   pPhDevExt = (PC0C_PDOPORT_EXTENSION)pPhDevObj->DeviceExtension;
 
-  if (pPhDevExt->doType != C0C_DOTYPE_PP) {
+  if (!pPhDevExt || pPhDevExt->doType != C0C_DOTYPE_PP) {
     status = STATUS_UNSUCCESSFUL;
     SysLog(pPhDevObj, status, L"AddFdoPort FAIL. Type  of PDO is not PP");
     goto clean;
@@ -328,6 +331,7 @@ NTSTATUS AddFdoPort(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
 
   HALT_UNLESS(pNewDevObj);
   pDevExt = pNewDevObj->DeviceExtension;
+  HALT_UNLESS(pDevExt);
   RtlZeroMemory(pDevExt, sizeof(*pDevExt));
   pDevExt->pIoPortLocal = pPhDevExt->pIoPortLocal;
   status = InitCommonExt((PC0C_COMMON_EXTENSION)pDevExt, pNewDevObj, C0C_DOTYPE_FP, portName.Buffer);
@@ -508,6 +512,7 @@ NTSTATUS AddPdoPort(
   HALT_UNLESS(pNewDevObj);
   pIoPortLocal->pPhDevObj = pNewDevObj;
   pDevExt = (pNewDevObj)->DeviceExtension;
+  HALT_UNLESS(pDevExt);
   RtlZeroMemory(pDevExt, sizeof(*pDevExt));
   status = InitCommonExt((PC0C_COMMON_EXTENSION)pDevExt, pNewDevObj, C0C_DOTYPE_PP, portName.Buffer);
 
@@ -565,8 +570,10 @@ ULONG AllocPortNum(IN PDRIVER_OBJECT pDrvObj, ULONG num)
   numNext = 0;
 
   for (pDevObj = pDrvObj->DeviceObject ; pDevObj ; pDevObj = pDevObj->NextDevice) {
-    if (((PC0C_COMMON_EXTENSION)pDevObj->DeviceExtension)->doType == C0C_DOTYPE_FB) {
-      ULONG portNum = ((PC0C_FDOBUS_EXTENSION)pDevObj->DeviceExtension)->portNum;
+    PC0C_FDOBUS_EXTENSION pDevExt = (PC0C_FDOBUS_EXTENSION)pDevObj->DeviceExtension;
+
+    if (pDevExt && pDevExt->doType == C0C_DOTYPE_FB) {
+      ULONG portNum = pDevExt->portNum;
 
       if (portNum >= numNext)
         numNext = portNum + 1;
@@ -591,8 +598,10 @@ ULONG AllocPortNum(IN PDRIVER_OBJECT pDrvObj, ULONG num)
   RtlZeroMemory(pBusyMask, busyMaskLen);
 
   for (pDevObj = pDrvObj->DeviceObject ; pDevObj ; pDevObj = pDevObj->NextDevice) {
-    if (((PC0C_COMMON_EXTENSION)pDevObj->DeviceExtension)->doType == C0C_DOTYPE_FB) {
-      ULONG portNum = ((PC0C_FDOBUS_EXTENSION)pDevObj->DeviceExtension)->portNum;
+    PC0C_FDOBUS_EXTENSION pDevExt = (PC0C_FDOBUS_EXTENSION)pDevObj->DeviceExtension;
+
+    if (pDevExt && pDevExt->doType == C0C_DOTYPE_FB) {
+      ULONG portNum = pDevExt->portNum;
 
       maskNum = portNum/(sizeof(*pBusyMask)*8);
       mask = 1 << (portNum%(sizeof(*pBusyMask)*8));
@@ -717,6 +726,7 @@ NTSTATUS AddFdoBus(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
 
   HALT_UNLESS(pNewDevObj);
   pDevExt = pNewDevObj->DeviceExtension;
+  HALT_UNLESS(pDevExt);
   RtlZeroMemory(pDevExt, sizeof(*pDevExt));
   status = InitCommonExt((PC0C_COMMON_EXTENSION)pDevExt, pNewDevObj, C0C_DOTYPE_FB, portName.Buffer);
 
