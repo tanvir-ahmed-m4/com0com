@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.8  2007/10/01 15:01:35  vfrolov
+ * Added pDevInstID parameter to InstallDevice()
+ *
  * Revision 1.7  2007/09/25 12:42:49  vfrolov
  * Fixed update command (bug if multiple pairs active)
  * Fixed uninstall command (restore active ports on cancell)
@@ -81,7 +84,6 @@ struct DevParams {
 };
 
 typedef DevParams *PDevParams;
-
 ///////////////////////////////////////////////////////////////
 static const char *SetStr(char **ppDst, const char *pSrc)
 {
@@ -105,8 +107,7 @@ static const char *SetStr(char **ppDst, const char *pSrc)
 
   return *ppDst;
 }
-
-
+///////////////////////////////////////////////////////////////
 const char *DevProperties::DevId(const char *_pDevId)
 {
   return SetStr(&pDevId, _pDevId);
@@ -589,6 +590,7 @@ BOOL RemoveDevices(
 static int TryInstallDevice(
     InfFile &infFile,
     const char *pDevId,
+    const char *pDevInstID,
     PDEVCALLBACK pDevCallBack,
     void *pCallBackParam)
 {
@@ -619,8 +621,41 @@ static int TryInstallDevice(
 
   devInfoData.cbSize = sizeof(devInfoData);
 
-  res = SetupDiCreateDeviceInfo(hDevInfo, className, &classGUID, NULL, 0,
-                                DICD_GENERATE_ID, &devInfoData);
+  if (StrChr(pDevInstID, '\\')) {
+    /*
+     * <enumerator>\<enumerator-specific-device-ID>\<instance-specific-ID>
+     */
+
+    res = SetupDiCreateDeviceInfo(hDevInfo, pDevInstID, &classGUID, NULL, 0, 0, &devInfoData);
+
+    if (!res && GetLastError() == ERROR_DEVINST_ALREADY_EXISTS) {
+      char *pTmpDevInstID = NULL;
+
+      if (SetStr(&pTmpDevInstID, pDevInstID)) {
+        char *pSave;
+        char *p;
+
+        p = STRTOK_R(pTmpDevInstID, "\\", &pSave);
+
+        if (p && !lstrcmp(p, REGSTR_KEY_ROOTENUM)) {
+          p = STRTOK_R(NULL, "\\", &pSave);
+
+          res = SetupDiCreateDeviceInfo(hDevInfo, p, &classGUID, NULL, 0, DICD_GENERATE_ID, &devInfoData);
+        }
+
+        SetStr(&pTmpDevInstID, NULL);
+      } else {
+        SetLastError(ERROR_DEVINST_ALREADY_EXISTS);
+      }
+    }
+  } else {
+    /*
+     * <enumerator-specific-device-ID>
+     */
+
+    res = SetupDiCreateDeviceInfo(hDevInfo, pDevInstID, &classGUID, NULL, 0, DICD_GENERATE_ID, &devInfoData);
+  }
+
   if (!res) {
     ShowLastError(MB_OK|MB_ICONSTOP, "SetupDiCreateDeviceInfo()");
     goto err;
@@ -743,13 +778,14 @@ err:
 BOOL InstallDevice(
     InfFile &infFile,
     const char *pDevId,
+    const char *pDevInstID,
     PDEVCALLBACK pDevCallBack,
     void *pCallBackParam)
 {
   int res;
 
   do {
-    res = TryInstallDevice(infFile, pDevId, pDevCallBack, pCallBackParam);
+    res = TryInstallDevice(infFile, pDevId, pDevInstID, pDevCallBack, pCallBackParam);
   } while (res == IDTRYAGAIN);
 
   return res == IDCONTINUE;

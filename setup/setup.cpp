@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.17  2007/10/01 15:01:35  vfrolov
+ * Added pDevInstID parameter to InstallDevice()
+ *
  * Revision 1.16  2007/09/25 12:42:49  vfrolov
  * Fixed update command (bug if multiple pairs active)
  * Fixed uninstall command (restore active ports on cancell)
@@ -501,37 +504,41 @@ int Update(InfFile &infFile)
   return  0;
 }
 ///////////////////////////////////////////////////////////////
-static BOOL SetPortNum(
+static BOOL InstallDeviceCallBack(
     HDEVINFO hDevInfo,
     PSP_DEVINFO_DATA pDevInfoData,
-    PCDevProperties /*pDevProperties*/,
+    PCDevProperties pDevProperties,
     BOOL * /*pRebootRequired*/,
     void *pParam)
 {
-  int res;
-  int num = *(int *)pParam;
+  if (!lstrcmp(pDevProperties->DevId(), C0C_BUS_DEVICE_ID)) {
+    int res;
+    int num = *(int *)pParam;
 
-  do {
-    res = IDCONTINUE;
+    do {
+      res = IDCONTINUE;
 
-    LONG err = SetPortNum(hDevInfo, pDevInfoData, num);
+      LONG err = SetPortNum(hDevInfo, pDevInfoData, num);
 
-    if (err != ERROR_SUCCESS)
-      res = ShowError(MB_CANCELTRYCONTINUE, err, "SetPortNum(%d)", num);
+      if (err != ERROR_SUCCESS)
+        res = ShowError(MB_CANCELTRYCONTINUE, err, "SetPortNum(%d)", num);
 
-  } while (res == IDTRYAGAIN);
+    } while (res == IDTRYAGAIN);
 
-  if (res != IDCONTINUE)
-    return FALSE;
+    if (res != IDCONTINUE)
+      return FALSE;
 
-  SetFriendlyName(hDevInfo, pDevInfoData, num);
+    SetFriendlyName(hDevInfo, pDevInfoData, num);
 
-  return TRUE;
+    return TRUE;
+  }
+
+  return FALSE;
 }
 
 static BOOL InstallBusDevice(InfFile &infFile, int num)
 {
-  return InstallDevice(infFile, C0C_BUS_DEVICE_ID, SetPortNum, &num);
+  return InstallDevice(infFile, C0C_BUS_DEVICE_ID, C0C_CLASS, InstallDeviceCallBack, &num);
 }
 
 static BOOL AddDeviceToBusyMask(
