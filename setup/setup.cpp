@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.18  2007/10/01 15:44:19  vfrolov
+ * Added check for install two ports with the same name
+ *
  * Revision 1.17  2007/10/01 15:01:35  vfrolov
  * Added pDevInstID parameter to InstallDevice()
  *
@@ -603,6 +606,8 @@ int Install(InfFile &infFile, const char *pParametersA, const char *pParametersB
   if (!IsValidPortNum(i))
     goto err;
 
+  char portName[2][20];
+
   for (int j = 0 ; j < 2 ; j++) {
     char phPortName[20];
     const char *pParameters;
@@ -619,11 +624,9 @@ int Install(InfFile &infFile, const char *pParametersA, const char *pParametersB
     if (err == ERROR_SUCCESS) {
       portParameters.ParseParametersStr(pParameters);
 
-      char portName[20];
+      portParameters.FillPortName(portName[j], sizeof(portName[j])/sizeof(portName[j][0]));
 
-      portParameters.FillPortName(portName, sizeof(portName)/sizeof(portName[0]));
-
-      if (!IsValidPortName(portName, NULL))
+      if (!IsValidPortName(portName[j], NULL))
         goto err;
 
       if (portParameters.Changed()) {
@@ -634,6 +637,7 @@ int Install(InfFile &infFile, const char *pParametersA, const char *pParametersB
       }
     } else {
       ShowError(MB_OK|MB_ICONWARNING, err, "portParameters.Load(%s)", phPortName);
+      SNPRINTF(portName[j], sizeof(portName[j])/sizeof(portName[j][0]), "%s", phPortName);
     }
 
     char buf[100];
@@ -641,6 +645,14 @@ int Install(InfFile &infFile, const char *pParametersA, const char *pParametersB
     portParameters.FillParametersStr(buf, sizeof(buf)/sizeof(buf[0]));
 
     Trace("       %s %s\n", phPortName, buf);
+  }
+
+  if (!lstrcmpi(portName[0], portName[1]) &&
+      ShowMsg(MB_OKCANCEL|MB_ICONWARNING,
+              "The same port name %s is used for both ports.",
+              portName[0]) == IDCANCEL)
+  {
+    goto err;
   }
 
   if (!InstallBusDevice(infFile, i))
