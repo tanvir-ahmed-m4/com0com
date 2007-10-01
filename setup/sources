@@ -23,6 +23,7 @@ TARGETLIBS= \
         $(DDK_LIB_PATH)\newdev.lib \
         $(DDK_LIB_PATH)\user32.lib \
         $(DDK_LIB_PATH)\msports.lib \
+        $(DDK_LIB_PATH)\shlwapi.lib \
 
 PRECOMPILED_INCLUDE=precomp.h
 PRECOMPILED_PCH=precomp.pch
