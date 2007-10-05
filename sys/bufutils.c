@@ -19,6 +19,10 @@
  *
  *
  * $Log$
+ * Revision 1.10  2007/10/05 07:34:21  vfrolov
+ * Added missing *pOverrun initialization
+ * Changed TX FIFO writing emulation to be interrupt driven
+ *
  * Revision 1.9  2007/07/20 08:00:22  vfrolov
  * Implemented TX buffer
  *
@@ -316,6 +320,9 @@ SIZE_T WriteToBuffer(
 {
   PUCHAR pWriteBuf = (PUCHAR)pWrite;
 
+  if (pOverrun)
+    *pOverrun = 0;
+
   while (writeLength) {
     SIZE_T readDone, writeDone;
     SIZE_T readLength;
@@ -333,8 +340,6 @@ SIZE_T WriteToBuffer(
               &writeDone, pOverrun);
 
           pWriteBuf += writeDone;
-        } else {
-          *pOverrun = 0;
         }
       }
       break;
@@ -595,9 +600,24 @@ SIZE_T WriteToTxBuffer(
     PVOID pWrite,
     SIZE_T writeLength)
 {
-  PUCHAR pWriteBuf = (PUCHAR)pWrite;
+  PUCHAR pWriteBuf;
+  SIZE_T sizeTxBuf;
 
-  while (writeLength && pTxBuf->busy < C0C_TX_BUFFER_SIZE(pTxBuf)) {
+  /* Writing to TX FIFO is interrupt driven so we can write only if it's empty */
+
+  if (!C0C_TX_BUFFER_THR_EMPTY(pTxBuf))
+    return 0;
+
+  sizeTxBuf = C0C_TX_BUFFER_SIZE(pTxBuf);
+
+  /* Write not more then TxFIFO registry value */
+
+  if (writeLength > sizeTxBuf - 1)
+    writeLength = sizeTxBuf - 1;
+
+  pWriteBuf = (PUCHAR)pWrite;
+
+  while (writeLength && pTxBuf->busy < sizeTxBuf) {
     SIZE_T readLength;
     PUCHAR pReadBuf;
 
@@ -682,7 +702,7 @@ VOID SetTxBuffer(PC0C_TX_BUFFER pTxBuf, SIZE_T size, BOOLEAN cleanFifo)
 
   UNREFERENCED_PARAMETER(cleanFifo);
 
-  size = 1;
+  size = sizeof(pTxBuf->leastBuf) - 1;
 
   size += 1;  /* add shift register */
   pBase = pTxBuf->leastBuf;
