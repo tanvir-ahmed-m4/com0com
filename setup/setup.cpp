@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.19  2007/10/05 07:28:26  vfrolov
+ * Added listing pairs w/o PortNum
+ *
  * Revision 1.18  2007/10/01 15:44:19  vfrolov
  * Added check for install two ports with the same name
  *
@@ -359,6 +362,9 @@ static BOOL ChangeDevice(
         ShowError(MB_OK|MB_ICONWARNING, err, "portParameters.Load(%s)", phPortName);
       }
     }
+  } else {
+    Trace("       " C0C_PREF_PORT_NAME_A "?\n");
+    Trace("       " C0C_PREF_PORT_NAME_B "?\n");
   }
 
   return TRUE;
