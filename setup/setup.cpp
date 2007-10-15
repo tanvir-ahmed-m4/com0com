@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.20  2007/10/15 13:49:04  vfrolov
+ * Added entry point MainA
+ *
  * Revision 1.19  2007/10/05 07:28:26  vfrolov
  * Added listing pairs w/o PortNum
  *
@@ -886,7 +889,7 @@ int Uninstall(InfFile &infFile)
   return 0;
 }
 ///////////////////////////////////////////////////////////////
-int Help(const char *pCmdPref)
+int Help(const char *pProgName)
 {
   SetTitle(C0C_SETUP_TITLE " (HELP)");
 
@@ -895,8 +898,8 @@ int Help(const char *pCmdPref)
     "\n");
   ConsoleWrite(
     "Usage:\n"
-    "  %s [options] <command>\n"
-    , pCmdPref);
+    "  %s%s[options] <command>\n"
+    , pProgName, (pProgName && *pProgName) ? " " : "");
   ConsoleWrite(
     "\n"
     "Options:\n"
@@ -942,29 +945,29 @@ int Help(const char *pCmdPref)
     "Examples:\n"
     );
   ConsoleWrite(
-    "  %sinstall - -\n"
-    , pCmdPref);
+    "  %s%sinstall - -\n"
+    , pProgName, (pProgName && *pProgName) ? " " : "");
   ConsoleWrite(
-    "  %sinstall 5 * *\n"
-    , pCmdPref);
+    "  %s%sinstall 5 * *\n"
+    , pProgName, (pProgName && *pProgName) ? " " : "");
   ConsoleWrite(
-    "  %sremove 0\n"
-    , pCmdPref);
+    "  %s%sremove 0\n"
+    , pProgName, (pProgName && *pProgName) ? " " : "");
   ConsoleWrite(
-    "  %sinstall PortName=COM2 PortName=COM4\n"
-    , pCmdPref);
+    "  %s%sinstall PortName=COM2 PortName=COM4\n"
+    , pProgName, (pProgName && *pProgName) ? " " : "");
   ConsoleWrite(
-    "  %sinstall PortName=COM5,EmuBR=yes,EmuOverrun=yes -\n"
-    , pCmdPref);
+    "  %s%sinstall PortName=COM5,EmuBR=yes,EmuOverrun=yes -\n"
+    , pProgName, (pProgName && *pProgName) ? " " : "");
   ConsoleWrite(
-    "  %schange " C0C_PREF_PORT_NAME_A "0 EmuBR=yes,EmuOverrun=yes\n"
-    , pCmdPref);
+    "  %s%schange " C0C_PREF_PORT_NAME_A "0 EmuBR=yes,EmuOverrun=yes\n"
+    , pProgName, (pProgName && *pProgName) ? " " : "");
   ConsoleWrite(
-    "  %slist\n"
-    , pCmdPref);
+    "  %s%slist\n"
+    , pProgName, (pProgName && *pProgName) ? " " : "");
   ConsoleWrite(
-    "  %suninstall\n"
-    , pCmdPref);
+    "  %s%suninstall\n"
+    , pProgName, (pProgName && *pProgName) ? " " : "");
   ConsoleWrite(
     "\n");
 
@@ -1091,7 +1094,7 @@ static int ParseCmd(char *pCmd, const char* argv[], int sizeArgv)
   return argc;
 }
 ///////////////////////////////////////////////////////////////
-int CALLBACK RunDllA(HWND /*hWnd*/, HINSTANCE /*hInst*/, LPSTR pCmdLine, int /*nCmdShow*/)
+int CALLBACK MainA(const char *pProgName, const char *pCmdLine)
 {
   SetTitle(C0C_SETUP_TITLE);
 
@@ -1123,12 +1126,20 @@ int CALLBACK RunDllA(HWND /*hWnd*/, HINSTANCE /*hInst*/, LPSTR pCmdLine, int /*n
     }
   }
 
-  argv[0] = "rundll32 setup,RunDll ";
+  argv[0] = pProgName;
 
-  int res = Main(argc, argv);
+  return Main(argc, argv);
+}
+///////////////////////////////////////////////////////////////
+int CALLBACK RunDllA(HWND /*hWnd*/, HINSTANCE /*hInst*/, LPSTR pCmdLine, int /*nCmdShow*/)
+{
+  int res = MainA("rundll32 setup,RunDll", pCmdLine);
 
-  if (!GetOutputFile())
-    ConsoleWriteRead(cmd, sizeof(cmd)/sizeof(cmd[0]), "\nPress <RETURN> to continue\n");
+  if (!GetOutputFile()) {
+    char buf[10];
+
+    ConsoleWriteRead(buf, sizeof(buf)/sizeof(buf[0]), "\nPress <RETURN> to continue\n");
+  }
 
   return res;
 }
