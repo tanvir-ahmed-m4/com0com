@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.5  2007/10/19 16:09:55  vfrolov
+ * Implemented --detail-prms option
+ *
  * Revision 1.4  2007/07/03 14:39:49  vfrolov
  * Implemented pinout customization
  *
@@ -45,7 +48,7 @@ class PortParameters {
     LONG Load();
     LONG Save();
     BOOL ParseParametersStr(const char *pParameters);
-    BOOL FillParametersStr(char *pParameters, int size);
+    BOOL FillParametersStr(char *pParameters, int size, BOOL detail);
     BOOL FillPortName(char *pPortName, int size);
     BOOL Changed() const { return maskChanged != 0; }
 
@@ -55,7 +58,6 @@ class PortParameters {
     BOOL FillParametersKey(char *pRegKey, int size);
     BOOL SetPortName(const char *pNewPortName);
     DWORD *GetDwPtr(DWORD bit);
-    const char *GetBitName(DWORD bit);
     BOOL SetFlag(const char *pNewVal, DWORD bit);
     BOOL SetPin(const char *pNewVal, DWORD bit);
     void LoadDw(HKEY hKey, DWORD bit);

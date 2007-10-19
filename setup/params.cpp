@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.9  2007/10/19 16:09:55  vfrolov
+ * Implemented --detail-prms option
+ *
  * Revision 1.8  2007/09/20 12:43:03  vfrolov
  * Added parameters string length check
  *
@@ -147,7 +150,32 @@ DWORD *PortParameters::GetDwPtr(DWORD bit)
   return NULL;
 }
 ///////////////////////////////////////////////////////////////
-const char *PortParameters::GetBitName(DWORD bit)
+static const DWORD *GetDwPtrDefault(DWORD bit)
+{
+  static const DWORD emuBR = C0C_DEFAULT_EMUBR;
+  static const DWORD emuOverrun = C0C_DEFAULT_EMUOVERRUN;
+  static const DWORD plugInMode = C0C_DEFAULT_PLUGINMODE;
+  static const DWORD exclusiveMode = C0C_DEFAULT_EXCLUSIVEMODE;
+  static const DWORD pinCTS = C0C_DEFAULT_PIN_CTS;
+  static const DWORD pinDSR = C0C_DEFAULT_PIN_DSR;
+  static const DWORD pinDCD = C0C_DEFAULT_PIN_DCD;
+  static const DWORD pinRI = C0C_DEFAULT_PIN_RI;
+
+  switch (bit) {
+    case m_emuBR:          return &emuBR;
+    case m_emuOverrun:     return &emuOverrun;
+    case m_plugInMode:     return &plugInMode;
+    case m_exclusiveMode:  return &exclusiveMode;
+    case m_pinCTS:         return &pinCTS;
+    case m_pinDSR:         return &pinDSR;
+    case m_pinDCD:         return &pinDCD;
+    case m_pinRI:          return &pinRI;
+  }
+
+  return NULL;
+}
+///////////////////////////////////////////////////////////////
+static const char *GetBitName(DWORD bit)
 {
   switch (bit) {
     case m_portName:       return "PortName";
@@ -581,11 +609,12 @@ BOOL PortParameters::ParseParametersStr(const char *pParameters)
   return TRUE;
 }
 ///////////////////////////////////////////////////////////////
-BOOL PortParameters::FillParametersStr(char *pParameters, int size)
+BOOL PortParameters::FillParametersStr(char *pParameters, int size, BOOL detail)
 {
   int len;
 
-  len = SNPRINTF(pParameters, size, "PortName=%s", (maskExplicit & m_portName) ? (portName) : "-");
+  len = SNPRINTF(pParameters, size, "PortName=%s",
+                 (maskExplicit & m_portName) ? portName : (detail ? phPortName : "-"));
 
   if (len < 0)
     return FALSE;
@@ -597,12 +626,20 @@ BOOL PortParameters::FillParametersStr(char *pParameters, int size)
 
   for (i = 0 ; i < sizeof(flagBits)/sizeof(flagBits[0]) ; i++) {
     DWORD bit = flagBits[i];
+    const char *pName = GetBitName(bit);
 
-    if ((maskExplicit & bit) != 0) {
-      DWORD *pFlag = GetDwPtr(bit);
-      const char *pName = GetBitName(bit);
+    if (pName) {
+      const DWORD *pFlag;
 
-      if (pFlag == NULL || pName == NULL)
+      if ((maskExplicit & bit) != 0)
+        pFlag = GetDwPtr(bit);
+      else
+      if (detail)
+        pFlag = GetDwPtrDefault(bit);
+      else
+        continue;
+
+      if (pFlag == NULL)
         continue;
 
       len = SNPRINTF(pParameters, size, ",%s=%s", pName, *pFlag ? "yes" : "no");
@@ -617,12 +654,20 @@ BOOL PortParameters::FillParametersStr(char *pParameters, int size)
 
   for (i = 0 ; i < sizeof(pinBits)/sizeof(pinBits[0]) ; i++) {
     DWORD bit = pinBits[i];
+    const char *pName = GetBitName(bit);
 
-    if ((maskExplicit & bit) != 0) {
-      DWORD *pPin = GetDwPtr(bit);
-      const char *pName = GetBitName(bit);
+    if (pName) {
+      const DWORD *pPin;
 
-      if (pPin == NULL || pName == NULL)
+      if ((maskExplicit & bit) != 0)
+        pPin = GetDwPtr(bit);
+      else
+      if (detail)
+        pPin = GetDwPtrDefault(bit);
+      else
+        continue;
+
+      if (pPin == NULL)
         continue;
 
       const char *pVal = NULL;

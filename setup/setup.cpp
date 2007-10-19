@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.21  2007/10/19 16:09:55  vfrolov
+ * Implemented --detail-prms option
+ *
  * Revision 1.20  2007/10/15 13:49:04  vfrolov
  * Added entry point MainA
  *
@@ -109,6 +112,8 @@
 
 #define C0C_SETUP_TITLE          "Setup for com0com"
 
+///////////////////////////////////////////////////////////////
+static BOOL detailPrms = FALSE;
 ///////////////////////////////////////////////////////////////
 static BOOL IsValidPortNum(int num)
 {
@@ -322,9 +327,9 @@ static BOOL ChangeDevice(
 
       LONG err = portParameters.Load();
 
-      char buf[100];
+      char buf[200];
 
-      portParameters.FillParametersStr(buf, sizeof(buf)/sizeof(buf[0]));
+      portParameters.FillParametersStr(buf, sizeof(buf)/sizeof(buf[0]), detailPrms);
       Trace("       %s %s\n", phPortName, buf);
 
       if (err == ERROR_SUCCESS) {
@@ -344,7 +349,7 @@ static BOOL ChangeDevice(
             err = portParameters.Save();
 
             if (err == ERROR_SUCCESS) {
-              portParameters.FillParametersStr(buf, sizeof(buf)/sizeof(buf[0]));
+              portParameters.FillParametersStr(buf, sizeof(buf)/sizeof(buf[0]), detailPrms);
               Trace("change %s %s\n", phPortName, buf);
 
               SetFriendlyName(hDevInfo, pDevInfoData, i);
@@ -649,9 +654,9 @@ int Install(InfFile &infFile, const char *pParametersA, const char *pParametersB
       SNPRINTF(portName[j], sizeof(portName[j])/sizeof(portName[j][0]), "%s", phPortName);
     }
 
-    char buf[100];
+    char buf[200];
 
-    portParameters.FillParametersStr(buf, sizeof(buf)/sizeof(buf[0]));
+    portParameters.FillParametersStr(buf, sizeof(buf)/sizeof(buf[0]), detailPrms);
 
     Trace("       %s %s\n", phPortName, buf);
   }
@@ -904,6 +909,7 @@ int Help(const char *pProgName)
     "\n"
     "Options:\n"
     "  --output <file>              - file for output, default is console\n"
+    "  --detail-prms                - show detailed parameters\n"
     );
   ConsoleWrite(
     "\n"
@@ -979,6 +985,8 @@ int Main(int argc, const char* argv[])
   if (!SetOutputFile(NULL))
     return 1;
 
+  detailPrms = FALSE;
+
   while (argc > 1) {
     if (*argv[1] != '-')
       break;
@@ -989,7 +997,14 @@ int Main(int argc, const char* argv[])
       argv[2] = argv[0];
       argv += 2;
       argc -= 2;
-    } else {
+    }
+    else
+    if (!strcmp(argv[1], "--detail-prms")) {
+      detailPrms = TRUE;
+      argv++;
+      argc--;
+    }
+    else {
       ConsoleWrite("Invalid option %s\n", argv[1]);
       return 1;
     }
