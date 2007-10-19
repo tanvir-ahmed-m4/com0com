@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.6  2007/10/19 15:58:18  vfrolov
+ * Added default values
+ *
  * Revision 1.5  2007/09/17 14:28:07  vfrolov
  * Implemented pseudo pin OPEN
  *
@@ -63,5 +66,15 @@
 #define C0C_PIN_LOPEN               0x00008000
 #define C0C_PIN_ON                  0x10000000
 #define C0C_PIN_NEGATIVE            0x80000000
+
+#define C0C_DEFAULT_PIN_CTS         C0C_PIN_RRTS
+#define C0C_DEFAULT_PIN_DSR         C0C_PIN_RDTR
+#define C0C_DEFAULT_PIN_DCD         C0C_PIN_RDTR
+#define C0C_DEFAULT_PIN_RI          (C0C_PIN_ON|C0C_PIN_NEGATIVE)
+
+#define C0C_DEFAULT_EMUBR           0x00000000
+#define C0C_DEFAULT_EMUOVERRUN      0x00000000
+#define C0C_DEFAULT_PLUGINMODE      0x00000000
+#define C0C_DEFAULT_EXCLUSIVEMODE   0x00000000
 
 #endif /* _INCLUDE_C0C_COM0COM_H_ */
