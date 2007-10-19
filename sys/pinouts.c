@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.3  2007/10/19 16:03:41  vfrolov
+ * Added default values
+ *
  * Revision 1.2  2007/09/17 14:31:06  vfrolov
  * Implemented pseudo pin OPEN
  *
@@ -164,18 +167,18 @@ VOID PinMap(
     RtlZeroMemory(&pIoPortRemote->pinOuts[i].remote, sizeof(pIoPortRemote->pinOuts[i].remote));
 
   if (!pinCTS)
-    pinCTS = C0C_PIN_RRTS;
+    pinCTS = C0C_DEFAULT_PIN_CTS;
   PinWire(pIoPort, pIoPortRemote, pinCTS, C0C_MSB_CTS, &pIoPort->modemStatus);
 
   if (!pinDSR)
-    pinDSR = C0C_PIN_RDTR;
+    pinDSR = C0C_DEFAULT_PIN_DSR;
   PinWire(pIoPort, pIoPortRemote, pinDSR, C0C_MSB_DSR, &pIoPort->modemStatus);
 
   if (!pinDCD)
-    pinDCD = C0C_PIN_RDTR;
+    pinDCD = C0C_DEFAULT_PIN_DCD;
   PinWire(pIoPort, pIoPortRemote, pinDCD, C0C_MSB_RLSD, &pIoPort->modemStatus);
 
   if (!pinRI)
-    pinRI = C0C_PIN_ON|C0C_PIN_NEGATIVE;
+    pinRI = C0C_DEFAULT_PIN_RI;
   PinWire(pIoPort, pIoPortRemote, pinRI, C0C_MSB_RING, &pIoPort->modemStatus);
 }
