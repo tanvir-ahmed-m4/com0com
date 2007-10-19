@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.6  2007/10/19 16:11:56  vfrolov
+ * Added ability to redirect console output
+ *
  * Revision 1.5  2007/09/20 12:29:03  vfrolov
  * Added return value to SetOutputFile()
  *
@@ -68,8 +71,14 @@ static void ConsoleWriteReadDefault(LPSTR pReadBuf, DWORD lenReadBuf, LPCSTR pTe
     isConsoleOpen = TRUE;
   }
 
-  if (pText)
-    WriteConsole(handle, pText, lstrlen(pText), NULL, NULL);
+  if (pText) {
+    DWORD cnt;
+
+    if (GetFileType(handle) == FILE_TYPE_CHAR)
+      WriteConsole(handle, pText, lstrlen(pText), &cnt, NULL);
+    else
+      WriteFile(handle, pText, lstrlen(pText), &cnt, NULL);
+  }
 
   if (pReadBuf && lenReadBuf > 0) {
     if (lenReadBuf > 1 &&
