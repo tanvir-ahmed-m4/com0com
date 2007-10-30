@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.8  2007/10/30 15:06:14  vfrolov
+ * Added changing working directory before removing $INSTDIR
+ *
  * Revision 1.7  2007/10/25 14:30:27  vfrolov
  * Replaced setup.bat by setupc.exe
  *
@@ -238,6 +241,7 @@ Section "Uninstall"
 
   ; Remove directories used
   RMDir "$SMPROGRAMS\com0com"
+  SetOutPath $TEMP
   RMDir "$INSTDIR"
 
 SectionEnd
