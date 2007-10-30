@@ -5,6 +5,7 @@ UMTYPE=console
 UMENTRY=main
 UMBASE=0x400000
 MSC_WARNING_LEVEL=/W4
+USE_MSVCRT=1
 
 SOURCES= \
         setup.cpp \
