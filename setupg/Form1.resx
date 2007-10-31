@@ -1,0 +1,824 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!-- 
+    Microsoft ResX Schema 
+    
+    Version 2.0
+    
+    The primary goals of this format is to allow a simple XML format 
+    that is mostly human readable. The generation and parsing of the 
+    various data types are done through the TypeConverter classes 
+    associated with the data types.
+    
+    Example:
+    
+    ... ado.net/XML headers & schema ...
+    <resheader name="resmimetype">text/microsoft-resx</resheader>
+    <resheader name="version">2.0</resheader>
+    <resheader name="reader">System.Resources.ResXResourceReader, System.Windows.Forms, ...</resheader>
+    <resheader name="writer">System.Resources.ResXResourceWriter, System.Windows.Forms, ...</resheader>
+    <data name="Name1"><value>this is my long string</value><comment>this is a comment</comment></data>
+    <data name="Color1" type="System.Drawing.Color, System.Drawing">Blue</data>
+    <data name="Bitmap1" mimetype="application/x-microsoft.net.object.binary.base64">
+        <value>[base64 mime encoded serialized .NET Framework object]</value>
+    </data>
+    <data name="Icon1" type="System.Drawing.Icon, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
+        <value>[base64 mime encoded string representing a byte array form of the .NET Framework object]</value>
+        <comment>This is a comment</comment>
+    </data>
+                
+    There are any number of "resheader" rows that contain simple 
+    name/value pairs.
+    
+    Each data row contains a name, and value. The row also contains a 
+    type or mimetype. Type corresponds to a .NET class that support 
+    text/value conversion through the TypeConverter architecture. 
+    Classes that don't support this are serialized and stored with the 
+    mimetype set.
+    
+    The mimetype is used for serialized objects, and tells the 
+    ResXResourceReader how to depersist the object. This is currently not 
+    extensible. For a given mimetype the value must be set accordingly:
+    
+    Note - application/x-microsoft.net.object.binary.base64 is the format 
+    that the ResXResourceWriter will generate, however the reader can 
+    read any of the formats listed below.
+    
+    mimetype: application/x-microsoft.net.object.binary.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Binary.BinaryFormatter
+            : and then encoded with base64 encoding.
+    
+    mimetype: application/x-microsoft.net.object.soap.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Soap.SoapFormatter
+            : and then encoded with base64 encoding.
+
+    mimetype: application/x-microsoft.net.object.bytearray.base64
+    value   : The object must be serialized into a byte array 
+            : using a System.ComponentModel.TypeConverter
+            : and then encoded with base64 encoding.
+    -->
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <assembly alias="System.Drawing" name="System.Drawing, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
+  <data name="PortNameB.Location" type="System.Drawing.Point, System.Drawing">
+    <value>481, 12</value>
+  </data>
+  <data name="PortNameB.Size" type="System.Drawing.Size, System.Drawing">
+    <value>100, 22</value>
+  </data>
+  <assembly alias="mscorlib" name="mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" />
+  <data name="PortNameB.TabIndex" type="System.Int32, mscorlib">
+    <value>20</value>
+  </data>
+  <assembly alias="System.Windows.Forms" name="System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" />
+  <data name="PortNameB.TextAlign" type="System.Windows.Forms.HorizontalAlignment, System.Windows.Forms">
+    <value>Right</value>
+  </data>
+  <metadata name="toolTip1.TrayLocation" type="System.Drawing.Point, System.Drawing, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
+    <value>17, 17</value>
+  </metadata>
+  <data name="PortNameB.ToolTip" xml:space="preserve">
+    <value>Port name.</value>
+  </data>
+  <data name="&gt;&gt;PortNameB.Name" xml:space="preserve">
+    <value>PortNameB</value>
+  </data>
+  <data name="&gt;&gt;PortNameB.Type" xml:space="preserve">
+    <value>System.Windows.Forms.TextBox, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="&gt;&gt;PortNameB.Parent" xml:space="preserve">
+    <value>$this</value>
+  </data>
+  <data name="&gt;&gt;PortNameB.ZOrder" xml:space="preserve">
+    <value>13</value>
+  </data>
+  <data name="PortNameA.Location" type="System.Drawing.Point, System.Drawing">
+    <value>233, 12</value>
+  </data>
+  <data name="PortNameA.Size" type="System.Drawing.Size, System.Drawing">
+    <value>100, 22</value>
+  </data>
+  <data name="PortNameA.TabIndex" type="System.Int32, mscorlib">
+    <value>19</value>
+  </data>
+  <data name="PortNameA.ToolTip" xml:space="preserve">
+    <value>Port name.</value>
+  </data>
+  <data name="&gt;&gt;PortNameA.Name" xml:space="preserve">
+    <value>PortNameA</value>
+  </data>
+  <data name="&gt;&gt;PortNameA.Type" xml:space="preserve">
+    <value>System.Windows.Forms.TextBox, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="&gt;&gt;PortNameA.Parent" xml:space="preserve">
+    <value>$this</value>
+  </data>
+  <data name="&gt;&gt;PortNameA.ZOrder" xml:space="preserve">
+    <value>14</value>
+  </data>
+  <data name="pinNameON.AutoSize" type="System.Boolean, mscorlib">
+    <value>True</value>
+  </data>
+  <data name="pinNameON.Font" type="System.Drawing.Font, System.Drawing">
+    <value>Courier New, 10.2pt</value>
+  </data>
+  <data name="pinNameON.ImeMode" type="System.Windows.Forms.ImeMode, System.Windows.Forms">
+    <value>NoControl</value>
+  </data>
+  <data name="pinNameON.Location" type="System.Drawing.Point, System.Drawing">
+    <value>390, 317</value>
+  </data>
+  <data name="pinNameON.Size" type="System.Drawing.Size, System.Drawing">
+    <value>29, 20</value>
+  </data>
+  <data name="pinNameON.TabIndex" type="System.Int32, mscorlib">
+    <value>18</value>
+  </data>
+  <data name="pinNameON.Text" xml:space="preserve">
+    <value>ON</value>
+  </data>
+  <data name="pinNameON.TextAlign" type="System.Drawing.ContentAlignment, System.Drawing">
+    <value>TopCenter</value>
+  </data>
+  <data name="pinNameON.ToolTip" xml:space="preserve">
+    <value>ON - logical ON.</value>
+  </data>
+  <data name="&gt;&gt;pinNameON.Name" xml:space="preserve">
+    <value>pinNameON</value>
+  </data>
+  <data name="&gt;&gt;pinNameON.Type" xml:space="preserve">
+    <value>System.Windows.Forms.Label, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="&gt;&gt;pinNameON.Parent" xml:space="preserve">
+    <value>$this</value>
+  </data>
+  <data name="&gt;&gt;pinNameON.ZOrder" xml:space="preserve">
+    <value>15</value>
+  </data>
+  <data name="pinNamesB.Font" type="System.Drawing.Font, System.Drawing">
+    <value>Courier New, 10.2pt</value>
+  </data>
+  <data name="pinNamesB.ItemHeight" type="System.Int32, mscorlib">
+    <value>20</value>
+  </data>
+  <data name="pinNamesB.Items" xml:space="preserve">
+    <value>RX</value>
+  </data>
+  <data name="pinNamesB.Items1" xml:space="preserve">
+    <value>TX</value>
+  </data>
+  <data name="pinNamesB.Items2" xml:space="preserve">
+    <value>DTR</value>
+  </data>
+  <data name="pinNamesB.Items3" xml:space="preserve">
+    <value>DSR</value>
+  </data>
+  <data name="pinNamesB.Items4" xml:space="preserve">
+    <value>DCD</value>
+  </data>
+  <data name="pinNamesB.Items5" xml:space="preserve">
+    <value>RTS</value>
+  </data>
+  <data name="pinNamesB.Items6" xml:space="preserve">
+    <value>CTS</value>
+  </data>
+  <data name="pinNamesB.Items7" xml:space="preserve">
+    <value>RI</value>
+  </data>
+  <data name="pinNamesB.Items8" xml:space="preserve">
+    <value>OUT1</value>
+  </data>
+  <data name="pinNamesB.Items9" xml:space="preserve">
+    <value>OPEN</value>
+  </data>
+  <data name="pinNamesB.Location" type="System.Drawing.Point, System.Drawing">
+    <value>538, 116</value>
+  </data>
+  <data name="pinNamesB.Size" type="System.Drawing.Size, System.Drawing">
+    <value>43, 200</value>
+  </data>
+  <data name="pinNamesB.TabIndex" type="System.Int32, mscorlib">
+    <value>17</value>
+  </data>
+  <data name="pinNamesB.ToolTip" xml:space="preserve">
+    <value>RX - receive data.
+TX - transmit data.
+DTR - data terminal ready.
+DSR - data set ready.
+DCD - data carrier detect.
+RTS - request to send.
+CTS - clear to send.
+RI - ring indicator.
+OUT1 - auxiliary output 1.
+OPEN - logical ON if remote/local port is open.</value>
+  </data>
+  <data name="&gt;&gt;pinNamesB.Name" xml:space="preserve">
+    <value>pinNamesB</value>
+  </data>
+  <data name="&gt;&gt;pinNamesB.Type" xml:space="preserve">
+    <value>System.Windows.Forms.ListBox, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="&gt;&gt;pinNamesB.Parent" xml:space="preserve">
+    <value>$this</value>
+  </data>
+  <data name="&gt;&gt;pinNamesB.ZOrder" xml:space="preserve">
+    <value>16</value>
+  </data>
+  <data name="pinNamesA.Font" type="System.Drawing.Font, System.Drawing">
+    <value>Courier New, 10.2pt</value>
+  </data>
+  <data name="pinNamesA.ItemHeight" type="System.Int32, mscorlib">
+    <value>20</value>
+  </data>
+  <data name="pinNamesA.Items" xml:space="preserve">
+    <value>  RX</value>
+  </data>
+  <data name="pinNamesA.Items1" xml:space="preserve">
+    <value>  TX</value>
+  </data>
+  <data name="pinNamesA.Items2" xml:space="preserve">
+    <value> DTR</value>
+  </data>
+  <data name="pinNamesA.Items3" xml:space="preserve">
+    <value> DSR</value>
+  </data>
+  <data name="pinNamesA.Items4" xml:space="preserve">
+    <value> DCD</value>
+  </data>
+  <data name="pinNamesA.Items5" xml:space="preserve">
+    <value> RTS</value>
+  </data>
+  <data name="pinNamesA.Items6" xml:space="preserve">
+    <value> CTS</value>
+  </data>
+  <data name="pinNamesA.Items7" xml:space="preserve">
+    <value>  RI</value>
+  </data>
+  <data name="pinNamesA.Items8" xml:space="preserve">
+    <value>OUT1</value>
+  </data>
+  <data name="pinNamesA.Items9" xml:space="preserve">
+    <value>OPEN</value>
+  </data>
+  <data name="pinNamesA.Location" type="System.Drawing.Point, System.Drawing">
+    <value>233, 116</value>
+  </data>
+  <data name="pinNamesA.Size" type="System.Drawing.Size, System.Drawing">
+    <value>43, 200</value>
+  </data>
+  <data name="pinNamesA.TabIndex" type="System.Int32, mscorlib">
+    <value>16</value>
+  </data>
+  <data name="pinNamesA.ToolTip" xml:space="preserve">
+    <value>RX - receive data.
+TX - transmit data.
+DTR - data terminal ready.
+DSR - data set ready.
+DCD - data carrier detect.
+RTS - request to send.
+CTS - clear to send.
+RI - ring indicator.
+OUT1 - auxiliary output 1.
+OPEN - logical ON if remote/local port is open.</value>
+  </data>
+  <data name="&gt;&gt;pinNamesA.Name" xml:space="preserve">
+    <value>pinNamesA</value>
+  </data>
+  <data name="&gt;&gt;pinNamesA.Type" xml:space="preserve">
+    <value>System.Windows.Forms.ListBox, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="&gt;&gt;pinNamesA.Parent" xml:space="preserve">
+    <value>$this</value>
+  </data>
+  <data name="&gt;&gt;pinNamesA.ZOrder" xml:space="preserve">
+    <value>17</value>
+  </data>
+  <data name="picturePinMap.ImeMode" type="System.Windows.Forms.ImeMode, System.Windows.Forms">
+    <value>NoControl</value>
+  </data>
+  <data name="picturePinMap.Location" type="System.Drawing.Point, System.Drawing">
+    <value>282, 116</value>
+  </data>
+  <data name="picturePinMap.Size" type="System.Drawing.Size, System.Drawing">
+    <value>250, 200</value>
+  </data>
+  <data name="picturePinMap.TabIndex" type="System.Int32, mscorlib">
+    <value>15</value>
+  </data>
+  <data name="picturePinMap.ToolTip" xml:space="preserve">
+    <value>One green pin can be wired to one red pin.
+One red pin can be wired to multiple green pins.
+Double click a green pin to add/remove inverter.</value>
+  </data>
+  <data name="&gt;&gt;picturePinMap.Name" xml:space="preserve">
+    <value>picturePinMap</value>
+  </data>
+  <data name="&gt;&gt;picturePinMap.Type" xml:space="preserve">
+    <value>System.Windows.Forms.PictureBox, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="&gt;&gt;picturePinMap.Parent" xml:space="preserve">
+    <value>$this</value>
+  </data>
+  <data name="&gt;&gt;picturePinMap.ZOrder" xml:space="preserve">
+    <value>18</value>
+  </data>
+  <data name="EmuBrB.AutoSize" type="System.Boolean, mscorlib">
+    <value>True</value>
+  </data>
+  <data name="EmuBrB.Location" type="System.Drawing.Point, System.Drawing">
+    <value>411, 35</value>
+  </data>
+  <data name="EmuBrB.Size" type="System.Drawing.Size, System.Drawing">
+    <value>142, 21</value>
+  </data>
+  <data name="EmuBrB.TabIndex" type="System.Int32, mscorlib">
+    <value>28</value>
+  </data>
+  <data name="EmuBrB.Text" xml:space="preserve">
+    <value>emulate baud rate</value>
+  </data>
+  <data name="EmuBrB.ToolTip" xml:space="preserve">
+    <value>Enable/disable baud rate emulation
+in the direction to the paired port.</value>
+  </data>
+  <data name="&gt;&gt;EmuBrB.Name" xml:space="preserve">
+    <value>EmuBrB</value>
+  </data>
+  <data name="&gt;&gt;EmuBrB.Type" xml:space="preserve">
+    <value>System.Windows.Forms.CheckBox, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="&gt;&gt;EmuBrB.Parent" xml:space="preserve">
+    <value>$this</value>
+  </data>
+  <data name="&gt;&gt;EmuBrB.ZOrder" xml:space="preserve">
+    <value>7</value>
+  </data>
+  <data name="EmuOverrunB.AutoSize" type="System.Boolean, mscorlib">
+    <value>True</value>
+  </data>
+  <data name="EmuOverrunB.Location" type="System.Drawing.Point, System.Drawing">
+    <value>411, 53</value>
+  </data>
+  <data name="EmuOverrunB.Size" type="System.Drawing.Size, System.Drawing">
+    <value>164, 21</value>
+  </data>
+  <data name="EmuOverrunB.TabIndex" type="System.Int32, mscorlib">
+    <value>29</value>
+  </data>
+  <data name="EmuOverrunB.Text" xml:space="preserve">
+    <value>enable buffer overrun</value>
+  </data>
+  <data name="EmuOverrunB.ToolTip" xml:space="preserve">
+    <value>Enable/disable receive buffer overrun.</value>
+  </data>
+  <data name="&gt;&gt;EmuOverrunB.Name" xml:space="preserve">
+    <value>EmuOverrunB</value>
+  </data>
+  <data name="&gt;&gt;EmuOverrunB.Type" xml:space="preserve">
+    <value>System.Windows.Forms.CheckBox, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="&gt;&gt;EmuOverrunB.Parent" xml:space="preserve">
+    <value>$this</value>
+  </data>
+  <data name="&gt;&gt;EmuOverrunB.ZOrder" xml:space="preserve">
+    <value>6</value>
+  </data>
+  <data name="PlugInModeB.AutoSize" type="System.Boolean, mscorlib">
+    <value>True</value>
+  </data>
+  <data name="PlugInModeB.Location" type="System.Drawing.Point, System.Drawing">
+    <value>411, 71</value>
+  </data>
+  <data name="PlugInModeB.Size" type="System.Drawing.Size, System.Drawing">
+    <value>156, 21</value>
+  </data>
+  <data name="PlugInModeB.TabIndex" type="System.Int32, mscorlib">
+    <value>30</value>
+  </data>
+  <data name="PlugInModeB.Text" xml:space="preserve">
+    <value>enable plug-in mode</value>
+  </data>
+  <data name="PlugInModeB.ToolTip" xml:space="preserve">
+    <value>Enable/disable plug-in mode.
+The plug-in mode port is hidden and can't
+be open if the paired port is not open.</value>
+  </data>
+  <data name="&gt;&gt;PlugInModeB.Name" xml:space="preserve">
+    <value>PlugInModeB</value>
+  </data>
+  <data name="&gt;&gt;PlugInModeB.Type" xml:space="preserve">
+    <value>System.Windows.Forms.CheckBox, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="&gt;&gt;PlugInModeB.Parent" xml:space="preserve">
+    <value>$this</value>
+  </data>
+  <data name="&gt;&gt;PlugInModeB.ZOrder" xml:space="preserve">
+    <value>5</value>
+  </data>
+  <data name="ExclusiveModeB.AutoSize" type="System.Boolean, mscorlib">
+    <value>True</value>
+  </data>
+  <data name="ExclusiveModeB.Location" type="System.Drawing.Point, System.Drawing">
+    <value>411, 89</value>
+  </data>
+  <data name="ExclusiveModeB.Size" type="System.Drawing.Size, System.Drawing">
+    <value>170, 21</value>
+  </data>
+  <data name="ExclusiveModeB.TabIndex" type="System.Int32, mscorlib">
+    <value>31</value>
+  </data>
+  <data name="ExclusiveModeB.Text" xml:space="preserve">
+    <value>enable exclusive mode</value>
+  </data>
+  <data name="ExclusiveModeB.ToolTip" xml:space="preserve">
+    <value>Enable/disable exclusive mode.
+The exclusive mode port is hidden if it is open.</value>
+  </data>
+  <data name="&gt;&gt;ExclusiveModeB.Name" xml:space="preserve">
+    <value>ExclusiveModeB</value>
+  </data>
+  <data name="&gt;&gt;ExclusiveModeB.Type" xml:space="preserve">
+    <value>System.Windows.Forms.CheckBox, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="&gt;&gt;ExclusiveModeB.Parent" xml:space="preserve">
+    <value>$this</value>
+  </data>
+  <data name="&gt;&gt;ExclusiveModeB.ZOrder" xml:space="preserve">
+    <value>4</value>
+  </data>
+  <data name="ExclusiveModeA.AutoSize" type="System.Boolean, mscorlib">
+    <value>True</value>
+  </data>
+  <data name="ExclusiveModeA.ImeMode" type="System.Windows.Forms.ImeMode, System.Windows.Forms">
+    <value>NoControl</value>
+  </data>
+  <data name="ExclusiveModeA.Location" type="System.Drawing.Point, System.Drawing">
+    <value>233, 89</value>
+  </data>
+  <data name="ExclusiveModeA.RightToLeft" type="System.Windows.Forms.RightToLeft, System.Windows.Forms">
+    <value>Yes</value>
+  </data>
+  <data name="ExclusiveModeA.Size" type="System.Drawing.Size, System.Drawing">
+    <value>170, 21</value>
+  </data>
+  <data name="ExclusiveModeA.TabIndex" type="System.Int32, mscorlib">
+    <value>35</value>
+  </data>
+  <data name="ExclusiveModeA.Text" xml:space="preserve">
+    <value>enable exclusive mode</value>
+  </data>
+  <data name="ExclusiveModeA.ToolTip" xml:space="preserve">
+    <value>Enable/disable exclusive mode.
+The exclusive mode port is hidden if it is open.</value>
+  </data>
+  <data name="&gt;&gt;ExclusiveModeA.Name" xml:space="preserve">
+    <value>ExclusiveModeA</value>
+  </data>
+  <data name="&gt;&gt;ExclusiveModeA.Type" xml:space="preserve">
+    <value>System.Windows.Forms.CheckBox, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="&gt;&gt;ExclusiveModeA.Parent" xml:space="preserve">
+    <value>$this</value>
+  </data>
+  <data name="&gt;&gt;ExclusiveModeA.ZOrder" xml:space="preserve">
+    <value>0</value>
+  </data>
+  <data name="PlugInModeA.AutoSize" type="System.Boolean, mscorlib">
+    <value>True</value>
+  </data>
+  <data name="PlugInModeA.ImeMode" type="System.Windows.Forms.ImeMode, System.Windows.Forms">
+    <value>NoControl</value>
+  </data>
+  <data name="PlugInModeA.Location" type="System.Drawing.Point, System.Drawing">
+    <value>247, 71</value>
+  </data>
+  <data name="PlugInModeA.RightToLeft" type="System.Windows.Forms.RightToLeft, System.Windows.Forms">
+    <value>Yes</value>
+  </data>
+  <data name="PlugInModeA.Size" type="System.Drawing.Size, System.Drawing">
+    <value>156, 21</value>
+  </data>
+  <data name="PlugInModeA.TabIndex" type="System.Int32, mscorlib">
+    <value>34</value>
+  </data>
+  <data name="PlugInModeA.Text" xml:space="preserve">
+    <value>enable plug-in mode</value>
+  </data>
+  <data name="PlugInModeA.ToolTip" xml:space="preserve">
+    <value>Enable/disable plug-in mode.
+The plug-in mode port is hidden and can't
+be open if the paired port is not open.</value>
+  </data>
+  <data name="&gt;&gt;PlugInModeA.Name" xml:space="preserve">
+    <value>PlugInModeA</value>
+  </data>
+  <data name="&gt;&gt;PlugInModeA.Type" xml:space="preserve">
+    <value>System.Windows.Forms.CheckBox, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="&gt;&gt;PlugInModeA.Parent" xml:space="preserve">
+    <value>$this</value>
+  </data>
+  <data name="&gt;&gt;PlugInModeA.ZOrder" xml:space="preserve">
+    <value>1</value>
+  </data>
+  <data name="EmuOverrunA.AutoSize" type="System.Boolean, mscorlib">
+    <value>True</value>
+  </data>
+  <data name="EmuOverrunA.ImeMode" type="System.Windows.Forms.ImeMode, System.Windows.Forms">
+    <value>NoControl</value>
+  </data>
+  <data name="EmuOverrunA.Location" type="System.Drawing.Point, System.Drawing">
+    <value>239, 53</value>
+  </data>
+  <data name="EmuOverrunA.RightToLeft" type="System.Windows.Forms.RightToLeft, System.Windows.Forms">
+    <value>Yes</value>
+  </data>
+  <data name="EmuOverrunA.Size" type="System.Drawing.Size, System.Drawing">
+    <value>164, 21</value>
+  </data>
+  <data name="EmuOverrunA.TabIndex" type="System.Int32, mscorlib">
+    <value>33</value>
+  </data>
+  <data name="EmuOverrunA.Text" xml:space="preserve">
+    <value>enable buffer overrun</value>
+  </data>
+  <data name="EmuOverrunA.ToolTip" xml:space="preserve">
+    <value>Enable/disable receive buffer overrun.</value>
+  </data>
+  <data name="&gt;&gt;EmuOverrunA.Name" xml:space="preserve">
+    <value>EmuOverrunA</value>
+  </data>
+  <data name="&gt;&gt;EmuOverrunA.Type" xml:space="preserve">
+    <value>System.Windows.Forms.CheckBox, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="&gt;&gt;EmuOverrunA.Parent" xml:space="preserve">
+    <value>$this</value>
+  </data>
+  <data name="&gt;&gt;EmuOverrunA.ZOrder" xml:space="preserve">
+    <value>2</value>
+  </data>
+  <data name="EmuBrA.AutoSize" type="System.Boolean, mscorlib">
+    <value>True</value>
+  </data>
+  <data name="EmuBrA.ImeMode" type="System.Windows.Forms.ImeMode, System.Windows.Forms">
+    <value>NoControl</value>
+  </data>
+  <data name="EmuBrA.Location" type="System.Drawing.Point, System.Drawing">
+    <value>261, 35</value>
+  </data>
+  <data name="EmuBrA.RightToLeft" type="System.Windows.Forms.RightToLeft, System.Windows.Forms">
+    <value>Yes</value>
+  </data>
+  <data name="EmuBrA.Size" type="System.Drawing.Size, System.Drawing">
+    <value>142, 21</value>
+  </data>
+  <data name="EmuBrA.TabIndex" type="System.Int32, mscorlib">
+    <value>32</value>
+  </data>
+  <data name="EmuBrA.Text" xml:space="preserve">
+    <value>emulate baud rate</value>
+  </data>
+  <data name="EmuBrA.ToolTip" xml:space="preserve">
+    <value>Enable/disable baud rate emulation
+in the direction to the paired port.</value>
+  </data>
+  <data name="&gt;&gt;EmuBrA.Name" xml:space="preserve">
+    <value>EmuBrA</value>
+  </data>
+  <data name="&gt;&gt;EmuBrA.Type" xml:space="preserve">
+    <value>System.Windows.Forms.CheckBox, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="&gt;&gt;EmuBrA.Parent" xml:space="preserve">
+    <value>$this</value>
+  </data>
+  <data name="&gt;&gt;EmuBrA.ZOrder" xml:space="preserve">
+    <value>3</value>
+  </data>
+  <data name="pairList.Location" type="System.Drawing.Point, System.Drawing">
+    <value>12, 12</value>
+  </data>
+  <data name="pairList.Size" type="System.Drawing.Size, System.Drawing">
+    <value>206, 325</value>
+  </data>
+  <data name="pairList.TabIndex" type="System.Int32, mscorlib">
+    <value>23</value>
+  </data>
+  <data name="&gt;&gt;pairList.Name" xml:space="preserve">
+    <value>pairList</value>
+  </data>
+  <data name="&gt;&gt;pairList.Type" xml:space="preserve">
+    <value>System.Windows.Forms.TreeView, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="&gt;&gt;pairList.Parent" xml:space="preserve">
+    <value>$this</value>
+  </data>
+  <data name="&gt;&gt;pairList.ZOrder" xml:space="preserve">
+    <value>12</value>
+  </data>
+  <data name="buttonRemovePair.Location" type="System.Drawing.Point, System.Drawing">
+    <value>118, 343</value>
+  </data>
+  <data name="buttonRemovePair.Size" type="System.Drawing.Size, System.Drawing">
+    <value>100, 26</value>
+  </data>
+  <data name="buttonRemovePair.TabIndex" type="System.Int32, mscorlib">
+    <value>24</value>
+  </data>
+  <data name="buttonRemovePair.Text" xml:space="preserve">
+    <value>Remove Pair</value>
+  </data>
+  <data name="&gt;&gt;buttonRemovePair.Name" xml:space="preserve">
+    <value>buttonRemovePair</value>
+  </data>
+  <data name="&gt;&gt;buttonRemovePair.Type" xml:space="preserve">
+    <value>System.Windows.Forms.Button, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="&gt;&gt;buttonRemovePair.Parent" xml:space="preserve">
+    <value>$this</value>
+  </data>
+  <data name="&gt;&gt;buttonRemovePair.ZOrder" xml:space="preserve">
+    <value>11</value>
+  </data>
+  <data name="buttonAddPair.ImeMode" type="System.Windows.Forms.ImeMode, System.Windows.Forms">
+    <value>NoControl</value>
+  </data>
+  <data name="buttonAddPair.Location" type="System.Drawing.Point, System.Drawing">
+    <value>12, 343</value>
+  </data>
+  <data name="buttonAddPair.Size" type="System.Drawing.Size, System.Drawing">
+    <value>100, 26</value>
+  </data>
+  <data name="buttonAddPair.TabIndex" type="System.Int32, mscorlib">
+    <value>25</value>
+  </data>
+  <data name="buttonAddPair.Text" xml:space="preserve">
+    <value>Add Pair</value>
+  </data>
+  <data name="&gt;&gt;buttonAddPair.Name" xml:space="preserve">
+    <value>buttonAddPair</value>
+  </data>
+  <data name="&gt;&gt;buttonAddPair.Type" xml:space="preserve">
+    <value>System.Windows.Forms.Button, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="&gt;&gt;buttonAddPair.Parent" xml:space="preserve">
+    <value>$this</value>
+  </data>
+  <data name="&gt;&gt;buttonAddPair.ZOrder" xml:space="preserve">
+    <value>10</value>
+  </data>
+  <data name="buttonApply.Location" type="System.Drawing.Point, System.Drawing">
+    <value>481, 343</value>
+  </data>
+  <data name="buttonApply.Size" type="System.Drawing.Size, System.Drawing">
+    <value>100, 26</value>
+  </data>
+  <data name="buttonApply.TabIndex" type="System.Int32, mscorlib">
+    <value>26</value>
+  </data>
+  <data name="buttonApply.Text" xml:space="preserve">
+    <value>Apply</value>
+  </data>
+  <data name="&gt;&gt;buttonApply.Name" xml:space="preserve">
+    <value>buttonApply</value>
+  </data>
+  <data name="&gt;&gt;buttonApply.Type" xml:space="preserve">
+    <value>System.Windows.Forms.Button, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="&gt;&gt;buttonApply.Parent" xml:space="preserve">
+    <value>$this</value>
+  </data>
+  <data name="&gt;&gt;buttonApply.ZOrder" xml:space="preserve">
+    <value>9</value>
+  </data>
+  <data name="buttonReset.Location" type="System.Drawing.Point, System.Drawing">
+    <value>233, 343</value>
+  </data>
+  <data name="buttonReset.Size" type="System.Drawing.Size, System.Drawing">
+    <value>100, 26</value>
+  </data>
+  <data name="buttonReset.TabIndex" type="System.Int32, mscorlib">
+    <value>27</value>
+  </data>
+  <data name="buttonReset.Text" xml:space="preserve">
+    <value>Reset</value>
+  </data>
+  <data name="&gt;&gt;buttonReset.Name" xml:space="preserve">
+    <value>buttonReset</value>
+  </data>
+  <data name="&gt;&gt;buttonReset.Type" xml:space="preserve">
+    <value>System.Windows.Forms.Button, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="&gt;&gt;buttonReset.Parent" xml:space="preserve">
+    <value>$this</value>
+  </data>
+  <data name="&gt;&gt;buttonReset.ZOrder" xml:space="preserve">
+    <value>8</value>
+  </data>
+  <metadata name="$this.Localizable" type="System.Boolean, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089">
+    <value>True</value>
+  </metadata>
+  <data name="$this.AutoScaleDimensions" type="System.Drawing.SizeF, System.Drawing">
+    <value>8, 16</value>
+  </data>
+  <data name="$this.ClientSize" type="System.Drawing.Size, System.Drawing">
+    <value>593, 381</value>
+  </data>
+  <data name="$this.Icon" type="System.Drawing.Icon, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
+    <value>
+        AAABAAIAICAQAAAAAADoAgAAJgAAABAQEAAAAAAAKAEAAA4DAAAoAAAAIAAAAEAAAAABAAQAAAAAAIAC
+        AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAAgAAAAICAAIAAAACAAIAAgIAAAMDAwACAgIAAAAD/AAD/
+        AAAA//8A/wAAAP8A/wD//wAA////AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHcA
+        AAAAAAAAAAAAAAAAD/B3dwAAAAAAAAAAAAAAAA/wd3dwAAAAAAAAAAAAAAAP8Hd3dwAAAAAAAAAAAAAA
+        D/B3d3dwERAAAAAAAAAAAA/wd3d3cHdxEQAAAAAAAAAP8Hd3d3B3d3cRAAAAAAAAD/B3d3dwERd3dxAA
+        AAAAAA/wd3d3AAABEXdxAAAAAAAP8Hd3cAAAAAAXdxAAAAAAD/B3dwAAAAAAAXcQAAAAAAAAdwAAAAAA
+        AAAXcQAAAAAAAAAAAAAAAAAAF3EAAAAAAAAAAAAAAAAAABdxAAAAAAAAAAAAAAAAAAAXcQAAAAAIgREA
+        AAAAAAAAF3EAAAAAgRF3EQAAAAAAABdxAAAAAB/xd3cQAAAAAAF3EAAAAAAf8Xd3cQAAAAAXdxAAAAAA
+        H/F3d3cQAAERd3EAAAAAAB/xd3d3cREXd3cQAAAAAAAf8Xd3d3F3d3cRAAAAAAAAH/F3d3dxd3ERAAAA
+        AAAAAB/xd3d3cREQAAAAAAAAAAAf8Xd3dxAAAAAAAAAAAAAAH/F3d3EAAAAAAAAAAAAAAB/xd3cQAAAA
+        AAAAAAAAAACBEXcRAAAAAAAAAAAAAAAAAIERAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//////4/
+        ///4D///8Af///AD///wAf//8AAf//AAA//wAAD/8AAAf/AB4D/wA/wf8Af+H/gP/w/+P/8P////D///
+        /w/4P/8P8A//D/AH/h/wA/wf8AHgP/AAAH/wAAD/8AAD//AAH//wAf//8AP///AH///wD////D//////
+        //8oAAAAEAAAACAAAAABAAQAAAAAAMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAAgAAAAICAAIAA
+        AACAAIAAgIAAAMDAwACAgIAAAAD/AAD/AAAA//8A/wAAAP8A/wD//wAA////AP/wAP//////8AB3D///
+        ///w8Hdw//////Dwd3AAf///8PB3cAAA///w8Hdw/3AP//AAdw//9wD///AA////AP//8AD///8A//AA
+        dw//9wD/8PB3cP9wD//w8HdwAAD///Dwd3AAf///8PB3cP/////wAHcP///////wAP//////AAAAAAAA
+        AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+</value>
+  </data>
+  <data name="$this.StartPosition" type="System.Windows.Forms.FormStartPosition, System.Windows.Forms">
+    <value>CenterScreen</value>
+  </data>
+  <data name="$this.Text" xml:space="preserve">
+    <value>Setup for com0com</value>
+  </data>
+  <data name="&gt;&gt;toolTip1.Name" xml:space="preserve">
+    <value>toolTip1</value>
+  </data>
+  <data name="&gt;&gt;toolTip1.Type" xml:space="preserve">
+    <value>System.Windows.Forms.ToolTip, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="&gt;&gt;$this.Name" xml:space="preserve">
+    <value>Form1</value>
+  </data>
+  <data name="&gt;&gt;$this.Type" xml:space="preserve">
+    <value>System.Windows.Forms.Form, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+</root>
