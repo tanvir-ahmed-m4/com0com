@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2005-2006 Vyacheslav Frolov
+ * Copyright (c) 2005-2007 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,12 +19,14 @@
  *
  *
  * $Log$
+ * Revision 1.3  2007/11/09 15:51:18  vfrolov
+ * Added OutputBufferLength check
+ *
  * Revision 1.2  2006/06/21 16:23:57  vfrolov
  * Fixed possible BSOD after one port of pair removal
  *
  * Revision 1.1  2005/09/28 10:06:42  vfrolov
  * Implemented IRP_MJ_QUERY_INFORMATION and IRP_MJ_SET_INFORMATION
- *
  *
  */
 
@@ -49,11 +51,19 @@ NTSTATUS FdoPortQueryInformation(PC0C_IO_PORT pIoPortLocal, IN PIRP pIrp)
 
     switch (pIrpStack->Parameters.QueryFile.FileInformationClass) {
     case FileStandardInformation:
+      if (pIrpStack->Parameters.DeviceIoControl.OutputBufferLength < sizeof(FILE_STANDARD_INFORMATION)) {
+         status = STATUS_BUFFER_TOO_SMALL;
+         break;
+      }
       RtlZeroMemory(pIrp->AssociatedIrp.SystemBuffer, sizeof(FILE_STANDARD_INFORMATION));
       pIrp->IoStatus.Information = sizeof(FILE_STANDARD_INFORMATION);
       status = STATUS_SUCCESS;
       break;
     case FilePositionInformation:
+      if (pIrpStack->Parameters.DeviceIoControl.OutputBufferLength < sizeof(FILE_POSITION_INFORMATION)) {
+         status = STATUS_BUFFER_TOO_SMALL;
+         break;
+      }
       RtlZeroMemory(pIrp->AssociatedIrp.SystemBuffer, sizeof(FILE_POSITION_INFORMATION));
       pIrp->IoStatus.Information = sizeof(FILE_POSITION_INFORMATION);
       status = STATUS_SUCCESS;
