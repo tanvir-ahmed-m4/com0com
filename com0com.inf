@@ -4,7 +4,7 @@
 ;
 ; Installation file for the Null-modem emulator driver.
 ;
-; Copyright (c) 2004-2005 Vyacheslav Frolov
+; Copyright (c) 2004-2007 Vyacheslav Frolov
 ;
 ;******************************************************************************
 
@@ -14,7 +14,7 @@ Provider = %VF%
 Class = CNCPorts
 ClassGUID = {df799e12-3c56-421b-b298-b6d3642bc878}
 CatalogFile = com0com.cat
-DriverVer = 02/18/2004,1.2.0.0
+DriverVer = 12/05/2007,2.0.0.0
 
 ;******************************************************************************
 ;
@@ -23,7 +23,7 @@ DriverVer = 02/18/2004,1.2.0.0
 ;******************************************************************************
 
 [ClassInstall32]
-AddReg = com0com_ClassReg     
+AddReg = com0com_ClassReg
 
 [com0com_ClassReg]
 HKR,,,0,%ClassName%
@@ -54,12 +54,24 @@ com0com.sys
 ;******************************************************************************
 
 [Manufacturer]
-%VF% = VF.Mfg
+%VF% = com0com, NTx86, NTia64, NTamd64
 
 [ControlFlags]
 ExcludeFromSelect = com0com\port
 
-[VF.Mfg]
+[com0com]
+%com0com.BusDesc% = com0com_inst, root\com0com
+%com0com.PortDesc% = com0com_inst_port, com0com\port
+
+[com0com.NTx86]
+%com0com.BusDesc% = com0com_inst, root\com0com
+%com0com.PortDesc% = com0com_inst_port, com0com\port
+
+[com0com.NTia64]
+%com0com.BusDesc% = com0com_inst, root\com0com
+%com0com.PortDesc% = com0com_inst_port, com0com\port
+
+[com0com.NTamd64]
 %com0com.BusDesc% = com0com_inst, root\com0com
 %com0com.PortDesc% = com0com_inst_port, com0com\port
 
