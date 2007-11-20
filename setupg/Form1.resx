@@ -148,7 +148,7 @@
     <value>$this</value>
   </data>
   <data name="&gt;&gt;PortNameB.ZOrder" xml:space="preserve">
-    <value>13</value>
+    <value>33</value>
   </data>
   <data name="PortNameA.Location" type="System.Drawing.Point, System.Drawing">
     <value>233, 12</value>
@@ -172,10 +172,7 @@
     <value>$this</value>
   </data>
   <data name="&gt;&gt;PortNameA.ZOrder" xml:space="preserve">
-    <value>14</value>
-  </data>
-  <data name="pinNameON.AutoSize" type="System.Boolean, mscorlib">
-    <value>True</value>
+    <value>34</value>
   </data>
   <data name="pinNameON.Font" type="System.Drawing.Font, System.Drawing">
     <value>Courier New, 10.2pt</value>
@@ -184,10 +181,10 @@
     <value>NoControl</value>
   </data>
   <data name="pinNameON.Location" type="System.Drawing.Point, System.Drawing">
-    <value>390, 317</value>
+    <value>282, 317</value>
   </data>
   <data name="pinNameON.Size" type="System.Drawing.Size, System.Drawing">
-    <value>29, 20</value>
+    <value>250, 20</value>
   </data>
   <data name="pinNameON.TabIndex" type="System.Int32, mscorlib">
     <value>18</value>
@@ -211,145 +208,7 @@
     <value>$this</value>
   </data>
   <data name="&gt;&gt;pinNameON.ZOrder" xml:space="preserve">
-    <value>15</value>
-  </data>
-  <data name="pinNamesB.Font" type="System.Drawing.Font, System.Drawing">
-    <value>Courier New, 10.2pt</value>
-  </data>
-  <data name="pinNamesB.ItemHeight" type="System.Int32, mscorlib">
-    <value>20</value>
-  </data>
-  <data name="pinNamesB.Items" xml:space="preserve">
-    <value>RX</value>
-  </data>
-  <data name="pinNamesB.Items1" xml:space="preserve">
-    <value>TX</value>
-  </data>
-  <data name="pinNamesB.Items2" xml:space="preserve">
-    <value>DTR</value>
-  </data>
-  <data name="pinNamesB.Items3" xml:space="preserve">
-    <value>DSR</value>
-  </data>
-  <data name="pinNamesB.Items4" xml:space="preserve">
-    <value>DCD</value>
-  </data>
-  <data name="pinNamesB.Items5" xml:space="preserve">
-    <value>RTS</value>
-  </data>
-  <data name="pinNamesB.Items6" xml:space="preserve">
-    <value>CTS</value>
-  </data>
-  <data name="pinNamesB.Items7" xml:space="preserve">
-    <value>RI</value>
-  </data>
-  <data name="pinNamesB.Items8" xml:space="preserve">
-    <value>OUT1</value>
-  </data>
-  <data name="pinNamesB.Items9" xml:space="preserve">
-    <value>OPEN</value>
-  </data>
-  <data name="pinNamesB.Location" type="System.Drawing.Point, System.Drawing">
-    <value>538, 116</value>
-  </data>
-  <data name="pinNamesB.Size" type="System.Drawing.Size, System.Drawing">
-    <value>43, 200</value>
-  </data>
-  <data name="pinNamesB.TabIndex" type="System.Int32, mscorlib">
-    <value>17</value>
-  </data>
-  <data name="pinNamesB.ToolTip" xml:space="preserve">
-    <value>RX - receive data.
-TX - transmit data.
-DTR - data terminal ready.
-DSR - data set ready.
-DCD - data carrier detect.
-RTS - request to send.
-CTS - clear to send.
-RI - ring indicator.
-OUT1 - auxiliary output 1.
-OPEN - logical ON if remote/local port is open.</value>
-  </data>
-  <data name="&gt;&gt;pinNamesB.Name" xml:space="preserve">
-    <value>pinNamesB</value>
-  </data>
-  <data name="&gt;&gt;pinNamesB.Type" xml:space="preserve">
-    <value>System.Windows.Forms.ListBox, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
-  </data>
-  <data name="&gt;&gt;pinNamesB.Parent" xml:space="preserve">
-    <value>$this</value>
-  </data>
-  <data name="&gt;&gt;pinNamesB.ZOrder" xml:space="preserve">
-    <value>16</value>
-  </data>
-  <data name="pinNamesA.Font" type="System.Drawing.Font, System.Drawing">
-    <value>Courier New, 10.2pt</value>
-  </data>
-  <data name="pinNamesA.ItemHeight" type="System.Int32, mscorlib">
-    <value>20</value>
-  </data>
-  <data name="pinNamesA.Items" xml:space="preserve">
-    <value>  RX</value>
-  </data>
-  <data name="pinNamesA.Items1" xml:space="preserve">
-    <value>  TX</value>
-  </data>
-  <data name="pinNamesA.Items2" xml:space="preserve">
-    <value> DTR</value>
-  </data>
-  <data name="pinNamesA.Items3" xml:space="preserve">
-    <value> DSR</value>
-  </data>
-  <data name="pinNamesA.Items4" xml:space="preserve">
-    <value> DCD</value>
-  </data>
-  <data name="pinNamesA.Items5" xml:space="preserve">
-    <value> RTS</value>
-  </data>
-  <data name="pinNamesA.Items6" xml:space="preserve">
-    <value> CTS</value>
-  </data>
-  <data name="pinNamesA.Items7" xml:space="preserve">
-    <value>  RI</value>
-  </data>
-  <data name="pinNamesA.Items8" xml:space="preserve">
-    <value>OUT1</value>
-  </data>
-  <data name="pinNamesA.Items9" xml:space="preserve">
-    <value>OPEN</value>
-  </data>
-  <data name="pinNamesA.Location" type="System.Drawing.Point, System.Drawing">
-    <value>233, 116</value>
-  </data>
-  <data name="pinNamesA.Size" type="System.Drawing.Size, System.Drawing">
-    <value>43, 200</value>
-  </data>
-  <data name="pinNamesA.TabIndex" type="System.Int32, mscorlib">
-    <value>16</value>
-  </data>
-  <data name="pinNamesA.ToolTip" xml:space="preserve">
-    <value>RX - receive data.
-TX - transmit data.
-DTR - data terminal ready.
-DSR - data set ready.
-DCD - data carrier detect.
-RTS - request to send.
-CTS - clear to send.
-RI - ring indicator.
-OUT1 - auxiliary output 1.
-OPEN - logical ON if remote/local port is open.</value>
-  </data>
-  <data name="&gt;&gt;pinNamesA.Name" xml:space="preserve">
-    <value>pinNamesA</value>
-  </data>
-  <data name="&gt;&gt;pinNamesA.Type" xml:space="preserve">
-    <value>System.Windows.Forms.ListBox, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
-  </data>
-  <data name="&gt;&gt;pinNamesA.Parent" xml:space="preserve">
-    <value>$this</value>
-  </data>
-  <data name="&gt;&gt;pinNamesA.ZOrder" xml:space="preserve">
-    <value>17</value>
+    <value>35</value>
   </data>
   <data name="picturePinMap.ImeMode" type="System.Windows.Forms.ImeMode, System.Windows.Forms">
     <value>NoControl</value>
@@ -378,16 +237,13 @@ Double click a green pin to add/remove inverter.</value>
     <value>$this</value>
   </data>
   <data name="&gt;&gt;picturePinMap.ZOrder" xml:space="preserve">
-    <value>18</value>
-  </data>
-  <data name="EmuBrB.AutoSize" type="System.Boolean, mscorlib">
-    <value>True</value>
+    <value>36</value>
   </data>
   <data name="EmuBrB.Location" type="System.Drawing.Point, System.Drawing">
     <value>411, 35</value>
   </data>
   <data name="EmuBrB.Size" type="System.Drawing.Size, System.Drawing">
-    <value>142, 21</value>
+    <value>180, 21</value>
   </data>
   <data name="EmuBrB.TabIndex" type="System.Int32, mscorlib">
     <value>28</value>
@@ -409,16 +265,13 @@ in the direction to the paired port.</value>
     <value>$this</value>
   </data>
   <data name="&gt;&gt;EmuBrB.ZOrder" xml:space="preserve">
-    <value>7</value>
-  </data>
-  <data name="EmuOverrunB.AutoSize" type="System.Boolean, mscorlib">
-    <value>True</value>
+    <value>27</value>
   </data>
   <data name="EmuOverrunB.Location" type="System.Drawing.Point, System.Drawing">
     <value>411, 53</value>
   </data>
   <data name="EmuOverrunB.Size" type="System.Drawing.Size, System.Drawing">
-    <value>164, 21</value>
+    <value>180, 21</value>
   </data>
   <data name="EmuOverrunB.TabIndex" type="System.Int32, mscorlib">
     <value>29</value>
@@ -439,16 +292,13 @@ in the direction to the paired port.</value>
     <value>$this</value>
   </data>
   <data name="&gt;&gt;EmuOverrunB.ZOrder" xml:space="preserve">
-    <value>6</value>
-  </data>
-  <data name="PlugInModeB.AutoSize" type="System.Boolean, mscorlib">
-    <value>True</value>
+    <value>26</value>
   </data>
   <data name="PlugInModeB.Location" type="System.Drawing.Point, System.Drawing">
     <value>411, 71</value>
   </data>
   <data name="PlugInModeB.Size" type="System.Drawing.Size, System.Drawing">
-    <value>156, 21</value>
+    <value>180, 21</value>
   </data>
   <data name="PlugInModeB.TabIndex" type="System.Int32, mscorlib">
     <value>30</value>
@@ -471,16 +321,13 @@ be open if the paired port is not open.</value>
     <value>$this</value>
   </data>
   <data name="&gt;&gt;PlugInModeB.ZOrder" xml:space="preserve">
-    <value>5</value>
-  </data>
-  <data name="ExclusiveModeB.AutoSize" type="System.Boolean, mscorlib">
-    <value>True</value>
+    <value>25</value>
   </data>
   <data name="ExclusiveModeB.Location" type="System.Drawing.Point, System.Drawing">
     <value>411, 89</value>
   </data>
   <data name="ExclusiveModeB.Size" type="System.Drawing.Size, System.Drawing">
-    <value>170, 21</value>
+    <value>180, 21</value>
   </data>
   <data name="ExclusiveModeB.TabIndex" type="System.Int32, mscorlib">
     <value>31</value>
@@ -502,22 +349,19 @@ The exclusive mode port is hidden if it is open.</value>
     <value>$this</value>
   </data>
   <data name="&gt;&gt;ExclusiveModeB.ZOrder" xml:space="preserve">
-    <value>4</value>
-  </data>
-  <data name="ExclusiveModeA.AutoSize" type="System.Boolean, mscorlib">
-    <value>True</value>
+    <value>24</value>
   </data>
   <data name="ExclusiveModeA.ImeMode" type="System.Windows.Forms.ImeMode, System.Windows.Forms">
     <value>NoControl</value>
   </data>
   <data name="ExclusiveModeA.Location" type="System.Drawing.Point, System.Drawing">
-    <value>233, 89</value>
+    <value>225, 89</value>
   </data>
   <data name="ExclusiveModeA.RightToLeft" type="System.Windows.Forms.RightToLeft, System.Windows.Forms">
     <value>Yes</value>
   </data>
   <data name="ExclusiveModeA.Size" type="System.Drawing.Size, System.Drawing">
-    <value>170, 21</value>
+    <value>180, 21</value>
   </data>
   <data name="ExclusiveModeA.TabIndex" type="System.Int32, mscorlib">
     <value>35</value>
@@ -539,22 +383,19 @@ The exclusive mode port is hidden if it is open.</value>
     <value>$this</value>
   </data>
   <data name="&gt;&gt;ExclusiveModeA.ZOrder" xml:space="preserve">
-    <value>0</value>
-  </data>
-  <data name="PlugInModeA.AutoSize" type="System.Boolean, mscorlib">
-    <value>True</value>
+    <value>20</value>
   </data>
   <data name="PlugInModeA.ImeMode" type="System.Windows.Forms.ImeMode, System.Windows.Forms">
     <value>NoControl</value>
   </data>
   <data name="PlugInModeA.Location" type="System.Drawing.Point, System.Drawing">
-    <value>247, 71</value>
+    <value>225, 71</value>
   </data>
   <data name="PlugInModeA.RightToLeft" type="System.Windows.Forms.RightToLeft, System.Windows.Forms">
     <value>Yes</value>
   </data>
   <data name="PlugInModeA.Size" type="System.Drawing.Size, System.Drawing">
-    <value>156, 21</value>
+    <value>180, 21</value>
   </data>
   <data name="PlugInModeA.TabIndex" type="System.Int32, mscorlib">
     <value>34</value>
@@ -577,22 +418,19 @@ be open if the paired port is not open.</value>
     <value>$this</value>
   </data>
   <data name="&gt;&gt;PlugInModeA.ZOrder" xml:space="preserve">
-    <value>1</value>
-  </data>
-  <data name="EmuOverrunA.AutoSize" type="System.Boolean, mscorlib">
-    <value>True</value>
+    <value>21</value>
   </data>
   <data name="EmuOverrunA.ImeMode" type="System.Windows.Forms.ImeMode, System.Windows.Forms">
     <value>NoControl</value>
   </data>
   <data name="EmuOverrunA.Location" type="System.Drawing.Point, System.Drawing">
-    <value>239, 53</value>
+    <value>225, 53</value>
   </data>
   <data name="EmuOverrunA.RightToLeft" type="System.Windows.Forms.RightToLeft, System.Windows.Forms">
     <value>Yes</value>
   </data>
   <data name="EmuOverrunA.Size" type="System.Drawing.Size, System.Drawing">
-    <value>164, 21</value>
+    <value>180, 21</value>
   </data>
   <data name="EmuOverrunA.TabIndex" type="System.Int32, mscorlib">
     <value>33</value>
@@ -613,22 +451,19 @@ be open if the paired port is not open.</value>
     <value>$this</value>
   </data>
   <data name="&gt;&gt;EmuOverrunA.ZOrder" xml:space="preserve">
-    <value>2</value>
-  </data>
-  <data name="EmuBrA.AutoSize" type="System.Boolean, mscorlib">
-    <value>True</value>
+    <value>22</value>
   </data>
   <data name="EmuBrA.ImeMode" type="System.Windows.Forms.ImeMode, System.Windows.Forms">
     <value>NoControl</value>
   </data>
   <data name="EmuBrA.Location" type="System.Drawing.Point, System.Drawing">
-    <value>261, 35</value>
+    <value>225, 35</value>
   </data>
   <data name="EmuBrA.RightToLeft" type="System.Windows.Forms.RightToLeft, System.Windows.Forms">
     <value>Yes</value>
   </data>
   <data name="EmuBrA.Size" type="System.Drawing.Size, System.Drawing">
-    <value>142, 21</value>
+    <value>180, 21</value>
   </data>
   <data name="EmuBrA.TabIndex" type="System.Int32, mscorlib">
     <value>32</value>
@@ -650,7 +485,337 @@ in the direction to the paired port.</value>
     <value>$this</value>
   </data>
   <data name="&gt;&gt;EmuBrA.ZOrder" xml:space="preserve">
-    <value>3</value>
+    <value>23</value>
+  </data>
+  <data name="pinNameA_RX.ImeMode" type="System.Windows.Forms.ImeMode, System.Windows.Forms">
+    <value>NoControl</value>
+  </data>
+  <data name="pinNameA_RX.Location" type="System.Drawing.Point, System.Drawing">
+    <value>232, 116</value>
+  </data>
+  <data name="pinNameA_RX.Size" type="System.Drawing.Size, System.Drawing">
+    <value>50, 20</value>
+  </data>
+  <data name="pinNameA_RX.TabIndex" type="System.Int32, mscorlib">
+    <value>36</value>
+  </data>
+  <data name="pinNameA_RX.Text" xml:space="preserve">
+    <value>RX</value>
+  </data>
+  <data name="pinNameA_RX.TextAlign" type="System.Drawing.ContentAlignment, System.Drawing">
+    <value>MiddleRight</value>
+  </data>
+  <data name="pinNameA_RX.ToolTip" xml:space="preserve">
+    <value>RX - receive data.</value>
+  </data>
+  <data name="&gt;&gt;pinNameA_RX.Name" xml:space="preserve">
+    <value>pinNameA_RX</value>
+  </data>
+  <data name="&gt;&gt;pinNameA_RX.Type" xml:space="preserve">
+    <value>System.Windows.Forms.Label, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="&gt;&gt;pinNameA_RX.Parent" xml:space="preserve">
+    <value>$this</value>
+  </data>
+  <data name="&gt;&gt;pinNameA_RX.ZOrder" xml:space="preserve">
+    <value>19</value>
+  </data>
+  <data name="pinNameA_DTR.ImeMode" type="System.Windows.Forms.ImeMode, System.Windows.Forms">
+    <value>NoControl</value>
+  </data>
+  <data name="pinNameA_DTR.Location" type="System.Drawing.Point, System.Drawing">
+    <value>232, 156</value>
+  </data>
+  <data name="pinNameA_DTR.Size" type="System.Drawing.Size, System.Drawing">
+    <value>50, 20</value>
+  </data>
+  <data name="pinNameA_DTR.TabIndex" type="System.Int32, mscorlib">
+    <value>37</value>
+  </data>
+  <data name="pinNameA_DTR.Text" xml:space="preserve">
+    <value>DTR</value>
+  </data>
+  <data name="pinNameA_DTR.TextAlign" type="System.Drawing.ContentAlignment, System.Drawing">
+    <value>MiddleRight</value>
+  </data>
+  <data name="pinNameA_DTR.ToolTip" xml:space="preserve">
+    <value>DTR - data terminal ready.</value>
+  </data>
+  <data name="&gt;&gt;pinNameA_DTR.Name" xml:space="preserve">
+    <value>pinNameA_DTR</value>
+  </data>
+  <data name="&gt;&gt;pinNameA_DTR.Type" xml:space="preserve">
+    <value>System.Windows.Forms.Label, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="&gt;&gt;pinNameA_DTR.Parent" xml:space="preserve">
+    <value>$this</value>
+  </data>
+  <data name="&gt;&gt;pinNameA_DTR.ZOrder" xml:space="preserve">
+    <value>18</value>
+  </data>
+  <data name="pinNameA_TX.ImeMode" type="System.Windows.Forms.ImeMode, System.Windows.Forms">
+    <value>NoControl</value>
+  </data>
+  <data name="pinNameA_TX.Location" type="System.Drawing.Point, System.Drawing">
+    <value>232, 136</value>
+  </data>
+  <data name="pinNameA_TX.Size" type="System.Drawing.Size, System.Drawing">
+    <value>50, 20</value>
+  </data>
+  <data name="pinNameA_TX.TabIndex" type="System.Int32, mscorlib">
+    <value>38</value>
+  </data>
+  <data name="pinNameA_TX.Text" xml:space="preserve">
+    <value>TX</value>
+  </data>
+  <data name="pinNameA_TX.TextAlign" type="System.Drawing.ContentAlignment, System.Drawing">
+    <value>MiddleRight</value>
+  </data>
+  <data name="pinNameA_TX.ToolTip" xml:space="preserve">
+    <value>TX - transmit data.</value>
+  </data>
+  <data name="&gt;&gt;pinNameA_TX.Name" xml:space="preserve">
+    <value>pinNameA_TX</value>
+  </data>
+  <data name="&gt;&gt;pinNameA_TX.Type" xml:space="preserve">
+    <value>System.Windows.Forms.Label, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="&gt;&gt;pinNameA_TX.Parent" xml:space="preserve">
+    <value>$this</value>
+  </data>
+  <data name="&gt;&gt;pinNameA_TX.ZOrder" xml:space="preserve">
+    <value>17</value>
+  </data>
+  <data name="pinNameA_DSR.ImeMode" type="System.Windows.Forms.ImeMode, System.Windows.Forms">
+    <value>NoControl</value>
+  </data>
+  <data name="pinNameA_DSR.Location" type="System.Drawing.Point, System.Drawing">
+    <value>232, 176</value>
+  </data>
+  <data name="pinNameA_DSR.Size" type="System.Drawing.Size, System.Drawing">
+    <value>50, 20</value>
+  </data>
+  <data name="pinNameA_DSR.TabIndex" type="System.Int32, mscorlib">
+    <value>39</value>
+  </data>
+  <data name="pinNameA_DSR.Text" xml:space="preserve">
+    <value>DSR</value>
+  </data>
+  <data name="pinNameA_DSR.TextAlign" type="System.Drawing.ContentAlignment, System.Drawing">
+    <value>MiddleRight</value>
+  </data>
+  <data name="pinNameA_DSR.ToolTip" xml:space="preserve">
+    <value>DSR - data set ready.</value>
+  </data>
+  <data name="&gt;&gt;pinNameA_DSR.Name" xml:space="preserve">
+    <value>pinNameA_DSR</value>
+  </data>
+  <data name="&gt;&gt;pinNameA_DSR.Type" xml:space="preserve">
+    <value>System.Windows.Forms.Label, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="&gt;&gt;pinNameA_DSR.Parent" xml:space="preserve">
+    <value>$this</value>
+  </data>
+  <data name="&gt;&gt;pinNameA_DSR.ZOrder" xml:space="preserve">
+    <value>16</value>
+  </data>
+  <data name="pinNameA_DCD.ImeMode" type="System.Windows.Forms.ImeMode, System.Windows.Forms">
+    <value>NoControl</value>
+  </data>
+  <data name="pinNameA_DCD.Location" type="System.Drawing.Point, System.Drawing">
+    <value>232, 196</value>
+  </data>
+  <data name="pinNameA_DCD.Size" type="System.Drawing.Size, System.Drawing">
+    <value>50, 20</value>
+  </data>
+  <data name="pinNameA_DCD.TabIndex" type="System.Int32, mscorlib">
+    <value>40</value>
+  </data>
+  <data name="pinNameA_DCD.Text" xml:space="preserve">
+    <value>DCD</value>
+  </data>
+  <data name="pinNameA_DCD.TextAlign" type="System.Drawing.ContentAlignment, System.Drawing">
+    <value>MiddleRight</value>
+  </data>
+  <data name="pinNameA_DCD.ToolTip" xml:space="preserve">
+    <value>DCD - data carrier detect.</value>
+  </data>
+  <data name="&gt;&gt;pinNameA_DCD.Name" xml:space="preserve">
+    <value>pinNameA_DCD</value>
+  </data>
+  <data name="&gt;&gt;pinNameA_DCD.Type" xml:space="preserve">
+    <value>System.Windows.Forms.Label, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="&gt;&gt;pinNameA_DCD.Parent" xml:space="preserve">
+    <value>$this</value>
+  </data>
+  <data name="&gt;&gt;pinNameA_DCD.ZOrder" xml:space="preserve">
+    <value>15</value>
+  </data>
+  <data name="pinNameA_RTS.ImeMode" type="System.Windows.Forms.ImeMode, System.Windows.Forms">
+    <value>NoControl</value>
+  </data>
+  <data name="pinNameA_RTS.Location" type="System.Drawing.Point, System.Drawing">
+    <value>232, 216</value>
+  </data>
+  <data name="pinNameA_RTS.Size" type="System.Drawing.Size, System.Drawing">
+    <value>50, 20</value>
+  </data>
+  <data name="pinNameA_RTS.TabIndex" type="System.Int32, mscorlib">
+    <value>41</value>
+  </data>
+  <data name="pinNameA_RTS.Text" xml:space="preserve">
+    <value>RTS</value>
+  </data>
+  <data name="pinNameA_RTS.TextAlign" type="System.Drawing.ContentAlignment, System.Drawing">
+    <value>MiddleRight</value>
+  </data>
+  <data name="pinNameA_RTS.ToolTip" xml:space="preserve">
+    <value>RTS - request to send.</value>
+  </data>
+  <data name="&gt;&gt;pinNameA_RTS.Name" xml:space="preserve">
+    <value>pinNameA_RTS</value>
+  </data>
+  <data name="&gt;&gt;pinNameA_RTS.Type" xml:space="preserve">
+    <value>System.Windows.Forms.Label, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="&gt;&gt;pinNameA_RTS.Parent" xml:space="preserve">
+    <value>$this</value>
+  </data>
+  <data name="&gt;&gt;pinNameA_RTS.ZOrder" xml:space="preserve">
+    <value>14</value>
+  </data>
+  <data name="pinNameA_CTS.ImeMode" type="System.Windows.Forms.ImeMode, System.Windows.Forms">
+    <value>NoControl</value>
+  </data>
+  <data name="pinNameA_CTS.Location" type="System.Drawing.Point, System.Drawing">
+    <value>232, 236</value>
+  </data>
+  <data name="pinNameA_CTS.Size" type="System.Drawing.Size, System.Drawing">
+    <value>50, 20</value>
+  </data>
+  <data name="pinNameA_CTS.TabIndex" type="System.Int32, mscorlib">
+    <value>42</value>
+  </data>
+  <data name="pinNameA_CTS.Text" xml:space="preserve">
+    <value>CTS</value>
+  </data>
+  <data name="pinNameA_CTS.TextAlign" type="System.Drawing.ContentAlignment, System.Drawing">
+    <value>MiddleRight</value>
+  </data>
+  <data name="pinNameA_CTS.ToolTip" xml:space="preserve">
+    <value>CTS - clear to send.</value>
+  </data>
+  <data name="&gt;&gt;pinNameA_CTS.Name" xml:space="preserve">
+    <value>pinNameA_CTS</value>
+  </data>
+  <data name="&gt;&gt;pinNameA_CTS.Type" xml:space="preserve">
+    <value>System.Windows.Forms.Label, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="&gt;&gt;pinNameA_CTS.Parent" xml:space="preserve">
+    <value>$this</value>
+  </data>
+  <data name="&gt;&gt;pinNameA_CTS.ZOrder" xml:space="preserve">
+    <value>13</value>
+  </data>
+  <data name="pinNameA_RI.ImeMode" type="System.Windows.Forms.ImeMode, System.Windows.Forms">
+    <value>NoControl</value>
+  </data>
+  <data name="pinNameA_RI.Location" type="System.Drawing.Point, System.Drawing">
+    <value>232, 256</value>
+  </data>
+  <data name="pinNameA_RI.Size" type="System.Drawing.Size, System.Drawing">
+    <value>50, 20</value>
+  </data>
+  <data name="pinNameA_RI.TabIndex" type="System.Int32, mscorlib">
+    <value>43</value>
+  </data>
+  <data name="pinNameA_RI.Text" xml:space="preserve">
+    <value>RI</value>
+  </data>
+  <data name="pinNameA_RI.TextAlign" type="System.Drawing.ContentAlignment, System.Drawing">
+    <value>MiddleRight</value>
+  </data>
+  <data name="pinNameA_RI.ToolTip" xml:space="preserve">
+    <value>RI - ring indicator.</value>
+  </data>
+  <data name="&gt;&gt;pinNameA_RI.Name" xml:space="preserve">
+    <value>pinNameA_RI</value>
+  </data>
+  <data name="&gt;&gt;pinNameA_RI.Type" xml:space="preserve">
+    <value>System.Windows.Forms.Label, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="&gt;&gt;pinNameA_RI.Parent" xml:space="preserve">
+    <value>$this</value>
+  </data>
+  <data name="&gt;&gt;pinNameA_RI.ZOrder" xml:space="preserve">
+    <value>12</value>
+  </data>
+  <data name="pinNameA_OUT1.ImeMode" type="System.Windows.Forms.ImeMode, System.Windows.Forms">
+    <value>NoControl</value>
+  </data>
+  <data name="pinNameA_OUT1.Location" type="System.Drawing.Point, System.Drawing">
+    <value>232, 276</value>
+  </data>
+  <data name="pinNameA_OUT1.Size" type="System.Drawing.Size, System.Drawing">
+    <value>50, 20</value>
+  </data>
+  <data name="pinNameA_OUT1.TabIndex" type="System.Int32, mscorlib">
+    <value>44</value>
+  </data>
+  <data name="pinNameA_OUT1.Text" xml:space="preserve">
+    <value>OUT1</value>
+  </data>
+  <data name="pinNameA_OUT1.TextAlign" type="System.Drawing.ContentAlignment, System.Drawing">
+    <value>MiddleRight</value>
+  </data>
+  <data name="pinNameA_OUT1.ToolTip" xml:space="preserve">
+    <value>OUT1 - auxiliary output 1.</value>
+  </data>
+  <data name="&gt;&gt;pinNameA_OUT1.Name" xml:space="preserve">
+    <value>pinNameA_OUT1</value>
+  </data>
+  <data name="&gt;&gt;pinNameA_OUT1.Type" xml:space="preserve">
+    <value>System.Windows.Forms.Label, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="&gt;&gt;pinNameA_OUT1.Parent" xml:space="preserve">
+    <value>$this</value>
+  </data>
+  <data name="&gt;&gt;pinNameA_OUT1.ZOrder" xml:space="preserve">
+    <value>11</value>
+  </data>
+  <data name="pinNameA_OPEN.ImeMode" type="System.Windows.Forms.ImeMode, System.Windows.Forms">
+    <value>NoControl</value>
+  </data>
+  <data name="pinNameA_OPEN.Location" type="System.Drawing.Point, System.Drawing">
+    <value>232, 296</value>
+  </data>
+  <data name="pinNameA_OPEN.Size" type="System.Drawing.Size, System.Drawing">
+    <value>50, 20</value>
+  </data>
+  <data name="pinNameA_OPEN.TabIndex" type="System.Int32, mscorlib">
+    <value>45</value>
+  </data>
+  <data name="pinNameA_OPEN.Text" xml:space="preserve">
+    <value>OPEN</value>
+  </data>
+  <data name="pinNameA_OPEN.TextAlign" type="System.Drawing.ContentAlignment, System.Drawing">
+    <value>MiddleRight</value>
+  </data>
+  <data name="pinNameA_OPEN.ToolTip" xml:space="preserve">
+    <value>OPEN - logical ON if remote/local port is open.</value>
+  </data>
+  <data name="&gt;&gt;pinNameA_OPEN.Name" xml:space="preserve">
+    <value>pinNameA_OPEN</value>
+  </data>
+  <data name="&gt;&gt;pinNameA_OPEN.Type" xml:space="preserve">
+    <value>System.Windows.Forms.Label, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="&gt;&gt;pinNameA_OPEN.Parent" xml:space="preserve">
+    <value>$this</value>
+  </data>
+  <data name="&gt;&gt;pinNameA_OPEN.ZOrder" xml:space="preserve">
+    <value>10</value>
   </data>
   <data name="pairList.Location" type="System.Drawing.Point, System.Drawing">
     <value>12, 12</value>
@@ -671,7 +836,7 @@ in the direction to the paired port.</value>
     <value>$this</value>
   </data>
   <data name="&gt;&gt;pairList.ZOrder" xml:space="preserve">
-    <value>12</value>
+    <value>32</value>
   </data>
   <data name="buttonRemovePair.Location" type="System.Drawing.Point, System.Drawing">
     <value>118, 343</value>
@@ -695,7 +860,7 @@ in the direction to the paired port.</value>
     <value>$this</value>
   </data>
   <data name="&gt;&gt;buttonRemovePair.ZOrder" xml:space="preserve">
-    <value>11</value>
+    <value>31</value>
   </data>
   <data name="buttonAddPair.ImeMode" type="System.Windows.Forms.ImeMode, System.Windows.Forms">
     <value>NoControl</value>
@@ -722,7 +887,7 @@ in the direction to the paired port.</value>
     <value>$this</value>
   </data>
   <data name="&gt;&gt;buttonAddPair.ZOrder" xml:space="preserve">
-    <value>10</value>
+    <value>30</value>
   </data>
   <data name="buttonApply.Location" type="System.Drawing.Point, System.Drawing">
     <value>481, 343</value>
@@ -746,7 +911,7 @@ in the direction to the paired port.</value>
     <value>$this</value>
   </data>
   <data name="&gt;&gt;buttonApply.ZOrder" xml:space="preserve">
-    <value>9</value>
+    <value>29</value>
   </data>
   <data name="buttonReset.Location" type="System.Drawing.Point, System.Drawing">
     <value>233, 343</value>
@@ -770,7 +935,337 @@ in the direction to the paired port.</value>
     <value>$this</value>
   </data>
   <data name="&gt;&gt;buttonReset.ZOrder" xml:space="preserve">
+    <value>28</value>
+  </data>
+  <data name="pinNameB_OPEN.ImeMode" type="System.Windows.Forms.ImeMode, System.Windows.Forms">
+    <value>NoControl</value>
+  </data>
+  <data name="pinNameB_OPEN.Location" type="System.Drawing.Point, System.Drawing">
+    <value>532, 296</value>
+  </data>
+  <data name="pinNameB_OPEN.Size" type="System.Drawing.Size, System.Drawing">
+    <value>50, 20</value>
+  </data>
+  <data name="pinNameB_OPEN.TabIndex" type="System.Int32, mscorlib">
+    <value>55</value>
+  </data>
+  <data name="pinNameB_OPEN.Text" xml:space="preserve">
+    <value>OPEN</value>
+  </data>
+  <data name="pinNameB_OPEN.TextAlign" type="System.Drawing.ContentAlignment, System.Drawing">
+    <value>MiddleLeft</value>
+  </data>
+  <data name="pinNameB_OPEN.ToolTip" xml:space="preserve">
+    <value>OPEN - logical ON if remote/local port is open.</value>
+  </data>
+  <data name="&gt;&gt;pinNameB_OPEN.Name" xml:space="preserve">
+    <value>pinNameB_OPEN</value>
+  </data>
+  <data name="&gt;&gt;pinNameB_OPEN.Type" xml:space="preserve">
+    <value>System.Windows.Forms.Label, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="&gt;&gt;pinNameB_OPEN.Parent" xml:space="preserve">
+    <value>$this</value>
+  </data>
+  <data name="&gt;&gt;pinNameB_OPEN.ZOrder" xml:space="preserve">
+    <value>0</value>
+  </data>
+  <data name="pinNameB_OUT1.ImeMode" type="System.Windows.Forms.ImeMode, System.Windows.Forms">
+    <value>NoControl</value>
+  </data>
+  <data name="pinNameB_OUT1.Location" type="System.Drawing.Point, System.Drawing">
+    <value>532, 276</value>
+  </data>
+  <data name="pinNameB_OUT1.Size" type="System.Drawing.Size, System.Drawing">
+    <value>50, 20</value>
+  </data>
+  <data name="pinNameB_OUT1.TabIndex" type="System.Int32, mscorlib">
+    <value>54</value>
+  </data>
+  <data name="pinNameB_OUT1.Text" xml:space="preserve">
+    <value>OUT1</value>
+  </data>
+  <data name="pinNameB_OUT1.TextAlign" type="System.Drawing.ContentAlignment, System.Drawing">
+    <value>MiddleLeft</value>
+  </data>
+  <data name="pinNameB_OUT1.ToolTip" xml:space="preserve">
+    <value>OUT1 - auxiliary output 1.</value>
+  </data>
+  <data name="&gt;&gt;pinNameB_OUT1.Name" xml:space="preserve">
+    <value>pinNameB_OUT1</value>
+  </data>
+  <data name="&gt;&gt;pinNameB_OUT1.Type" xml:space="preserve">
+    <value>System.Windows.Forms.Label, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="&gt;&gt;pinNameB_OUT1.Parent" xml:space="preserve">
+    <value>$this</value>
+  </data>
+  <data name="&gt;&gt;pinNameB_OUT1.ZOrder" xml:space="preserve">
+    <value>1</value>
+  </data>
+  <data name="pinNameB_RI.ImeMode" type="System.Windows.Forms.ImeMode, System.Windows.Forms">
+    <value>NoControl</value>
+  </data>
+  <data name="pinNameB_RI.Location" type="System.Drawing.Point, System.Drawing">
+    <value>532, 256</value>
+  </data>
+  <data name="pinNameB_RI.Size" type="System.Drawing.Size, System.Drawing">
+    <value>50, 20</value>
+  </data>
+  <data name="pinNameB_RI.TabIndex" type="System.Int32, mscorlib">
+    <value>53</value>
+  </data>
+  <data name="pinNameB_RI.Text" xml:space="preserve">
+    <value>RI</value>
+  </data>
+  <data name="pinNameB_RI.TextAlign" type="System.Drawing.ContentAlignment, System.Drawing">
+    <value>MiddleLeft</value>
+  </data>
+  <data name="pinNameB_RI.ToolTip" xml:space="preserve">
+    <value>RI - ring indicator.</value>
+  </data>
+  <data name="&gt;&gt;pinNameB_RI.Name" xml:space="preserve">
+    <value>pinNameB_RI</value>
+  </data>
+  <data name="&gt;&gt;pinNameB_RI.Type" xml:space="preserve">
+    <value>System.Windows.Forms.Label, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="&gt;&gt;pinNameB_RI.Parent" xml:space="preserve">
+    <value>$this</value>
+  </data>
+  <data name="&gt;&gt;pinNameB_RI.ZOrder" xml:space="preserve">
+    <value>2</value>
+  </data>
+  <data name="pinNameB_CTS.ImeMode" type="System.Windows.Forms.ImeMode, System.Windows.Forms">
+    <value>NoControl</value>
+  </data>
+  <data name="pinNameB_CTS.Location" type="System.Drawing.Point, System.Drawing">
+    <value>532, 236</value>
+  </data>
+  <data name="pinNameB_CTS.Size" type="System.Drawing.Size, System.Drawing">
+    <value>50, 20</value>
+  </data>
+  <data name="pinNameB_CTS.TabIndex" type="System.Int32, mscorlib">
+    <value>52</value>
+  </data>
+  <data name="pinNameB_CTS.Text" xml:space="preserve">
+    <value>CTS</value>
+  </data>
+  <data name="pinNameB_CTS.TextAlign" type="System.Drawing.ContentAlignment, System.Drawing">
+    <value>MiddleLeft</value>
+  </data>
+  <data name="pinNameB_CTS.ToolTip" xml:space="preserve">
+    <value>CTS - clear to send.</value>
+  </data>
+  <data name="&gt;&gt;pinNameB_CTS.Name" xml:space="preserve">
+    <value>pinNameB_CTS</value>
+  </data>
+  <data name="&gt;&gt;pinNameB_CTS.Type" xml:space="preserve">
+    <value>System.Windows.Forms.Label, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="&gt;&gt;pinNameB_CTS.Parent" xml:space="preserve">
+    <value>$this</value>
+  </data>
+  <data name="&gt;&gt;pinNameB_CTS.ZOrder" xml:space="preserve">
+    <value>3</value>
+  </data>
+  <data name="pinNameB_RTS.ImeMode" type="System.Windows.Forms.ImeMode, System.Windows.Forms">
+    <value>NoControl</value>
+  </data>
+  <data name="pinNameB_RTS.Location" type="System.Drawing.Point, System.Drawing">
+    <value>532, 216</value>
+  </data>
+  <data name="pinNameB_RTS.Size" type="System.Drawing.Size, System.Drawing">
+    <value>50, 20</value>
+  </data>
+  <data name="pinNameB_RTS.TabIndex" type="System.Int32, mscorlib">
+    <value>51</value>
+  </data>
+  <data name="pinNameB_RTS.Text" xml:space="preserve">
+    <value>RTS</value>
+  </data>
+  <data name="pinNameB_RTS.TextAlign" type="System.Drawing.ContentAlignment, System.Drawing">
+    <value>MiddleLeft</value>
+  </data>
+  <data name="pinNameB_RTS.ToolTip" xml:space="preserve">
+    <value>RTS - request to send.</value>
+  </data>
+  <data name="&gt;&gt;pinNameB_RTS.Name" xml:space="preserve">
+    <value>pinNameB_RTS</value>
+  </data>
+  <data name="&gt;&gt;pinNameB_RTS.Type" xml:space="preserve">
+    <value>System.Windows.Forms.Label, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="&gt;&gt;pinNameB_RTS.Parent" xml:space="preserve">
+    <value>$this</value>
+  </data>
+  <data name="&gt;&gt;pinNameB_RTS.ZOrder" xml:space="preserve">
+    <value>4</value>
+  </data>
+  <data name="pinNameB_DCD.ImeMode" type="System.Windows.Forms.ImeMode, System.Windows.Forms">
+    <value>NoControl</value>
+  </data>
+  <data name="pinNameB_DCD.Location" type="System.Drawing.Point, System.Drawing">
+    <value>532, 196</value>
+  </data>
+  <data name="pinNameB_DCD.Size" type="System.Drawing.Size, System.Drawing">
+    <value>50, 20</value>
+  </data>
+  <data name="pinNameB_DCD.TabIndex" type="System.Int32, mscorlib">
+    <value>50</value>
+  </data>
+  <data name="pinNameB_DCD.Text" xml:space="preserve">
+    <value>DCD</value>
+  </data>
+  <data name="pinNameB_DCD.TextAlign" type="System.Drawing.ContentAlignment, System.Drawing">
+    <value>MiddleLeft</value>
+  </data>
+  <data name="pinNameB_DCD.ToolTip" xml:space="preserve">
+    <value>DCD - data carrier detect.</value>
+  </data>
+  <data name="&gt;&gt;pinNameB_DCD.Name" xml:space="preserve">
+    <value>pinNameB_DCD</value>
+  </data>
+  <data name="&gt;&gt;pinNameB_DCD.Type" xml:space="preserve">
+    <value>System.Windows.Forms.Label, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="&gt;&gt;pinNameB_DCD.Parent" xml:space="preserve">
+    <value>$this</value>
+  </data>
+  <data name="&gt;&gt;pinNameB_DCD.ZOrder" xml:space="preserve">
+    <value>5</value>
+  </data>
+  <data name="pinNameB_DSR.ImeMode" type="System.Windows.Forms.ImeMode, System.Windows.Forms">
+    <value>NoControl</value>
+  </data>
+  <data name="pinNameB_DSR.Location" type="System.Drawing.Point, System.Drawing">
+    <value>532, 176</value>
+  </data>
+  <data name="pinNameB_DSR.Size" type="System.Drawing.Size, System.Drawing">
+    <value>50, 20</value>
+  </data>
+  <data name="pinNameB_DSR.TabIndex" type="System.Int32, mscorlib">
+    <value>49</value>
+  </data>
+  <data name="pinNameB_DSR.Text" xml:space="preserve">
+    <value>DSR</value>
+  </data>
+  <data name="pinNameB_DSR.TextAlign" type="System.Drawing.ContentAlignment, System.Drawing">
+    <value>MiddleLeft</value>
+  </data>
+  <data name="pinNameB_DSR.ToolTip" xml:space="preserve">
+    <value>DSR - data set ready.</value>
+  </data>
+  <data name="&gt;&gt;pinNameB_DSR.Name" xml:space="preserve">
+    <value>pinNameB_DSR</value>
+  </data>
+  <data name="&gt;&gt;pinNameB_DSR.Type" xml:space="preserve">
+    <value>System.Windows.Forms.Label, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="&gt;&gt;pinNameB_DSR.Parent" xml:space="preserve">
+    <value>$this</value>
+  </data>
+  <data name="&gt;&gt;pinNameB_DSR.ZOrder" xml:space="preserve">
+    <value>6</value>
+  </data>
+  <data name="pinNameB_TX.ImeMode" type="System.Windows.Forms.ImeMode, System.Windows.Forms">
+    <value>NoControl</value>
+  </data>
+  <data name="pinNameB_TX.Location" type="System.Drawing.Point, System.Drawing">
+    <value>532, 136</value>
+  </data>
+  <data name="pinNameB_TX.Size" type="System.Drawing.Size, System.Drawing">
+    <value>50, 20</value>
+  </data>
+  <data name="pinNameB_TX.TabIndex" type="System.Int32, mscorlib">
+    <value>48</value>
+  </data>
+  <data name="pinNameB_TX.Text" xml:space="preserve">
+    <value>TX</value>
+  </data>
+  <data name="pinNameB_TX.TextAlign" type="System.Drawing.ContentAlignment, System.Drawing">
+    <value>MiddleLeft</value>
+  </data>
+  <data name="pinNameB_TX.ToolTip" xml:space="preserve">
+    <value>TX - transmit data.</value>
+  </data>
+  <data name="&gt;&gt;pinNameB_TX.Name" xml:space="preserve">
+    <value>pinNameB_TX</value>
+  </data>
+  <data name="&gt;&gt;pinNameB_TX.Type" xml:space="preserve">
+    <value>System.Windows.Forms.Label, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="&gt;&gt;pinNameB_TX.Parent" xml:space="preserve">
+    <value>$this</value>
+  </data>
+  <data name="&gt;&gt;pinNameB_TX.ZOrder" xml:space="preserve">
+    <value>7</value>
+  </data>
+  <data name="pinNameB_DTR.ImeMode" type="System.Windows.Forms.ImeMode, System.Windows.Forms">
+    <value>NoControl</value>
+  </data>
+  <data name="pinNameB_DTR.Location" type="System.Drawing.Point, System.Drawing">
+    <value>532, 156</value>
+  </data>
+  <data name="pinNameB_DTR.Size" type="System.Drawing.Size, System.Drawing">
+    <value>50, 20</value>
+  </data>
+  <data name="pinNameB_DTR.TabIndex" type="System.Int32, mscorlib">
+    <value>47</value>
+  </data>
+  <data name="pinNameB_DTR.Text" xml:space="preserve">
+    <value>DTR</value>
+  </data>
+  <data name="pinNameB_DTR.TextAlign" type="System.Drawing.ContentAlignment, System.Drawing">
+    <value>MiddleLeft</value>
+  </data>
+  <data name="pinNameB_DTR.ToolTip" xml:space="preserve">
+    <value>DTR - data terminal ready.</value>
+  </data>
+  <data name="&gt;&gt;pinNameB_DTR.Name" xml:space="preserve">
+    <value>pinNameB_DTR</value>
+  </data>
+  <data name="&gt;&gt;pinNameB_DTR.Type" xml:space="preserve">
+    <value>System.Windows.Forms.Label, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="&gt;&gt;pinNameB_DTR.Parent" xml:space="preserve">
+    <value>$this</value>
+  </data>
+  <data name="&gt;&gt;pinNameB_DTR.ZOrder" xml:space="preserve">
     <value>8</value>
+  </data>
+  <data name="pinNameB_RX.ImeMode" type="System.Windows.Forms.ImeMode, System.Windows.Forms">
+    <value>NoControl</value>
+  </data>
+  <data name="pinNameB_RX.Location" type="System.Drawing.Point, System.Drawing">
+    <value>532, 116</value>
+  </data>
+  <data name="pinNameB_RX.Size" type="System.Drawing.Size, System.Drawing">
+    <value>50, 20</value>
+  </data>
+  <data name="pinNameB_RX.TabIndex" type="System.Int32, mscorlib">
+    <value>46</value>
+  </data>
+  <data name="pinNameB_RX.Text" xml:space="preserve">
+    <value>RX</value>
+  </data>
+  <data name="pinNameB_RX.TextAlign" type="System.Drawing.ContentAlignment, System.Drawing">
+    <value>MiddleLeft</value>
+  </data>
+  <data name="pinNameB_RX.ToolTip" xml:space="preserve">
+    <value>RX - receive data.</value>
+  </data>
+  <data name="&gt;&gt;pinNameB_RX.Name" xml:space="preserve">
+    <value>pinNameB_RX</value>
+  </data>
+  <data name="&gt;&gt;pinNameB_RX.Type" xml:space="preserve">
+    <value>System.Windows.Forms.Label, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="&gt;&gt;pinNameB_RX.Parent" xml:space="preserve">
+    <value>$this</value>
+  </data>
+  <data name="&gt;&gt;pinNameB_RX.ZOrder" xml:space="preserve">
+    <value>9</value>
   </data>
   <metadata name="$this.Localizable" type="System.Boolean, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089">
     <value>True</value>

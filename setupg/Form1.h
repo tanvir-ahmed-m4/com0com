@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.2  2007/11/20 12:29:40  vfrolov
+ * Fixed appearance for Vista
+ *
  * Revision 1.1  2007/10/31 10:16:55  vfrolov
  * Initial revision
  *
@@ -71,9 +74,6 @@ namespace SetupApp {
 
     private: System::Windows::Forms::TextBox^  PortNameB;
     private: System::Windows::Forms::TextBox^  PortNameA;
-    private: System::Windows::Forms::Label^  pinNameON;
-    private: System::Windows::Forms::ListBox^  pinNamesB;
-    private: System::Windows::Forms::ListBox^  pinNamesA;
     private: System::Windows::Forms::PictureBox^  picturePinMap;
     private: System::Windows::Forms::ToolTip^  toolTip1;
     private: System::ComponentModel::IContainer^  components;
@@ -89,6 +89,27 @@ namespace SetupApp {
     private: System::Windows::Forms::CheckBox^  PlugInModeA;
     private: System::Windows::Forms::CheckBox^  EmuOverrunA;
     private: System::Windows::Forms::CheckBox^  EmuBrA;
+    private: System::Windows::Forms::Label^  pinNameON;
+    private: System::Windows::Forms::Label^  pinNameA_RX;
+    private: System::Windows::Forms::Label^  pinNameA_DTR;
+    private: System::Windows::Forms::Label^  pinNameA_TX;
+    private: System::Windows::Forms::Label^  pinNameA_DSR;
+    private: System::Windows::Forms::Label^  pinNameA_DCD;
+    private: System::Windows::Forms::Label^  pinNameA_RTS;
+    private: System::Windows::Forms::Label^  pinNameA_CTS;
+    private: System::Windows::Forms::Label^  pinNameA_RI;
+    private: System::Windows::Forms::Label^  pinNameA_OUT1;
+    private: System::Windows::Forms::Label^  pinNameA_OPEN;
+    private: System::Windows::Forms::Label^  pinNameB_OPEN;
+    private: System::Windows::Forms::Label^  pinNameB_OUT1;
+    private: System::Windows::Forms::Label^  pinNameB_RI;
+    private: System::Windows::Forms::Label^  pinNameB_CTS;
+    private: System::Windows::Forms::Label^  pinNameB_RTS;
+    private: System::Windows::Forms::Label^  pinNameB_DCD;
+    private: System::Windows::Forms::Label^  pinNameB_DSR;
+    private: System::Windows::Forms::Label^  pinNameB_TX;
+    private: System::Windows::Forms::Label^  pinNameB_DTR;
+    private: System::Windows::Forms::Label^  pinNameB_RX;
     private: System::Windows::Forms::TreeView^  pairList;
 
 	private:
@@ -109,8 +130,6 @@ namespace SetupApp {
           this->PortNameB = (gcnew System::Windows::Forms::TextBox());
           this->PortNameA = (gcnew System::Windows::Forms::TextBox());
           this->pinNameON = (gcnew System::Windows::Forms::Label());
-          this->pinNamesB = (gcnew System::Windows::Forms::ListBox());
-          this->pinNamesA = (gcnew System::Windows::Forms::ListBox());
           this->picturePinMap = (gcnew System::Windows::Forms::PictureBox());
           this->toolTip1 = (gcnew System::Windows::Forms::ToolTip(this->components));
           this->EmuBrB = (gcnew System::Windows::Forms::CheckBox());
@@ -121,11 +140,31 @@ namespace SetupApp {
           this->PlugInModeA = (gcnew System::Windows::Forms::CheckBox());
           this->EmuOverrunA = (gcnew System::Windows::Forms::CheckBox());
           this->EmuBrA = (gcnew System::Windows::Forms::CheckBox());
+          this->pinNameA_RX = (gcnew System::Windows::Forms::Label());
+          this->pinNameA_DTR = (gcnew System::Windows::Forms::Label());
+          this->pinNameA_TX = (gcnew System::Windows::Forms::Label());
+          this->pinNameA_DSR = (gcnew System::Windows::Forms::Label());
+          this->pinNameA_DCD = (gcnew System::Windows::Forms::Label());
+          this->pinNameA_RTS = (gcnew System::Windows::Forms::Label());
+          this->pinNameA_CTS = (gcnew System::Windows::Forms::Label());
+          this->pinNameA_RI = (gcnew System::Windows::Forms::Label());
+          this->pinNameA_OUT1 = (gcnew System::Windows::Forms::Label());
+          this->pinNameA_OPEN = (gcnew System::Windows::Forms::Label());
           this->pairList = (gcnew System::Windows::Forms::TreeView());
           this->buttonRemovePair = (gcnew System::Windows::Forms::Button());
           this->buttonAddPair = (gcnew System::Windows::Forms::Button());
           this->buttonApply = (gcnew System::Windows::Forms::Button());
           this->buttonReset = (gcnew System::Windows::Forms::Button());
+          this->pinNameB_OPEN = (gcnew System::Windows::Forms::Label());
+          this->pinNameB_OUT1 = (gcnew System::Windows::Forms::Label());
+          this->pinNameB_RI = (gcnew System::Windows::Forms::Label());
+          this->pinNameB_CTS = (gcnew System::Windows::Forms::Label());
+          this->pinNameB_RTS = (gcnew System::Windows::Forms::Label());
+          this->pinNameB_DCD = (gcnew System::Windows::Forms::Label());
+          this->pinNameB_DSR = (gcnew System::Windows::Forms::Label());
+          this->pinNameB_TX = (gcnew System::Windows::Forms::Label());
+          this->pinNameB_DTR = (gcnew System::Windows::Forms::Label());
+          this->pinNameB_RX = (gcnew System::Windows::Forms::Label());
           (cli::safe_cast<System::ComponentModel::ISupportInitialize^  >(this->picturePinMap))->BeginInit();
           this->SuspendLayout();
           // 
@@ -148,34 +187,6 @@ namespace SetupApp {
           resources->ApplyResources(this->pinNameON, L"pinNameON");
           this->pinNameON->Name = L"pinNameON";
           this->toolTip1->SetToolTip(this->pinNameON, resources->GetString(L"pinNameON.ToolTip"));
-          // 
-          // pinNamesB
-          // 
-          this->pinNamesB->BackColor = System::Drawing::SystemColors::Control;
-          this->pinNamesB->BorderStyle = System::Windows::Forms::BorderStyle::None;
-          resources->ApplyResources(this->pinNamesB, L"pinNamesB");
-          this->pinNamesB->FormattingEnabled = true;
-          this->pinNamesB->Items->AddRange(gcnew cli::array< System::Object^  >(10) {resources->GetString(L"pinNamesB.Items"), resources->GetString(L"pinNamesB.Items1"), 
-            resources->GetString(L"pinNamesB.Items2"), resources->GetString(L"pinNamesB.Items3"), resources->GetString(L"pinNamesB.Items4"), 
-            resources->GetString(L"pinNamesB.Items5"), resources->GetString(L"pinNamesB.Items6"), resources->GetString(L"pinNamesB.Items7"), 
-            resources->GetString(L"pinNamesB.Items8"), resources->GetString(L"pinNamesB.Items9")});
-          this->pinNamesB->Name = L"pinNamesB";
-          this->pinNamesB->SelectionMode = System::Windows::Forms::SelectionMode::None;
-          this->toolTip1->SetToolTip(this->pinNamesB, resources->GetString(L"pinNamesB.ToolTip"));
-          // 
-          // pinNamesA
-          // 
-          this->pinNamesA->BackColor = System::Drawing::SystemColors::Control;
-          this->pinNamesA->BorderStyle = System::Windows::Forms::BorderStyle::None;
-          resources->ApplyResources(this->pinNamesA, L"pinNamesA");
-          this->pinNamesA->FormattingEnabled = true;
-          this->pinNamesA->Items->AddRange(gcnew cli::array< System::Object^  >(10) {resources->GetString(L"pinNamesA.Items"), resources->GetString(L"pinNamesA.Items1"), 
-            resources->GetString(L"pinNamesA.Items2"), resources->GetString(L"pinNamesA.Items3"), resources->GetString(L"pinNamesA.Items4"), 
-            resources->GetString(L"pinNamesA.Items5"), resources->GetString(L"pinNamesA.Items6"), resources->GetString(L"pinNamesA.Items7"), 
-            resources->GetString(L"pinNamesA.Items8"), resources->GetString(L"pinNamesA.Items9")});
-          this->pinNamesA->Name = L"pinNamesA";
-          this->pinNamesA->SelectionMode = System::Windows::Forms::SelectionMode::None;
-          this->toolTip1->SetToolTip(this->pinNamesA, resources->GetString(L"pinNamesA.ToolTip"));
           // 
           // picturePinMap
           // 
@@ -250,12 +261,72 @@ namespace SetupApp {
           // 
           // EmuBrA
           // 
-          resources->ApplyResources(this->EmuBrA, L"EmuBrA");
           this->EmuBrA->ForeColor = System::Drawing::SystemColors::ControlText;
+          resources->ApplyResources(this->EmuBrA, L"EmuBrA");
           this->EmuBrA->Name = L"EmuBrA";
           this->toolTip1->SetToolTip(this->EmuBrA, resources->GetString(L"EmuBrA.ToolTip"));
           this->EmuBrA->UseVisualStyleBackColor = true;
           this->EmuBrA->CheckedChanged += gcnew System::EventHandler(this, &Form1::EmuBrA_Changed);
+          // 
+          // pinNameA_RX
+          // 
+          resources->ApplyResources(this->pinNameA_RX, L"pinNameA_RX");
+          this->pinNameA_RX->Name = L"pinNameA_RX";
+          this->toolTip1->SetToolTip(this->pinNameA_RX, resources->GetString(L"pinNameA_RX.ToolTip"));
+          // 
+          // pinNameA_DTR
+          // 
+          resources->ApplyResources(this->pinNameA_DTR, L"pinNameA_DTR");
+          this->pinNameA_DTR->Name = L"pinNameA_DTR";
+          this->toolTip1->SetToolTip(this->pinNameA_DTR, resources->GetString(L"pinNameA_DTR.ToolTip"));
+          // 
+          // pinNameA_TX
+          // 
+          resources->ApplyResources(this->pinNameA_TX, L"pinNameA_TX");
+          this->pinNameA_TX->Name = L"pinNameA_TX";
+          this->toolTip1->SetToolTip(this->pinNameA_TX, resources->GetString(L"pinNameA_TX.ToolTip"));
+          // 
+          // pinNameA_DSR
+          // 
+          resources->ApplyResources(this->pinNameA_DSR, L"pinNameA_DSR");
+          this->pinNameA_DSR->Name = L"pinNameA_DSR";
+          this->toolTip1->SetToolTip(this->pinNameA_DSR, resources->GetString(L"pinNameA_DSR.ToolTip"));
+          // 
+          // pinNameA_DCD
+          // 
+          resources->ApplyResources(this->pinNameA_DCD, L"pinNameA_DCD");
+          this->pinNameA_DCD->Name = L"pinNameA_DCD";
+          this->toolTip1->SetToolTip(this->pinNameA_DCD, resources->GetString(L"pinNameA_DCD.ToolTip"));
+          // 
+          // pinNameA_RTS
+          // 
+          resources->ApplyResources(this->pinNameA_RTS, L"pinNameA_RTS");
+          this->pinNameA_RTS->Name = L"pinNameA_RTS";
+          this->toolTip1->SetToolTip(this->pinNameA_RTS, resources->GetString(L"pinNameA_RTS.ToolTip"));
+          // 
+          // pinNameA_CTS
+          // 
+          resources->ApplyResources(this->pinNameA_CTS, L"pinNameA_CTS");
+          this->pinNameA_CTS->Name = L"pinNameA_CTS";
+          this->toolTip1->SetToolTip(this->pinNameA_CTS, resources->GetString(L"pinNameA_CTS.ToolTip"));
+          // 
+          // pinNameA_RI
+          // 
+          resources->ApplyResources(this->pinNameA_RI, L"pinNameA_RI");
+          this->pinNameA_RI->Name = L"pinNameA_RI";
+          this->toolTip1->SetToolTip(this->pinNameA_RI, resources->GetString(L"pinNameA_RI.ToolTip"));
+          // 
+          // pinNameA_OUT1
+          // 
+          resources->ApplyResources(this->pinNameA_OUT1, L"pinNameA_OUT1");
+          this->pinNameA_OUT1->Name = L"pinNameA_OUT1";
+          this->toolTip1->SetToolTip(this->pinNameA_OUT1, resources->GetString(L"pinNameA_OUT1.ToolTip"));
+          // 
+          // pinNameA_OPEN
+          // 
+          resources->ApplyResources(this->pinNameA_OPEN, L"pinNameA_OPEN");
+          this->pinNameA_OPEN->Name = L"pinNameA_OPEN";
+          this->toolTip1->SetToolTip(this->pinNameA_OPEN, resources->GetString(L"pinNameA_OPEN.ToolTip"));
           // 
           // pairList
           // 
@@ -293,10 +364,90 @@ namespace SetupApp {
           this->buttonReset->UseVisualStyleBackColor = true;
           this->buttonReset->Click += gcnew System::EventHandler(this, &Form1::buttonReset_Click);
           // 
+          // pinNameB_OPEN
+          // 
+          resources->ApplyResources(this->pinNameB_OPEN, L"pinNameB_OPEN");
+          this->pinNameB_OPEN->Name = L"pinNameB_OPEN";
+          this->toolTip1->SetToolTip(this->pinNameB_OPEN, resources->GetString(L"pinNameB_OPEN.ToolTip"));
+          // 
+          // pinNameB_OUT1
+          // 
+          resources->ApplyResources(this->pinNameB_OUT1, L"pinNameB_OUT1");
+          this->pinNameB_OUT1->Name = L"pinNameB_OUT1";
+          this->toolTip1->SetToolTip(this->pinNameB_OUT1, resources->GetString(L"pinNameB_OUT1.ToolTip"));
+          // 
+          // pinNameB_RI
+          // 
+          resources->ApplyResources(this->pinNameB_RI, L"pinNameB_RI");
+          this->pinNameB_RI->Name = L"pinNameB_RI";
+          this->toolTip1->SetToolTip(this->pinNameB_RI, resources->GetString(L"pinNameB_RI.ToolTip"));
+          // 
+          // pinNameB_CTS
+          // 
+          resources->ApplyResources(this->pinNameB_CTS, L"pinNameB_CTS");
+          this->pinNameB_CTS->Name = L"pinNameB_CTS";
+          this->toolTip1->SetToolTip(this->pinNameB_CTS, resources->GetString(L"pinNameB_CTS.ToolTip"));
+          // 
+          // pinNameB_RTS
+          // 
+          resources->ApplyResources(this->pinNameB_RTS, L"pinNameB_RTS");
+          this->pinNameB_RTS->Name = L"pinNameB_RTS";
+          this->toolTip1->SetToolTip(this->pinNameB_RTS, resources->GetString(L"pinNameB_RTS.ToolTip"));
+          // 
+          // pinNameB_DCD
+          // 
+          resources->ApplyResources(this->pinNameB_DCD, L"pinNameB_DCD");
+          this->pinNameB_DCD->Name = L"pinNameB_DCD";
+          this->toolTip1->SetToolTip(this->pinNameB_DCD, resources->GetString(L"pinNameB_DCD.ToolTip"));
+          // 
+          // pinNameB_DSR
+          // 
+          resources->ApplyResources(this->pinNameB_DSR, L"pinNameB_DSR");
+          this->pinNameB_DSR->Name = L"pinNameB_DSR";
+          this->toolTip1->SetToolTip(this->pinNameB_DSR, resources->GetString(L"pinNameB_DSR.ToolTip"));
+          // 
+          // pinNameB_TX
+          // 
+          resources->ApplyResources(this->pinNameB_TX, L"pinNameB_TX");
+          this->pinNameB_TX->Name = L"pinNameB_TX";
+          this->toolTip1->SetToolTip(this->pinNameB_TX, resources->GetString(L"pinNameB_TX.ToolTip"));
+          // 
+          // pinNameB_DTR
+          // 
+          resources->ApplyResources(this->pinNameB_DTR, L"pinNameB_DTR");
+          this->pinNameB_DTR->Name = L"pinNameB_DTR";
+          this->toolTip1->SetToolTip(this->pinNameB_DTR, resources->GetString(L"pinNameB_DTR.ToolTip"));
+          // 
+          // pinNameB_RX
+          // 
+          resources->ApplyResources(this->pinNameB_RX, L"pinNameB_RX");
+          this->pinNameB_RX->Name = L"pinNameB_RX";
+          this->toolTip1->SetToolTip(this->pinNameB_RX, resources->GetString(L"pinNameB_RX.ToolTip"));
+          // 
           // Form1
           // 
           resources->ApplyResources(this, L"$this");
           this->AutoScaleMode = System::Windows::Forms::AutoScaleMode::Font;
+          this->Controls->Add(this->pinNameB_OPEN);
+          this->Controls->Add(this->pinNameB_OUT1);
+          this->Controls->Add(this->pinNameB_RI);
+          this->Controls->Add(this->pinNameB_CTS);
+          this->Controls->Add(this->pinNameB_RTS);
+          this->Controls->Add(this->pinNameB_DCD);
+          this->Controls->Add(this->pinNameB_DSR);
+          this->Controls->Add(this->pinNameB_TX);
+          this->Controls->Add(this->pinNameB_DTR);
+          this->Controls->Add(this->pinNameB_RX);
+          this->Controls->Add(this->pinNameA_OPEN);
+          this->Controls->Add(this->pinNameA_OUT1);
+          this->Controls->Add(this->pinNameA_RI);
+          this->Controls->Add(this->pinNameA_CTS);
+          this->Controls->Add(this->pinNameA_RTS);
+          this->Controls->Add(this->pinNameA_DCD);
+          this->Controls->Add(this->pinNameA_DSR);
+          this->Controls->Add(this->pinNameA_TX);
+          this->Controls->Add(this->pinNameA_DTR);
+          this->Controls->Add(this->pinNameA_RX);
           this->Controls->Add(this->ExclusiveModeA);
           this->Controls->Add(this->PlugInModeA);
           this->Controls->Add(this->EmuOverrunA);
@@ -313,8 +464,6 @@ namespace SetupApp {
           this->Controls->Add(this->PortNameB);
           this->Controls->Add(this->PortNameA);
           this->Controls->Add(this->pinNameON);
-          this->Controls->Add(this->pinNamesB);
-          this->Controls->Add(this->pinNamesA);
           this->Controls->Add(this->picturePinMap);
           this->FormBorderStyle = System::Windows::Forms::FormBorderStyle::FixedDialog;
           this->MaximizeBox = false;
