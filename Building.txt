@@ -1,0 +1,72 @@
+                 =============================
+                 Null-modem emulator (com0com)
+                 =============================
+
+PREREQUISITES
+=============
+
+You will need the following to build com0com from source code:
+
+1.  Microsoft Windows Driver Development Kit (DDK).
+    When the DDK is installed, it defines the Start menu shortcuts for
+    several different build environments. To open a DDK build environment
+    window choose one of the environment shortcuts.
+
+2.  Microsoft Windows Platform Software Development Kit (SDK).
+    It's required for creating a certificate and signing com0com.sys file
+    if you build driver for x64-based versions of Windows Vista.
+    When the SDK is installed, it defines the Start menu shortcuts for
+    several different build environments. To open a SDK build environment
+    window choose one of the environment shortcuts.
+
+3.  Microsoft Visual C++ 2005 Express Edition (MSVC).
+    It's required for building the GUI-based setup utility.
+    When the MSVC is installed, it defines the Start menu shortcut for
+    build environment. To open a MSVC build environment window choose it.
+
+4.  Nullsoft Scriptable Install System (http://nsis.sourceforge.net/).
+    It's required for building the installer.
+
+
+BUILDING
+========
+
+1.  Build the driver.
+
+    For example execute in the DDK build environment window:
+
+      cd C:\com0com
+      build -wcZ -M 1
+
+    It will create the com0com.sys, setup.dll and setupc.exe files in the
+    C:\com0com\<CPU>\ directory, where <CPU> is i386, ia64 or amd64
+    and depends from choosen DDK build environment.
+
+2.  If you build driver for x64-based versions of Windows Vista then create
+    a test certificate and sign com0com.sys file.
+
+    For example execute in the SDK build environment window:
+
+      mkdir C:\com0com\cert
+      cd C:\com0com\cert
+      makecert -r -n "CN=com0com (test)" -sv com0com.pvk com0com.cer
+      pvk2pfx -pvk com0com.pvk -spc com0com.cer -pfx com0com.pfx
+      signtool sign /v /f com0com.pfx /t "http://timestamp.verisign.com/scripts/timestamp.dll" ..\amd64\com0com.sys
+
+    It will test-sign the C:\com0com\amd64\com0com.sys file.
+
+3.  Build the GUI-based setup utility.
+
+    For example execute in the MSVC build environment window:
+
+      vcbuild C:\com0com\setupg\setup.vcproj Release
+
+    It will create the C:\com0com\setupg\Release\setupg.exe file.
+
+4.  Build the installer.
+
+    For example execute in the DDK build environment window:
+
+      "C:\Program Files\NSIS\makensis.exe" /V2 C:\com0com\NSIS\install.nsi
+
+    It will create the installer in the C:\com0com\<CPU>\setup.exe file.
