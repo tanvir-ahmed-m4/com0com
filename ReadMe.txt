@@ -24,24 +24,17 @@ to CNCB0 port. In this case the t38modem is a fax modem emulation program.
 The homepage for com0com project is http://com0com.sourceforge.net/.
 
 
-BUILDING
-========
-
-If you'd like to build a binary from source yourself then:
-
-  1. Set up the DDK environment on your machine.
-  2. Run the build -wcZ command in the com0com directory to build
-     <CPU>\com0com.sys and <CPU>\setup.dll (where <CPU> is i386, ia64
-     or amd64).
-  3. Create the installer (setup.exe) from NSIS\install.nsi by
-     NSIS (see http://nsis.sourceforge.net/ for details)
-
-
 INSTALLING
 ==========
 
-NOTE: Before installing/uninstalling the com0com driver or adding/removing/changing
-ports on Windows Vista the User Account Control (UAC) should be turned off.
+NOTE (Windows Vista):
+  Before installing/uninstalling the com0com driver or adding/removing/changing
+  ports on Windows Vista the User Account Control (UAC) should be turned off.
+
+NOTE (x64-based Windows Vista):
+  The com0com.sys is a test-signed kernel-mode driver that will not load by
+  default on x64-based Windows Vista. To enable test signing, use the following
+  BCDedit command: bcdedit.exe -set TESTSIGNING ON
 
 Simply run the installer (setup.exe). An installation wizard will guide
 you through the required steps.
@@ -67,6 +60,8 @@ To get more info enter the help command, for example:
 
        command> help
 
+Alternatively to setup ports you can invoke GUI-based setup utility by
+launching Setup shortcut (Microsoft .NET Framework 2.0 is required).
 
 TESTING
 =======
@@ -95,20 +90,20 @@ FAQ & HOWTO
 Q. Is it possible to change the names CNCA0 and CNCB0 to COM2 and COM3?
 A. Yes, it's possible. To change the names:
 
-  1. Launch the Setup Command Prompt shortcut.
-  2. Enter the change commands, for example:
+   1. Launch the Setup Command Prompt shortcut.
+   2. Enter the change commands, for example:
 
-       command> change CNCA0 PortName=COM2
-       command> change CNCB0 PortName=COM3
+      command> change CNCA0 PortName=COM2
+      command> change CNCB0 PortName=COM3
 
 Q. The baud rate setting does not seem to make a difference: data is always
    transferred at the same speed. How to enable the baud rate emulation?
 A. To enable baud rate emulation for transferring data from CNCA0 to CNCB0:
 
-  1. Launch the Setup Command Prompt shortcut.
-  2. Enter the change command, for example:
+   1. Launch the Setup Command Prompt shortcut.
+   2. Enter the change command, for example:
 
-       command> change CNCA0 EmuBR=yes
+      command> change CNCA0 EmuBR=yes
 
 Q. The HyperTerminal test succeeds, but I get a failure when trying to open the
    port with CreateFile("CNCA0", ...). GetLastError() returns ERROR_FILE_NOT_FOUND.
@@ -125,11 +120,11 @@ A. Your application can hang because receive buffer overrun is disabled by
    baud rate emulation for the sending port. So, if your application use port CNCA0
    and other paired port is CNCB0, then:
 
-  1. Launch the Setup Command Prompt shortcut.
-  2. Enter the change commands, for example:
+   1. Launch the Setup Command Prompt shortcut.
+   2. Enter the change commands, for example:
 
-       command> change CNCB0 EmuOverrun=yes
-       command> change CNCA0 EmuBR=yes
+      command> change CNCB0 EmuOverrun=yes
+      command> change CNCA0 EmuBR=yes
 
 Q. I have to write an application connected to one side of the com0com port pair,
    and I don't want users to 'see' all the virtual ports created by com0com, but
@@ -138,8 +133,38 @@ A. if your application use port CNCB0 and other (used by users) paired port is C
    then CNCB0 can be 'hidden' and CNCA0 can be 'shown' on opening CNCB0 by your
    application. To enable it:
 
-  1. Launch the Setup Command Prompt shortcut.
-  2. Enter the change commands:
+   1. Launch the Setup Command Prompt shortcut.
+   2. Enter the change commands:
 
-       command> change CNCB0 ExclusiveMode=yes
-       command> change CNCA0 PlugInMode=yes
+      command> change CNCB0 ExclusiveMode=yes
+      command> change CNCA0 PlugInMode=yes
+
+Q. When I add a port pair, why does Windows XP always pops up a Found New Hardware
+   Wizard? The drivers are already there and it can install them silently in the
+   background and report when the device is ready.
+A. It's because there is not signed com0com.cat catalog file. It can be created on
+   your test computer by this way:
+
+   1. Create a catalog file, for example:
+
+      cd "C:\Program Files\com0com"
+      inf2cat /driver:. /os:XP_X86
+
+   2. Create a test certificate, for example:
+
+      makecert -r -n "CN=com0com (test)" -sv com0com.pvk com0com.cer
+      pvk2pfx -pvk com0com.pvk -spc com0com.cer -pfx com0com.pfx
+
+   3. Sign the catalog file by test certificate, for example:
+
+      signtool sign /v /f com0com.pfx com0com.cat
+
+   4. Install a test certificate to the Trusted Root Certification Authorities
+      certificate store and the Trusted Publishers certificate store, for example:
+
+      certmgr -add com0com.cer -s -r localMachine root
+      certmgr -add com0com.cer -s -r localMachine trustedpublisher
+
+   The inf2cat tool can be installed with the Winqual Submission Tool.
+   The makecert, pvk2pfx, signtool and certmgr tools can be installed with the
+   Platform Software Development Kit (SDK).
