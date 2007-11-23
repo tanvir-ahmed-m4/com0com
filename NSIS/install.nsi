@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.11  2007/11/23 08:23:29  vfrolov
+ * Added popup for uncompatible CPU
+ *
  * Revision 1.10  2007/11/22 11:36:41  vfrolov
  * Moved output file to target CPU directory
  * Disabled moving Start Menu shortcuts to all users for Vista
@@ -61,6 +64,7 @@
 ;--------------------------------
 
   !include "MUI.nsh"
+  !include "x64.nsh"
 
 ;--------------------------------
 
@@ -80,6 +84,29 @@
   !define TARGET_CPU i386
   !Warning "TARGET_CPU=${TARGET_CPU}"
 !endif
+
+;--------------------------------
+
+Function .onInit
+  ${If} ${RunningX64}
+    !if "${TARGET_CPU}" == "i386"
+      MessageBox MB_YESNO|MB_DEFBUTTON2|MB_ICONEXCLAMATION \
+        "The 32-bit driver cannot run under 64-bit System.$\n$\nContinue?" \
+        /SD IDNO IDYES end_x64
+      Abort
+    !endif
+  ${Else}
+    !if "${TARGET_CPU}" != "i386"
+      MessageBox MB_YESNO|MB_DEFBUTTON2|MB_ICONEXCLAMATION \
+        "The 64-bit driver cannot run under 32-bit System.$\n$\nContinue?" \
+        /SD IDNO IDYES end_x64
+      Abort
+    !endif
+  ${EndIf}
+
+end_x64:
+
+FunctionEnd
 
 ;--------------------------------
 
