@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.9  2007/11/23 08:58:48  vfrolov
+ * Added UniqueID capability
+ *
  * Revision 1.8  2007/06/04 15:24:33  vfrolov
  * Fixed open reject just after close in exclusiveMode
  *
@@ -46,7 +49,6 @@
  *
  * Revision 1.1  2005/01/26 12:18:54  vfrolov
  * Initial revision
- *
  *
  */
 
@@ -188,6 +190,8 @@ NTSTATUS PdoPortQueryCaps(
 
   if (pCaps->Version != 1 || pCaps->Size < sizeof(DEVICE_CAPABILITIES))
     return STATUS_UNSUCCESSFUL;
+
+  pCaps->UniqueID = TRUE;
 
   return STATUS_SUCCESS;
 }
