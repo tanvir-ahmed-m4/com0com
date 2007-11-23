@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.39  2007/11/23 08:30:50  vfrolov
+ * Increased size of TX buffer to typical default for Windows
+ *
  * Revision 1.38  2007/09/17 14:31:06  vfrolov
  * Implemented pseudo pin OPEN
  *
@@ -217,7 +220,7 @@ typedef struct _C0C_TX_BUFFER {
   PUCHAR                  pFree;
   PUCHAR                  pEnd;
   SIZE_T                  busy;
-  UCHAR                   leastBuf[1 + 1];  /* transmitter holding and shift registers */
+  UCHAR                   leastBuf[14 + 1];  /* transmitter holding and shift registers */
 } C0C_TX_BUFFER, *PC0C_TX_BUFFER;
 
 #define C0C_TX_BUFFER_BUSY(pTxBuf) \
