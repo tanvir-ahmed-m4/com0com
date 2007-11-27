@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.22  2007/11/27 16:32:54  vfrolov
+ * Added disable and enable options
+ *
  * Revision 1.21  2007/10/19 16:09:55  vfrolov
  * Implemented --detail-prms option
  *
@@ -518,6 +521,41 @@ int Update(InfFile &infFile)
   if (rebootRequired || rr)
     SetupPromptReboot(NULL, NULL, FALSE);
 
+  return 0;
+}
+///////////////////////////////////////////////////////////////
+int Disable(InfFile &infFile)
+{
+  BOOL rebootRequired = FALSE;
+
+  DevProperties devProperties;
+  if (!devProperties.DevId(C0C_BUS_DEVICE_ID))
+    return 1;
+
+  if (!DisableDevices(infFile, &devProperties, &rebootRequired, NULL))
+    return 1;
+
+  if (rebootRequired)
+    SetupPromptReboot(NULL, NULL, FALSE);
+
+  return 0;
+}
+///////////////////////////////////////////////////////////////
+int Enable(InfFile &infFile)
+{
+  BOOL rebootRequired = FALSE;
+
+  DevProperties devProperties;
+  if (!devProperties.DevId(C0C_BUS_DEVICE_ID))
+    return 1;
+
+  if (!EnableDevices(infFile, &devProperties, &rebootRequired)) {
+    return 1;
+  }
+
+  if (rebootRequired)
+    SetupPromptReboot(NULL, NULL, FALSE);
+
   return  0;
 }
 ///////////////////////////////////////////////////////////////
@@ -922,6 +960,8 @@ int Help(const char *pProgName)
     "  remove <n>                   - remove a pair of linked ports with\n"
     "                                 identifiers " C0C_PREF_PORT_NAME_A "<n> and "
                                       C0C_PREF_PORT_NAME_B "<n>\n"
+    "  disable all                  - disable all ports in current hardware profile\n"
+    "  enable all                   - enable all ports in current hardware profile\n"
     "  change <portid> <prms>       - set parameters <prms> for port with\n"
     "                                 identifier <portid>\n"
     "  list                         - for each port show its identifier and\n"
@@ -1059,6 +1099,20 @@ int Main(int argc, const char* argv[])
 
     if (StrToInt(argv[2], &num) && num >= 0)
       return Remove(infFile, num);
+  }
+  else
+  if (argc == 3 && !lstrcmpi(argv[1], "disable")) {
+    SetTitle(C0C_SETUP_TITLE " (DISABLE)");
+
+    if (!lstrcmpi(argv[2], "all"))
+      return Disable(infFile);
+  }
+  else
+  if (argc == 3 && !lstrcmpi(argv[1], "enable")) {
+    SetTitle(C0C_SETUP_TITLE " (ENABLE)");
+
+    if (!lstrcmpi(argv[2], "all"))
+      return Enable(infFile);
   }
   else
   if (argc == 2 && !lstrcmpi(argv[1], "preinstall")) {
