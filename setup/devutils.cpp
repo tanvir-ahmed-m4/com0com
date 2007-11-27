@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.9  2007/11/27 16:35:49  vfrolov
+ * Added state check before enabling
+ *
  * Revision 1.8  2007/10/01 15:01:35  vfrolov
  * Added pDevInstID parameter to InstallDevice()
  *
@@ -284,6 +287,17 @@ static BOOL IsDisabled(PSP_DEVINFO_DATA pDevInfoData)
   return (status & DN_HAS_PROBLEM) != 0 && problem == CM_PROB_DISABLED;
 }
 ///////////////////////////////////////////////////////////////
+static BOOL IsEnabled(PSP_DEVINFO_DATA pDevInfoData)
+{
+  ULONG status = 0;
+  ULONG problem = 0;
+
+  if (CM_Get_DevNode_Status(&status, &problem, pDevInfoData->DevInst, 0) != CR_SUCCESS)
+    return FALSE;
+
+  return (status & DN_HAS_PROBLEM) == 0;
+}
+///////////////////////////////////////////////////////////////
 static int EnumDevice(HDEVINFO hDevInfo, PSP_DEVINFO_DATA pDevInfoData, PDevParams pDevParams)
 {
   /*
@@ -438,6 +452,9 @@ BOOL DisableDevices(
 ///////////////////////////////////////////////////////////////
 static int EnableDevice(HDEVINFO hDevInfo, PSP_DEVINFO_DATA pDevInfoData, PDevParams pDevParams)
 {
+  if (IsEnabled(pDevInfoData))
+    return IDCONTINUE;
+
   if (ChangeState(hDevInfo, pDevInfoData, DICS_ENABLE)) {
     Trace("Enabled %s %s %s\n",
           pDevParams->devProperties.Location(),
