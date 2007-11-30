@@ -24,10 +24,10 @@
 
 #define C0C_COPYRIGHT_YEARS "2004-2007"
 
-#define C0C_V1 1
-#define C0C_V2 8
+#define C0C_V1 2
+#define C0C_V2 0
 #define C0C_V3 0
-#define C0C_V4 1
+#define C0C_V4 0
 
 #define MK_VERSION_STR1(V1, V2, V3, V4) #V1 "." #V2 "." #V3 "." #V4
 #define MK_VERSION_STR(V1, V2, V3, V4) MK_VERSION_STR1(V1, V2, V3, V4)
