@@ -36,6 +36,9 @@ NOTE (x64-based Windows Vista):
   default on x64-based Windows Vista. To enable test signing, use the following
   BCDedit command: bcdedit.exe -set TESTSIGNING ON
 
+NOTE:
+  Turning off UAC or enabling test signing will impair computer security.
+
 Simply run the installer (setup.exe). An installation wizard will guide
 you through the required steps.
 If the Found New Hardware Wizard will pop up then
