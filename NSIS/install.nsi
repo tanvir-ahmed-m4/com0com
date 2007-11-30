@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.12  2007/11/30 09:53:37  vfrolov
+ * Added license page
+ *
  * Revision 1.11  2007/11/23 08:23:29  vfrolov
  * Added popup for uncompatible CPU
  *
@@ -184,6 +187,7 @@ ShowUninstDetails show
   !define MUI_FINISHPAGE_NOAUTOCLOSE
 
   !insertmacro MUI_PAGE_WELCOME
+  !insertmacro MUI_PAGE_LICENSE "..\license.txt"
   !insertmacro MUI_PAGE_COMPONENTS
   !insertmacro MUI_PAGE_DIRECTORY
   !insertmacro MUI_PAGE_INSTFILES
