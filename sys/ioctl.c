@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2004-2007 Vyacheslav Frolov
+ * Copyright (c) 2004-2008 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,10 @@
  *
  *
  * $Log$
+ * Revision 1.34  2008/03/14 15:28:39  vfrolov
+ * Implemented ability to get paired port settings with
+ * extended IOCTL_SERIAL_LSRMST_INSERT
+ *
  * Revision 1.33  2007/09/17 14:31:06  vfrolov
  * Implemented pseudo pin OPEN
  *
@@ -134,6 +138,7 @@
 #include "bufutils.h"
 #include "handflow.h"
 #include "commprop.h"
+#include "../include/cncext.h"
 
 NTSTATUS FdoPortIoCtl(
     IN PC0C_FDOPORT_EXTENSION pDevExt,
@@ -176,17 +181,10 @@ NTSTATUS FdoPortIoCtl(
             C0C_MCR_RTS,
             &queueToComplete);
 
-          if (pIoPortLocal->pIoPortRemote->tryWrite) {
+          if (pIoPortLocal->pIoPortRemote->tryWrite || pIoPortLocal->tryWrite) {
             ReadWrite(
                 pIoPortLocal, FALSE,
                 pIoPortLocal->pIoPortRemote, FALSE,
-                &queueToComplete);
-          }
-
-          if (pIoPortLocal->tryWrite) {
-            ReadWrite(
-                pIoPortLocal->pIoPortRemote, FALSE,
-                pIoPortLocal, FALSE,
                 &queueToComplete);
           }
 
@@ -214,17 +212,10 @@ NTSTATUS FdoPortIoCtl(
             C0C_MCR_DTR,
             &queueToComplete);
 
-          if (pIoPortLocal->pIoPortRemote->tryWrite) {
+          if (pIoPortLocal->pIoPortRemote->tryWrite || pIoPortLocal->tryWrite) {
             ReadWrite(
                 pIoPortLocal, FALSE,
                 pIoPortLocal->pIoPortRemote, FALSE,
-                &queueToComplete);
-          }
-
-          if (pIoPortLocal->tryWrite) {
-            ReadWrite(
-                pIoPortLocal->pIoPortRemote, FALSE,
-                pIoPortLocal, FALSE,
                 &queueToComplete);
           }
 
@@ -250,17 +241,10 @@ NTSTATUS FdoPortIoCtl(
         (UCHAR)C0C_MCR_MASK,
         &queueToComplete);
 
-      if (pIoPortLocal->pIoPortRemote->tryWrite) {
+      if (pIoPortLocal->pIoPortRemote->tryWrite || pIoPortLocal->tryWrite) {
         ReadWrite(
             pIoPortLocal, FALSE,
             pIoPortLocal->pIoPortRemote, FALSE,
-            &queueToComplete);
-      }
-
-      if (pIoPortLocal->tryWrite) {
-        ReadWrite(
-            pIoPortLocal->pIoPortRemote, FALSE,
-            pIoPortLocal, FALSE,
             &queueToComplete);
       }
 
@@ -521,10 +505,10 @@ NTSTATUS FdoPortIoCtl(
       TraceIrp("FdoPortIoCtl", pIrp, &status, TRACE_FLAG_RESULTS);
       break;
     case IOCTL_SERIAL_SET_TIMEOUTS:
-      status = FdoPortSetTimeouts(pDevExt, pIrp, pIrpStack);
+      status = FdoPortSetTimeouts(pIoPortLocal, pIrp, pIrpStack);
       break;
     case IOCTL_SERIAL_GET_TIMEOUTS:
-      status = FdoPortGetTimeouts(pDevExt, pIrp, pIrpStack);
+      status = FdoPortGetTimeouts(pIoPortLocal, pIrp, pIrpStack);
       TraceIrp("FdoPortIoCtl", pIrp, &status, TRACE_FLAG_RESULTS);
       break;
     case IOCTL_SERIAL_SET_CHARS: {
@@ -567,14 +551,81 @@ NTSTATUS FdoPortIoCtl(
       TraceIrp("FdoPortIoCtl", pIrp, &status, TRACE_FLAG_RESULTS);
       break;
     case IOCTL_SERIAL_LSRMST_INSERT: {
+      ULONG Information;
+      ULONG optsAndBits;
       UCHAR escapeChar;
+      PUCHAR pSysBuf;
+      ULONG InputBufferLength;
+      BOOLEAN extended;
 
-      if (pIrpStack->Parameters.DeviceIoControl.InputBufferLength < sizeof(UCHAR)) {
+      InputBufferLength = pIrpStack->Parameters.DeviceIoControl.InputBufferLength;
+
+      if (InputBufferLength < sizeof(UCHAR)) {
         status = STATUS_BUFFER_TOO_SMALL;
         break;
       }
 
-      escapeChar = *(PUCHAR)pIrp->AssociatedIrp.SystemBuffer;
+      Information = 0;
+      pSysBuf = (PUCHAR)pIrp->AssociatedIrp.SystemBuffer;
+      escapeChar = *pSysBuf;
+
+      if (InputBufferLength >= (sizeof(UCHAR) + C0CE_SIGNATURE_SIZE + sizeof(ULONG)) &&
+          RtlEqualMemory(pSysBuf + 1, C0CE_SIGNATURE, C0CE_SIGNATURE_SIZE))
+      {
+        extended = TRUE;
+        optsAndBits = *(ULONG *)(pSysBuf + 1 + C0CE_SIGNATURE_SIZE);
+
+        #define C0CE_INSERT_OPTS ( \
+            C0CE_INSERT_IOCTL_GET| \
+            C0CE_INSERT_IOCTL_RXCLEAR)
+
+        #define C0CE_INSERT_BITS ( \
+            C0CE_INSERT_ENABLE_LSR| \
+            C0CE_INSERT_ENABLE_MST| \
+            C0CE_INSERT_ENABLE_RBR| \
+            C0CE_INSERT_ENABLE_RLC)
+
+        #define C0CE_INSERT_CAPS (C0CE_INSERT_OPTS|C0CE_INSERT_BITS)
+
+        if (optsAndBits == C0CE_INSERT_IOCTL_CAPS) {
+          optsAndBits = (C0CE_INSERT_ENABLE_LSR|C0CE_INSERT_ENABLE_MST);
+          optsAndBits = 0;
+
+          Information += C0CE_SIGNATURE_SIZE + sizeof(ULONG);
+
+          if (pIrpStack->Parameters.DeviceIoControl.OutputBufferLength < Information) {
+            status = STATUS_BUFFER_TOO_SMALL;
+            break;
+          }
+
+          RtlCopyMemory(pSysBuf, C0CE_SIGNATURE, C0CE_SIGNATURE_SIZE);
+          *(ULONG *)(pSysBuf + C0CE_SIGNATURE_SIZE) = C0CE_INSERT_CAPS;
+        } else {
+          if (optsAndBits & ~C0CE_INSERT_CAPS) {
+            status = STATUS_INVALID_PARAMETER;
+            break;
+          }
+
+          if (optsAndBits & C0CE_INSERT_IOCTL_GET) {
+            if (optsAndBits & C0CE_INSERT_ENABLE_LSR)
+              Information += sizeof(UCHAR)*2 + sizeof(UCHAR);
+            if (optsAndBits & C0CE_INSERT_ENABLE_MST)
+              Information += sizeof(UCHAR)*2 + sizeof(UCHAR);
+            if (optsAndBits & C0CE_INSERT_ENABLE_RBR)
+              Information += sizeof(UCHAR)*2 + sizeof(ULONG);
+            if (optsAndBits & C0CE_INSERT_ENABLE_RLC)
+              Information += sizeof(UCHAR)*2 + sizeof(UCHAR)*3;
+          }
+
+          if (pIrpStack->Parameters.DeviceIoControl.OutputBufferLength < Information) {
+            status = STATUS_BUFFER_TOO_SMALL;
+            break;
+          }
+        }
+      } else {
+        extended = FALSE;
+        optsAndBits = (C0CE_INSERT_ENABLE_LSR|C0CE_INSERT_ENABLE_MST);
+      }
 
       KeAcquireSpinLock(pIoPortLocal->pIoLock, &oldIrql);
 
@@ -583,60 +634,182 @@ NTSTATUS FdoPortIoCtl(
                          (pIoPortLocal->handFlow.FlowReplace & SERIAL_ERROR_CHAR)))
       {
         status = STATUS_INVALID_PARAMETER;
+        KeReleaseSpinLock(pIoPortLocal->pIoLock, oldIrql);
+        break;
       }
 
-      if (status == STATUS_SUCCESS)
-        pIoPortLocal->escapeChar = escapeChar;
+      pIoPortLocal->insertMask = optsAndBits & C0CE_INSERT_BITS;
+      pIoPortLocal->escapeChar = escapeChar;
+
+      if (extended) {
+        LIST_ENTRY queueToComplete;
+
+        InitializeListHead(&queueToComplete);
+
+        if (optsAndBits & C0CE_INSERT_IOCTL_GET) {
+          if (optsAndBits & C0CE_INSERT_ENABLE_LSR) {
+            UCHAR lsr = 0x10;  /* break interrupt indicator */
+
+            if (!pIoPortLocal->amountInWriteQueue || pIoPortLocal->writeHolding)
+              lsr |= 0x60;  /* transmit holding register empty and transmitter empty indicators */
+
+            *pSysBuf++ = escapeChar;
+            *pSysBuf++ = SERIAL_LSRMST_LSR_NODATA;
+            *pSysBuf++ = lsr;
+          }
+
+          if (optsAndBits & C0CE_INSERT_ENABLE_MST) {
+            *pSysBuf++ = escapeChar;
+            *pSysBuf++ = SERIAL_LSRMST_MST;
+            *pSysBuf++ = pIoPortLocal->modemStatus;
+          }
+
+          if (optsAndBits & C0CE_INSERT_ENABLE_RBR) {
+            *pSysBuf++ = escapeChar;
+            *pSysBuf++ = C0CE_INSERT_RBR;
+            *(ULONG *)pSysBuf = pIoPortLocal->pIoPortRemote->baudRate.BaudRate;
+            pSysBuf += sizeof(ULONG);
+          }
+
+          if (optsAndBits & C0CE_INSERT_ENABLE_RLC) {
+            *pSysBuf++ = escapeChar;
+            *pSysBuf++ = C0CE_INSERT_RLC;
+            *pSysBuf++ = pIoPortLocal->pIoPortRemote->lineControl.WordLength;
+            *pSysBuf++ = pIoPortLocal->pIoPortRemote->lineControl.Parity;
+            *pSysBuf++ = pIoPortLocal->pIoPortRemote->lineControl.StopBits;
+          }
+        }
+
+        pIrp->IoStatus.Information = Information;
+
+        if (optsAndBits & C0CE_INSERT_IOCTL_RXCLEAR) {
+          PurgeBuffer(&pIoPortLocal->readBuf);
+          UpdateHandFlow(pIoPortLocal, TRUE, &queueToComplete);
+          if (pIoPortLocal->tryWrite || pIoPortLocal->pIoPortRemote->tryWrite) {
+            ReadWrite(
+                pIoPortLocal, FALSE,
+                pIoPortLocal->pIoPortRemote, FALSE,
+                &queueToComplete);
+          }
+        }
+
+        KeReleaseSpinLock(pIoPortLocal->pIoLock, oldIrql);
+        FdoPortCompleteQueue(&queueToComplete);
+
+        TraceIrp("FdoPortIoCtl", pIrp, &status, TRACE_FLAG_RESULTS);
+        break;
+      }
 
       KeReleaseSpinLock(pIoPortLocal->pIoLock, oldIrql);
       break;
     }
-    case IOCTL_SERIAL_SET_LINE_CONTROL:
+    case IOCTL_SERIAL_SET_LINE_CONTROL: {
+      PSERIAL_LINE_CONTROL pLineControl;
+
       if (pIrpStack->Parameters.DeviceIoControl.InputBufferLength < sizeof(SERIAL_LINE_CONTROL)) {
         status = STATUS_BUFFER_TOO_SMALL;
         break;
       }
 
-      KeAcquireSpinLock(&pDevExt->controlLock, &oldIrql);
-      pDevExt->lineControl = *(PSERIAL_LINE_CONTROL)pIrp->AssociatedIrp.SystemBuffer;
-      KeReleaseSpinLock(&pDevExt->controlLock, oldIrql);
+      pLineControl = (PSERIAL_LINE_CONTROL)pIrp->AssociatedIrp.SystemBuffer;
 
-      SetWriteDelay(pDevExt);
+      KeAcquireSpinLock(pIoPortLocal->pIoLock, &oldIrql);
+      if (pIoPortLocal->lineControl.StopBits != pLineControl->StopBits ||
+          pIoPortLocal->lineControl.Parity != pLineControl->Parity ||
+          pIoPortLocal->lineControl.WordLength != pLineControl->WordLength)
+      {
+        PC0C_IO_PORT pIoPortRemote;
+
+        pIoPortLocal->lineControl = *pLineControl;
+        SetWriteDelay(pIoPortLocal);
+
+        pIoPortRemote = pIoPortLocal->pIoPortRemote;
+
+        if (pIoPortRemote->escapeChar && (pIoPortRemote->insertMask & C0CE_INSERT_ENABLE_RLC)) {
+          LIST_ENTRY queueToComplete;
+
+          InitializeListHead(&queueToComplete);
+
+          InsertRemoteLc(pIoPortRemote, &queueToComplete);
+
+          if (pIoPortLocal->pIoPortRemote->tryWrite || pIoPortLocal->tryWrite) {
+            ReadWrite(
+                pIoPortLocal, FALSE,
+                pIoPortLocal->pIoPortRemote, FALSE,
+                &queueToComplete);
+          }
+
+          KeReleaseSpinLock(pIoPortLocal->pIoLock, oldIrql);
+          FdoPortCompleteQueue(&queueToComplete);
+          break;
+        }
+      }
+      KeReleaseSpinLock(pIoPortLocal->pIoLock, oldIrql);
       break;
+    }
     case IOCTL_SERIAL_GET_LINE_CONTROL:
       if (pIrpStack->Parameters.DeviceIoControl.OutputBufferLength < sizeof(SERIAL_LINE_CONTROL)) {
         status = STATUS_BUFFER_TOO_SMALL;
         break;
       }
 
-      KeAcquireSpinLock(&pDevExt->controlLock, &oldIrql);
-      *(PSERIAL_LINE_CONTROL)pIrp->AssociatedIrp.SystemBuffer = pDevExt->lineControl;
-      KeReleaseSpinLock(&pDevExt->controlLock, oldIrql);
+      KeAcquireSpinLock(pIoPortLocal->pIoLock, &oldIrql);
+      *(PSERIAL_LINE_CONTROL)pIrp->AssociatedIrp.SystemBuffer = pIoPortLocal->lineControl;
+      KeReleaseSpinLock(pIoPortLocal->pIoLock, oldIrql);
       pIrp->IoStatus.Information = sizeof(SERIAL_LINE_CONTROL);
 
       TraceIrp("FdoPortIoCtl", pIrp, &status, TRACE_FLAG_RESULTS);
       break;
-    case IOCTL_SERIAL_SET_BAUD_RATE:
+    case IOCTL_SERIAL_SET_BAUD_RATE: {
+      PSERIAL_BAUD_RATE pBaudRate;
+
       if (pIrpStack->Parameters.DeviceIoControl.InputBufferLength < sizeof(SERIAL_BAUD_RATE)) {
         status = STATUS_BUFFER_TOO_SMALL;
         break;
       }
 
-      KeAcquireSpinLock(&pDevExt->controlLock, &oldIrql);
-      pDevExt->baudRate = *(PSERIAL_BAUD_RATE)pIrp->AssociatedIrp.SystemBuffer;
-      KeReleaseSpinLock(&pDevExt->controlLock, oldIrql);
+      pBaudRate = (PSERIAL_BAUD_RATE)pIrp->AssociatedIrp.SystemBuffer;
 
-      SetWriteDelay(pDevExt);
+      KeAcquireSpinLock(pIoPortLocal->pIoLock, &oldIrql);
+      if (pIoPortLocal->baudRate.BaudRate != pBaudRate->BaudRate) {
+        PC0C_IO_PORT pIoPortRemote;
+
+        pIoPortLocal->baudRate = *pBaudRate;
+        SetWriteDelay(pIoPortLocal);
+
+        pIoPortRemote = pIoPortLocal->pIoPortRemote;
+
+        if (pIoPortRemote->escapeChar && (pIoPortRemote->insertMask & C0CE_INSERT_ENABLE_RBR)) {
+          LIST_ENTRY queueToComplete;
+
+          InitializeListHead(&queueToComplete);
+
+          InsertRemoteBr(pIoPortRemote, &queueToComplete);
+
+          if (pIoPortLocal->pIoPortRemote->tryWrite || pIoPortLocal->tryWrite) {
+            ReadWrite(
+                pIoPortLocal, FALSE,
+                pIoPortLocal->pIoPortRemote, FALSE,
+                &queueToComplete);
+          }
+
+          KeReleaseSpinLock(pIoPortLocal->pIoLock, oldIrql);
+          FdoPortCompleteQueue(&queueToComplete);
+          break;
+        }
+      }
+      KeReleaseSpinLock(pIoPortLocal->pIoLock, oldIrql);
       break;
+    }
     case IOCTL_SERIAL_GET_BAUD_RATE:
       if (pIrpStack->Parameters.DeviceIoControl.OutputBufferLength < sizeof(SERIAL_BAUD_RATE)) {
         status = STATUS_BUFFER_TOO_SMALL;
         break;
       }
 
-      KeAcquireSpinLock(&pDevExt->controlLock, &oldIrql);
-      *(PSERIAL_BAUD_RATE)pIrp->AssociatedIrp.SystemBuffer = pDevExt->baudRate;
-      KeReleaseSpinLock(&pDevExt->controlLock, oldIrql);
+      KeAcquireSpinLock(pIoPortLocal->pIoLock, &oldIrql);
+      *(PSERIAL_BAUD_RATE)pIrp->AssociatedIrp.SystemBuffer = pIoPortLocal->baudRate;
+      KeReleaseSpinLock(pIoPortLocal->pIoLock, oldIrql);
       pIrp->IoStatus.Information = sizeof(SERIAL_BAUD_RATE);
 
       TraceIrp("FdoPortIoCtl", pIrp, &status, TRACE_FLAG_RESULTS);
@@ -718,17 +891,17 @@ NTSTATUS FdoPortIoCtl(
         break;
       }
 
-      KeAcquireSpinLock(&pDevExt->controlLock, &oldIrql);
+      KeAcquireSpinLock(pIoPortLocal->pIoLock, &oldIrql);
       *(PSERIALPERF_STATS)pIrp->AssociatedIrp.SystemBuffer = pIoPortLocal->perfStats;
-      KeReleaseSpinLock(&pDevExt->controlLock, oldIrql);
+      KeReleaseSpinLock(pIoPortLocal->pIoLock, oldIrql);
       pIrp->IoStatus.Information = sizeof(SERIALPERF_STATS);
 
       TraceIrp("FdoPortIoCtl", pIrp, &status, TRACE_FLAG_RESULTS);
       break;
     case IOCTL_SERIAL_CLEAR_STATS:
-      KeAcquireSpinLock(&pDevExt->controlLock, &oldIrql);
+      KeAcquireSpinLock(pIoPortLocal->pIoLock, &oldIrql);
       RtlZeroMemory(&pIoPortLocal->perfStats, sizeof(pIoPortLocal->perfStats));
-      KeReleaseSpinLock(&pDevExt->controlLock, oldIrql);
+      KeReleaseSpinLock(pIoPortLocal->pIoLock, oldIrql);
       break;
     default:
       status = STATUS_INVALID_PARAMETER;

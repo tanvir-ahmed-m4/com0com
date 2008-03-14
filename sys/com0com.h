@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2004-2007 Vyacheslav Frolov
+ * Copyright (c) 2004-2008 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,10 @@
  *
  *
  * $Log$
+ * Revision 1.40  2008/03/14 15:28:39  vfrolov
+ * Implemented ability to get paired port settings with
+ * extended IOCTL_SERIAL_LSRMST_INSERT
+ *
  * Revision 1.39  2007/11/23 08:30:50  vfrolov
  * Increased size of TX buffer to typical default for Windows
  *
@@ -193,7 +197,7 @@ typedef struct _C0C_IRP_QUEUE {
 
 typedef struct _C0C_RAW_DATA {
   UCHAR                   size;
-  UCHAR                   data[7];
+  UCHAR                   data[3 + sizeof(ULONG)];
 } C0C_RAW_DATA, *PC0C_RAW_DATA;
 
 typedef struct _C0C_BUFFER {
@@ -272,6 +276,10 @@ typedef struct _C0C_IO_PORT {
   KTIMER                  timerClose;
   KDPC                    timerCloseDpc;
 
+  SERIAL_BAUD_RATE        baudRate;
+  SERIAL_LINE_CONTROL     lineControl;
+  SERIAL_TIMEOUTS         timeouts;
+
   struct _C0C_ADAPTIVE_DELAY *pWriteDelay;
 
   #define C0C_PIN_OUTS_RTS  0
@@ -289,6 +297,7 @@ typedef struct _C0C_IO_PORT {
   ULONG                   amountInWriteQueue;
   ULONG                   waitMask;
   ULONG                   eventMask;
+  ULONG                   insertMask;
   UCHAR                   escapeChar;
   SERIALPERF_STATS        perfStats;
 
@@ -346,12 +355,6 @@ typedef struct _C0C_FDOPORT_EXTENSION {
   unsigned short          shown;
 
   LONG                    openCount;
-
-  KSPIN_LOCK              controlLock;
-
-  SERIAL_BAUD_RATE        baudRate;
-  SERIAL_LINE_CONTROL     lineControl;
-  SERIAL_TIMEOUTS         timeouts;
 
 } C0C_FDOPORT_EXTENSION, *PC0C_FDOPORT_EXTENSION;
 
@@ -496,6 +499,14 @@ VOID PinMap(
     IN ULONG pinDSR,
     IN ULONG pinDCD,
     IN ULONG pinRI);
+
+VOID InsertRemoteBr(
+    PC0C_IO_PORT pIoPortRead,
+    PLIST_ENTRY pQueueToComplete);
+
+VOID InsertRemoteLc(
+    PC0C_IO_PORT pIoPortRead,
+    PLIST_ENTRY pQueueToComplete);
 
 #define C0C_TAG 'c0c'
 #define C0C_ALLOCATE_POOL(PoolType, NumberOfBytes) \

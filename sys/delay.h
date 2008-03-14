@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2005-2007 Vyacheslav Frolov
+ * Copyright (c) 2005-2008 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,10 @@
  *
  *
  * $Log$
+ * Revision 1.6  2008/03/14 15:28:39  vfrolov
+ * Implemented ability to get paired port settings with
+ * extended IOCTL_SERIAL_LSRMST_INSERT
+ *
  * Revision 1.5  2007/06/09 08:49:47  vfrolov
  * Improved baudrate emulation
  *
@@ -60,7 +64,7 @@ typedef struct _C0C_ADAPTIVE_DELAY {
 NTSTATUS AllocWriteDelay(PC0C_IO_PORT pIoPort);
 VOID FreeWriteDelay(PC0C_IO_PORT pIoPort);
 SIZE_T GetWriteLimit(PC0C_ADAPTIVE_DELAY pWriteDelay);
-VOID SetWriteDelay(PC0C_FDOPORT_EXTENSION pDevExt);
+VOID SetWriteDelay(PC0C_IO_PORT pIoPort);
 VOID StartWriteDelayTimer(PC0C_ADAPTIVE_DELAY pWriteDelay);
 VOID StopWriteDelayTimer(PC0C_ADAPTIVE_DELAY pWriteDelay);
 

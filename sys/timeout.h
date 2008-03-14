@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2004-2007 Vyacheslav Frolov
+ * Copyright (c) 2004-2008 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,10 @@
  *
  *
  * $Log$
+ * Revision 1.7  2008/03/14 15:28:39  vfrolov
+ * Implemented ability to get paired port settings with
+ * extended IOCTL_SERIAL_LSRMST_INSERT
+ *
  * Revision 1.6  2007/06/04 15:24:33  vfrolov
  * Fixed open reject just after close in exclusiveMode
  *
@@ -60,13 +64,13 @@ NTSTATUS SetIrpTimeout(
     PIRP pIrp);
 
 NTSTATUS FdoPortSetTimeouts(
-    IN PC0C_FDOPORT_EXTENSION pDevExt,
-    IN PIRP pIrp,
-    IN PIO_STACK_LOCATION pIrpStack);
+    PC0C_IO_PORT pIoPort,
+    PIRP pIrp,
+    PIO_STACK_LOCATION pIrpStack);
 
 NTSTATUS FdoPortGetTimeouts(
-    IN PC0C_FDOPORT_EXTENSION pDevExt,
-    IN PIRP pIrp,
-    IN PIO_STACK_LOCATION pIrpStack);
+    PC0C_IO_PORT pIoPort,
+    PIRP pIrp,
+    PIO_STACK_LOCATION pIrpStack);
 
 #endif /* _C0C_TIMEOUT_H_ */

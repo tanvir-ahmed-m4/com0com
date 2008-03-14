@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2004-2007 Vyacheslav Frolov
+ * Copyright (c) 2004-2008 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,10 @@
  *
  *
  * $Log$
+ * Revision 1.29  2008/03/14 15:28:39  vfrolov
+ * Implemented ability to get paired port settings with
+ * extended IOCTL_SERIAL_LSRMST_INSERT
+ *
  * Revision 1.28  2007/06/20 10:32:44  vfrolov
  * Added PID tracing on IRP_MJ_CREATE
  *
@@ -1508,8 +1512,14 @@ VOID TraceIrp(
             pDestStr = AnsiStrCopyCommStatus(pDestStr, &size, (PSERIAL_STATUS)pSysBuf);
           break;
         case IOCTL_SERIAL_LSRMST_INSERT:
-          if ((flags & TRACE_FLAG_PARAMS) && inLength >= sizeof(UCHAR))
-            pDestStr = AnsiStrFormat(pDestStr, &size, " escapeChar=0x%02X", (int)(*(PUCHAR)pSysBuf & 0xFF));
+          if (flags & TRACE_FLAG_PARAMS) {
+            pDestStr = AnsiStrCopyStr(pDestStr, &size, " ");
+            pDestStr = AnsiStrCopyDump(pDestStr, &size, pSysBuf, inLength);
+          }
+          if (flags & TRACE_FLAG_RESULTS) {
+            pDestStr = AnsiStrCopyStr(pDestStr, &size, " ");
+            pDestStr = AnsiStrCopyDump(pDestStr, &size, pSysBuf, inform);
+          }
           break;
         case IOCTL_SERIAL_GET_STATS:
           if ((flags & TRACE_FLAG_RESULTS) && inform >= sizeof(SERIALPERF_STATS))

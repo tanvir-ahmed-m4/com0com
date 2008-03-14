@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2004-2007 Vyacheslav Frolov
+ * Copyright (c) 2004-2008 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,10 @@
  *
  *
  * $Log$
+ * Revision 1.37  2008/03/14 15:28:39  vfrolov
+ * Implemented ability to get paired port settings with
+ * extended IOCTL_SERIAL_LSRMST_INSERT
+ *
  * Revision 1.36  2007/09/12 12:32:53  vfrolov
  * Fixed TX buffer
  *
@@ -140,6 +144,7 @@
 #include "delay.h"
 #include "bufutils.h"
 #include "handflow.h"
+#include "../include/cncext.h"
 
 /*
  * FILE_ID used by HALT_UNLESS to put it on BSOD
@@ -845,6 +850,54 @@ VOID InsertChar(
   }
 }
 
+VOID InsertRemoteBr(
+    PC0C_IO_PORT pIoPortRead,
+    PLIST_ENTRY pQueueToComplete)
+{
+  C0C_RAW_DATA insertData;
+
+  insertData.size = 2 + sizeof(ULONG);
+  insertData.data[0] = pIoPortRead->escapeChar;
+  insertData.data[1] = C0CE_INSERT_RBR;
+  *(ULONG *)&insertData.data[2] = pIoPortRead->pIoPortRemote->baudRate.BaudRate;
+
+  if (FdoPortIo(
+      C0C_IO_TYPE_INSERT,
+      &insertData,
+      pIoPortRead,
+      &pIoPortRead->irpQueues[C0C_QUEUE_READ],
+      pQueueToComplete) == STATUS_PENDING)
+  {
+    AlertOverrun(pIoPortRead, pQueueToComplete);
+    Trace0((PC0C_COMMON_EXTENSION)pIoPortRead->pDevExt, L"WARNING: Lost C0CE_INSERT_RBR");
+  }
+}
+
+VOID InsertRemoteLc(
+    PC0C_IO_PORT pIoPortRead,
+    PLIST_ENTRY pQueueToComplete)
+{
+  C0C_RAW_DATA insertData;
+
+  insertData.size = 5;
+  insertData.data[0] = pIoPortRead->escapeChar;
+  insertData.data[1] = C0CE_INSERT_RLC;
+  insertData.data[2] = pIoPortRead->pIoPortRemote->lineControl.WordLength;
+  insertData.data[3] = pIoPortRead->pIoPortRemote->lineControl.Parity;
+  insertData.data[4] = pIoPortRead->pIoPortRemote->lineControl.StopBits;
+
+  if (FdoPortIo(
+      C0C_IO_TYPE_INSERT,
+      &insertData,
+      pIoPortRead,
+      &pIoPortRead->irpQueues[C0C_QUEUE_READ],
+      pQueueToComplete) == STATUS_PENDING)
+  {
+    AlertOverrun(pIoPortRead, pQueueToComplete);
+    Trace0((PC0C_COMMON_EXTENSION)pIoPortRead->pDevExt, L"WARNING: Lost C0CE_INSERT_RLC");
+  }
+}
+
 NTSTATUS TryReadWrite(
     PC0C_IO_PORT pIoPortRead,
     BOOLEAN startRead,
@@ -1202,7 +1255,7 @@ NTSTATUS TryReadWrite(
         if (pIoPortRead->eventMask)
           WaitComplete(pIoPortRead, pQueueToComplete);
 
-        if (pIoPortRead->escapeChar) {
+        if (pIoPortRead->escapeChar && (pIoPortRead->insertMask & C0CE_INSERT_ENABLE_LSR)) {
           UCHAR lsr = 0x10;  /* break interrupt indicator */
 
           if (!pIoPortRead->amountInWriteQueue || pIoPortRead->writeHolding)
@@ -1375,7 +1428,7 @@ VOID SetModemStatus(
 
     SetModemStatusHolding(pIoPort);
 
-    if (pIoPort->escapeChar)
+    if (pIoPort->escapeChar && (pIoPort->insertMask & C0CE_INSERT_ENABLE_MST))
       InsertLsrMst(pIoPort, TRUE,
           (UCHAR)(pIoPort->modemStatus | (modemStatusChanged >> 4)), pQueueToComplete);
 
