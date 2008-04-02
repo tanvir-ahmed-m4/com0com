@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2006-2007 Vyacheslav Frolov
+ * Copyright (c) 2006-2008 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.6  2008/04/02 10:30:26  vfrolov
+ * Added check pointer for null
+ *
  * Revision 1.5  2007/09/20 12:39:59  vfrolov
  * Added SetLastError(ERROR_NOT_ENOUGH_MEMORY)
  *
@@ -33,7 +36,6 @@
  *
  * Revision 1.1  2006/07/28 12:16:43  vfrolov
  * Initial revision
- *
  *
  */
 
@@ -116,6 +118,11 @@ static BOOL GetFilePath(
 
   if (res >= lenFilePath) {
     ShowError(MB_OK|MB_ICONSTOP, ERROR_BUFFER_OVERFLOW, "GetFullPathName(%s)", pNearPath);
+    return FALSE;
+  }
+
+  if (!pBuf) {
+    ShowError(MB_OK|MB_ICONSTOP, ERROR_INVALID_NAME, "GetFullPathName(%s)", pNearPath);
     return FALSE;
   }
 
