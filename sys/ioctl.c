@@ -19,6 +19,10 @@
  *
  *
  * $Log$
+ * Revision 1.35  2008/04/08 10:36:16  vfrolov
+ * Implemented ability to set individual pins with extended
+ * IOCTL_SERIAL_SET_MODEM_CONTROL and IOCTL_SERIAL_GET_MODEM_CONTROL
+ *
  * Revision 1.34  2008/03/14 15:28:39  vfrolov
  * Implemented ability to get paired port settings with
  * extended IOCTL_SERIAL_LSRMST_INSERT
@@ -226,20 +230,32 @@ NTSTATUS FdoPortIoCtl(
       break;
     case IOCTL_SERIAL_SET_MODEM_CONTROL: {
       LIST_ENTRY queueToComplete;
+      UCHAR mask;
+      PUCHAR pSysBuf;
+      ULONG InputBufferLength;
 
-      if (pIrpStack->Parameters.DeviceIoControl.InputBufferLength < sizeof(ULONG)) {
+      InputBufferLength = pIrpStack->Parameters.DeviceIoControl.InputBufferLength;
+
+      if (InputBufferLength < sizeof(ULONG)) {
         status = STATUS_BUFFER_TOO_SMALL;
         break;
       }
 
+      pSysBuf = (PUCHAR)pIrp->AssociatedIrp.SystemBuffer;
+
+      if (InputBufferLength >= (sizeof(ULONG) + sizeof(ULONG) + C0CE_SIGNATURE_SIZE) &&
+          RtlEqualMemory(pSysBuf + sizeof(ULONG) + sizeof(ULONG), C0CE_SIGNATURE, C0CE_SIGNATURE_SIZE))
+      {
+        mask = C0C_MCR_MASK & (UCHAR)*((PULONG)pSysBuf + 1);
+      } else {
+        mask = C0C_MCR_MASK;
+      }
+
       InitializeListHead(&queueToComplete);
+
       KeAcquireSpinLock(pIoPortLocal->pIoLock, &oldIrql);
 
-      SetModemControl(
-        pIoPortLocal,
-        (UCHAR)*(PULONG)pIrp->AssociatedIrp.SystemBuffer,
-        (UCHAR)C0C_MCR_MASK,
-        &queueToComplete);
+      SetModemControl(pIoPortLocal, (UCHAR)*(PULONG)pSysBuf, mask, &queueToComplete);
 
       if (pIoPortLocal->pIoPortRemote->tryWrite || pIoPortLocal->tryWrite) {
         ReadWrite(
@@ -255,21 +271,49 @@ NTSTATUS FdoPortIoCtl(
     case IOCTL_SERIAL_GET_MODEM_CONTROL:
     case IOCTL_SERIAL_GET_DTRRTS: {
       ULONG modemControl;
+      PUCHAR pSysBuf;
+      ULONG OutputBufferLength;
 
-      if (pIrpStack->Parameters.DeviceIoControl.OutputBufferLength < sizeof(ULONG)) {
+      OutputBufferLength = pIrpStack->Parameters.DeviceIoControl.OutputBufferLength;
+
+      if (OutputBufferLength < sizeof(ULONG)) {
         status = STATUS_BUFFER_TOO_SMALL;
         break;
       }
 
       KeAcquireSpinLock(pIoPortLocal->pIoLock, &oldIrql);
-      modemControl = pIoPortLocal->modemControl & C0C_MCR_MASK;
+      modemControl = pIoPortLocal->modemControl;
       KeReleaseSpinLock(pIoPortLocal->pIoLock, oldIrql);
 
-      if (code == IOCTL_SERIAL_GET_DTRRTS)
-        modemControl &= SERIAL_DTR_STATE | SERIAL_RTS_STATE;
+      pSysBuf = (PUCHAR)pIrp->AssociatedIrp.SystemBuffer;
 
-      *(PULONG)pIrp->AssociatedIrp.SystemBuffer = modemControl;
-      pIrp->IoStatus.Information = sizeof(ULONG);
+      if (code == IOCTL_SERIAL_GET_DTRRTS) {
+        modemControl &= SERIAL_DTR_STATE | SERIAL_RTS_STATE;
+      } else {
+        ULONG InputBufferLength;
+
+        InputBufferLength = pIrpStack->Parameters.DeviceIoControl.InputBufferLength;
+
+        if (OutputBufferLength >= (sizeof(ULONG) + C0CE_SIGNATURE_SIZE) &&
+            InputBufferLength >= C0CE_SIGNATURE_SIZE &&
+            RtlEqualMemory(pSysBuf, C0CE_SIGNATURE, C0CE_SIGNATURE_SIZE))
+        {
+          RtlCopyMemory(pSysBuf + sizeof(PULONG), C0CE_SIGNATURE, C0CE_SIGNATURE_SIZE);
+
+          if (OutputBufferLength > (sizeof(ULONG) + C0CE_SIGNATURE_SIZE)) {
+            RtlZeroMemory(pSysBuf + sizeof(ULONG) + C0CE_SIGNATURE_SIZE,
+                          OutputBufferLength - (sizeof(ULONG) + C0CE_SIGNATURE_SIZE));
+          }
+
+          pIrp->IoStatus.Information = OutputBufferLength;
+        } else {
+          pIrp->IoStatus.Information = sizeof(ULONG);
+        }
+
+        modemControl &= C0C_MCR_MASK;
+      }
+
+      *(PULONG)pSysBuf = modemControl;
 
       TraceIrp("FdoPortIoCtl", pIrp, &status, TRACE_FLAG_RESULTS);
       break;
