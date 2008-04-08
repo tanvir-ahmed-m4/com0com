@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2007 Vyacheslav Frolov
+ * Copyright (c) 2007-2008 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.4  2008/04/08 06:47:37  vfrolov
+ * Added pin OUT2
+ *
  * Revision 1.3  2007/10/19 16:03:41  vfrolov
  * Added default values
  *
@@ -27,7 +30,6 @@
  *
  * Revision 1.1  2007/07/03 14:35:17  vfrolov
  * Implemented pinout customization
- *
  *
  */
 
@@ -82,6 +84,7 @@ VOID SetModemControl(
     SET_PIN_OUTS(RTS);
     SET_PIN_OUTS(DTR);
     SET_PIN_OUTS(OUT1);
+    SET_PIN_OUTS(OUT2);
     SET_PIN_OUTS(OPEN);
 
     #undef SET_PIN_OUTS
@@ -142,6 +145,7 @@ VOID PinWire(
     CASE_PIN(RTS)
     CASE_PIN(DTR)
     CASE_PIN(OUT1)
+    CASE_PIN(OUT2)
     CASE_PIN(OPEN)
 
     #undef CASE_PIN

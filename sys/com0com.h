@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.41  2008/04/08 06:47:37  vfrolov
+ * Added pin OUT2
+ *
  * Revision 1.40  2008/03/14 15:28:39  vfrolov
  * Implemented ability to get paired port settings with
  * extended IOCTL_SERIAL_LSRMST_INSERT
@@ -285,9 +288,10 @@ typedef struct _C0C_IO_PORT {
   #define C0C_PIN_OUTS_RTS  0
   #define C0C_PIN_OUTS_DTR  1
   #define C0C_PIN_OUTS_OUT1 2
-  #define C0C_PIN_OUTS_OPEN 3
+  #define C0C_PIN_OUTS_OUT2 3
+  #define C0C_PIN_OUTS_OPEN 4
 
-  C0C_PIN_OUTS            pinOuts[4];
+  C0C_PIN_OUTS            pinOuts[5];
 
   SERIAL_HANDFLOW         handFlow;
   SERIAL_CHARS            specialChars;
