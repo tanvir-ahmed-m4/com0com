@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.42  2008/04/08 10:27:44  vfrolov
+ * Fixed C0C_MCR_MASK
+ *
  * Revision 1.41  2008/04/08 06:47:37  vfrolov
  * Added pin OUT2
  *
@@ -318,7 +321,7 @@ typedef struct _C0C_IO_PORT {
   #define C0C_MCR_OUT2    0x08
   #define C0C_MCR_LOOP    0x10
   #define C0C_MCR_OPEN    0x80
-  #define C0C_MCR_MASK    (~(C0C_MCR_OPEN))
+  #define C0C_MCR_MASK    ((UCHAR)~(C0C_MCR_OPEN))
 
   UCHAR                   modemControl;
 
