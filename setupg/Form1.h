@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2007 Vyacheslav Frolov
+ * Copyright (c) 2007-2008 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,12 +19,14 @@
  *
  *
  * $Log$
+ * Revision 1.3  2008/04/08 06:52:12  vfrolov
+ * Added pin OUT2
+ *
  * Revision 1.2  2007/11/20 12:29:40  vfrolov
  * Fixed appearance for Vista
  *
  * Revision 1.1  2007/10/31 10:16:55  vfrolov
  * Initial revision
- *
  *
  */
 
@@ -99,9 +101,11 @@ namespace SetupApp {
     private: System::Windows::Forms::Label^  pinNameA_CTS;
     private: System::Windows::Forms::Label^  pinNameA_RI;
     private: System::Windows::Forms::Label^  pinNameA_OUT1;
+    private: System::Windows::Forms::Label^  pinNameA_OUT2;
     private: System::Windows::Forms::Label^  pinNameA_OPEN;
     private: System::Windows::Forms::Label^  pinNameB_OPEN;
     private: System::Windows::Forms::Label^  pinNameB_OUT1;
+    private: System::Windows::Forms::Label^  pinNameB_OUT2;
     private: System::Windows::Forms::Label^  pinNameB_RI;
     private: System::Windows::Forms::Label^  pinNameB_CTS;
     private: System::Windows::Forms::Label^  pinNameB_RTS;
@@ -149,6 +153,7 @@ namespace SetupApp {
           this->pinNameA_CTS = (gcnew System::Windows::Forms::Label());
           this->pinNameA_RI = (gcnew System::Windows::Forms::Label());
           this->pinNameA_OUT1 = (gcnew System::Windows::Forms::Label());
+          this->pinNameA_OUT2 = (gcnew System::Windows::Forms::Label());
           this->pinNameA_OPEN = (gcnew System::Windows::Forms::Label());
           this->pairList = (gcnew System::Windows::Forms::TreeView());
           this->buttonRemovePair = (gcnew System::Windows::Forms::Button());
@@ -157,6 +162,7 @@ namespace SetupApp {
           this->buttonReset = (gcnew System::Windows::Forms::Button());
           this->pinNameB_OPEN = (gcnew System::Windows::Forms::Label());
           this->pinNameB_OUT1 = (gcnew System::Windows::Forms::Label());
+          this->pinNameB_OUT2 = (gcnew System::Windows::Forms::Label());
           this->pinNameB_RI = (gcnew System::Windows::Forms::Label());
           this->pinNameB_CTS = (gcnew System::Windows::Forms::Label());
           this->pinNameB_RTS = (gcnew System::Windows::Forms::Label());
@@ -322,6 +328,12 @@ namespace SetupApp {
           this->pinNameA_OUT1->Name = L"pinNameA_OUT1";
           this->toolTip1->SetToolTip(this->pinNameA_OUT1, resources->GetString(L"pinNameA_OUT1.ToolTip"));
           // 
+          // pinNameA_OUT2
+          // 
+          resources->ApplyResources(this->pinNameA_OUT2, L"pinNameA_OUT2");
+          this->pinNameA_OUT2->Name = L"pinNameA_OUT2";
+          this->toolTip1->SetToolTip(this->pinNameA_OUT2, resources->GetString(L"pinNameA_OUT2.ToolTip"));
+          // 
           // pinNameA_OPEN
           // 
           resources->ApplyResources(this->pinNameA_OPEN, L"pinNameA_OPEN");
@@ -375,6 +387,12 @@ namespace SetupApp {
           resources->ApplyResources(this->pinNameB_OUT1, L"pinNameB_OUT1");
           this->pinNameB_OUT1->Name = L"pinNameB_OUT1";
           this->toolTip1->SetToolTip(this->pinNameB_OUT1, resources->GetString(L"pinNameB_OUT1.ToolTip"));
+          // 
+          // pinNameB_OUT2
+          // 
+          resources->ApplyResources(this->pinNameB_OUT2, L"pinNameB_OUT2");
+          this->pinNameB_OUT2->Name = L"pinNameB_OUT2";
+          this->toolTip1->SetToolTip(this->pinNameB_OUT2, resources->GetString(L"pinNameB_OUT2.ToolTip"));
           // 
           // pinNameB_RI
           // 
@@ -430,6 +448,7 @@ namespace SetupApp {
           this->AutoScaleMode = System::Windows::Forms::AutoScaleMode::Font;
           this->Controls->Add(this->pinNameB_OPEN);
           this->Controls->Add(this->pinNameB_OUT1);
+          this->Controls->Add(this->pinNameB_OUT2);
           this->Controls->Add(this->pinNameB_RI);
           this->Controls->Add(this->pinNameB_CTS);
           this->Controls->Add(this->pinNameB_RTS);
@@ -440,6 +459,7 @@ namespace SetupApp {
           this->Controls->Add(this->pinNameB_RX);
           this->Controls->Add(this->pinNameA_OPEN);
           this->Controls->Add(this->pinNameA_OUT1);
+          this->Controls->Add(this->pinNameA_OUT2);
           this->Controls->Add(this->pinNameA_RI);
           this->Controls->Add(this->pinNameA_CTS);
           this->Controls->Add(this->pinNameA_RTS);

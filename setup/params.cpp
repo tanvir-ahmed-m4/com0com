@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2006-2007 Vyacheslav Frolov
+ * Copyright (c) 2006-2008 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.10  2008/04/08 06:49:44  vfrolov
+ * Added pin OUT2
+ *
  * Revision 1.9  2007/10/19 16:09:55  vfrolov
  * Implemented --detail-prms option
  *
@@ -266,6 +269,10 @@ BOOL PortParameters::SetPin(const char *pNewVal, DWORD bit)
     newPin |= C0C_PIN_ROUT1;
   }
   else
+  if (!lstrcmpi(pNewVal, "rout2")) {
+    newPin |= C0C_PIN_ROUT2;
+  }
+  else
   if (!lstrcmpi(pNewVal, "ropen")) {
     newPin |= C0C_PIN_ROPEN;
   }
@@ -280,6 +287,10 @@ BOOL PortParameters::SetPin(const char *pNewVal, DWORD bit)
   else
   if (!lstrcmpi(pNewVal, "lout1")) {
     newPin |= C0C_PIN_LOUT1;
+  }
+  else
+  if (!lstrcmpi(pNewVal, "lout2")) {
+    newPin |= C0C_PIN_LOUT2;
   }
   else
   if (!lstrcmpi(pNewVal, "lopen")) {
@@ -676,10 +687,12 @@ BOOL PortParameters::FillParametersStr(char *pParameters, int size, BOOL detail)
         case C0C_PIN_RRTS:  pVal = "rrts";  break;
         case C0C_PIN_RDTR:  pVal = "rdtr";  break;
         case C0C_PIN_ROUT1: pVal = "rout1"; break;
+        case C0C_PIN_ROUT2: pVal = "rout2"; break;
         case C0C_PIN_ROPEN: pVal = "ropen"; break;
         case C0C_PIN_LRTS:  pVal = "lrts";  break;
         case C0C_PIN_LDTR:  pVal = "ldtr";  break;
         case C0C_PIN_LOUT1: pVal = "lout1"; break;
+        case C0C_PIN_LOUT2: pVal = "lout2"; break;
         case C0C_PIN_LOPEN: pVal = "lopen"; break;
         case C0C_PIN_ON:    pVal = "on";    break;
       }
@@ -734,10 +747,10 @@ const char *PortParameters::GetHelp()
     "  dcd=[!]<p>              - wire DCD pin to <p> (rdtr by default)\n"
     "  ri=[!]<p>               - wire RI pin to <p> (!on by default)\n"
     "\n"
-    "The possible values of <p> above can be rrts, lrts, rdtr, ldtr, rout1, lout1\n"
-    "(remote/local RTS/DTR/OUT1), ropen, lopen (logical ON if remote/local port is\n"
-    "open) or on (logical ON). The exclamation sign (!) can be used to invert the\n"
-    "value.\n"
+    "The possible values of <p> above can be rrts, lrts, rdtr, ldtr, rout1, lout1,\n"
+    "rout2, lout2 (remote/local RTS/DTR/OUT1/OUT2), ropen, lopen (logical ON if\n"
+    "remote/local port is open) or on (logical ON). The exclamation sign (!) can be\n"
+    "used to invert the value.\n"
     "\n"
     "Special values:\n"
     "  -                       - use driver's default value\n"

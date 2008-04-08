@@ -181,7 +181,7 @@
     <value>NoControl</value>
   </data>
   <data name="pinNameON.Location" type="System.Drawing.Point, System.Drawing">
-    <value>282, 317</value>
+    <value>282, 337</value>
   </data>
   <data name="pinNameON.Size" type="System.Drawing.Size, System.Drawing">
     <value>250, 20</value>
@@ -217,7 +217,7 @@
     <value>282, 116</value>
   </data>
   <data name="picturePinMap.Size" type="System.Drawing.Size, System.Drawing">
-    <value>250, 200</value>
+    <value>250, 220</value>
   </data>
   <data name="picturePinMap.TabIndex" type="System.Int32, mscorlib">
     <value>15</value>
@@ -784,11 +784,44 @@ in the direction to the paired port.</value>
   <data name="&gt;&gt;pinNameA_OUT1.ZOrder" xml:space="preserve">
     <value>11</value>
   </data>
+  <data name="pinNameA_OUT2.ImeMode" type="System.Windows.Forms.ImeMode, System.Windows.Forms">
+    <value>NoControl</value>
+  </data>
+  <data name="pinNameA_OUT2.Location" type="System.Drawing.Point, System.Drawing">
+    <value>232, 296</value>
+  </data>
+  <data name="pinNameA_OUT2.Size" type="System.Drawing.Size, System.Drawing">
+    <value>50, 20</value>
+  </data>
+  <data name="pinNameA_OUT2.TabIndex" type="System.Int32, mscorlib">
+    <value>44</value>
+  </data>
+  <data name="pinNameA_OUT2.Text" xml:space="preserve">
+    <value>OUT2</value>
+  </data>
+  <data name="pinNameA_OUT2.TextAlign" type="System.Drawing.ContentAlignment, System.Drawing">
+    <value>MiddleRight</value>
+  </data>
+  <data name="pinNameA_OUT2.ToolTip" xml:space="preserve">
+    <value>OUT2 - auxiliary output 2.</value>
+  </data>
+  <data name="&gt;&gt;pinNameA_OUT2.Name" xml:space="preserve">
+    <value>pinNameA_OUT2</value>
+  </data>
+  <data name="&gt;&gt;pinNameA_OUT2.Type" xml:space="preserve">
+    <value>System.Windows.Forms.Label, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="&gt;&gt;pinNameA_OUT2.Parent" xml:space="preserve">
+    <value>$this</value>
+  </data>
+  <data name="&gt;&gt;pinNameA_OUT2.ZOrder" xml:space="preserve">
+    <value>11</value>
+  </data>
   <data name="pinNameA_OPEN.ImeMode" type="System.Windows.Forms.ImeMode, System.Windows.Forms">
     <value>NoControl</value>
   </data>
   <data name="pinNameA_OPEN.Location" type="System.Drawing.Point, System.Drawing">
-    <value>232, 296</value>
+    <value>232, 316</value>
   </data>
   <data name="pinNameA_OPEN.Size" type="System.Drawing.Size, System.Drawing">
     <value>50, 20</value>
@@ -941,7 +974,7 @@ in the direction to the paired port.</value>
     <value>NoControl</value>
   </data>
   <data name="pinNameB_OPEN.Location" type="System.Drawing.Point, System.Drawing">
-    <value>532, 296</value>
+    <value>532, 316</value>
   </data>
   <data name="pinNameB_OPEN.Size" type="System.Drawing.Size, System.Drawing">
     <value>50, 20</value>
@@ -1001,6 +1034,39 @@ in the direction to the paired port.</value>
     <value>$this</value>
   </data>
   <data name="&gt;&gt;pinNameB_OUT1.ZOrder" xml:space="preserve">
+    <value>1</value>
+  </data>
+  <data name="pinNameB_OUT2.ImeMode" type="System.Windows.Forms.ImeMode, System.Windows.Forms">
+    <value>NoControl</value>
+  </data>
+  <data name="pinNameB_OUT2.Location" type="System.Drawing.Point, System.Drawing">
+    <value>532, 296</value>
+  </data>
+  <data name="pinNameB_OUT2.Size" type="System.Drawing.Size, System.Drawing">
+    <value>50, 20</value>
+  </data>
+  <data name="pinNameB_OUT2.TabIndex" type="System.Int32, mscorlib">
+    <value>54</value>
+  </data>
+  <data name="pinNameB_OUT2.Text" xml:space="preserve">
+    <value>OUT2</value>
+  </data>
+  <data name="pinNameB_OUT2.TextAlign" type="System.Drawing.ContentAlignment, System.Drawing">
+    <value>MiddleLeft</value>
+  </data>
+  <data name="pinNameB_OUT2.ToolTip" xml:space="preserve">
+    <value>OUT2 - auxiliary output 2.</value>
+  </data>
+  <data name="&gt;&gt;pinNameB_OUT2.Name" xml:space="preserve">
+    <value>pinNameB_OUT2</value>
+  </data>
+  <data name="&gt;&gt;pinNameB_OUT2.Type" xml:space="preserve">
+    <value>System.Windows.Forms.Label, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="&gt;&gt;pinNameB_OUT2.Parent" xml:space="preserve">
+    <value>$this</value>
+  </data>
+  <data name="&gt;&gt;pinNameB_OUT2.ZOrder" xml:space="preserve">
     <value>1</value>
   </data>
   <data name="pinNameB_RI.ImeMode" type="System.Windows.Forms.ImeMode, System.Windows.Forms">

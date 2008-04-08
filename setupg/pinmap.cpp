@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2007 Vyacheslav Frolov
+ * Copyright (c) 2007-2008 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,9 +19,11 @@
  *
  *
  * $Log$
+ * Revision 1.2  2008/04/08 06:52:12  vfrolov
+ * Added pin OUT2
+ *
  * Revision 1.1  2007/10/31 10:16:55  vfrolov
  * Initial revision
- *
  *
  */
 
@@ -78,9 +80,9 @@ using namespace System::Drawing;
 using namespace System::Windows::Forms;
 using namespace System::Collections::Generic;
 
-#define NUM_LINES          10
+#define NUM_LINES          11
 #define NUM_MIDDLE_SRCS    1
-#define MAX_DIFF           6
+#define MAX_DIFF           7
 
 #define UL                 0
 #define DL                 (NUM_LINES - 1)
@@ -90,7 +92,7 @@ using namespace System::Collections::Generic;
 #define RC                 (NUM_COLUMS - 1)
 #define MC                 (NUM_COLUMS/2)
 
-#define PIN_SIZE           8
+#define PIN_SIZE           9
 #define INVERT_SIZE        14
 
 PinMap::PinMap()
@@ -114,6 +116,7 @@ PinMap::PinMap()
   pins["CTS(A)"]  = gcnew Pin(C, L++, false, 0);
   pins["RI(A)"]   = gcnew Pin(C, L++, false, 0);
   pins["OUT1(A)"] = gcnew Pin(C, L++, false, IC++);
+  pins["OUT2(A)"] = gcnew Pin(C, L++, false, IC++);
   pins["OPEN(A)"] = gcnew Pin(C, L++, false, IC++);
 
   C = RC;
@@ -128,6 +131,7 @@ PinMap::PinMap()
   pins["CTS(B)"]  = gcnew Pin(C, L++, false, 0);
   pins["RI(B)"]   = gcnew Pin(C, L++, false, 0);
   pins["OUT1(B)"] = gcnew Pin(C, L++, false, IC++);
+  pins["OUT2(B)"] = gcnew Pin(C, L++, false, IC++);
   pins["OPEN(B)"] = gcnew Pin(C, L++, false, IC++);
 
   pins["ON"]      = gcnew Pin(MC, DL, false, 0);
