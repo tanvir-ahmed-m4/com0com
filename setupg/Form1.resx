@@ -836,7 +836,7 @@ in the direction to the paired port.</value>
     <value>MiddleRight</value>
   </data>
   <data name="pinNameA_OPEN.ToolTip" xml:space="preserve">
-    <value>OPEN - logical ON if remote/local port is open.</value>
+    <value>OPEN - logical ON if the port is open.</value>
   </data>
   <data name="&gt;&gt;pinNameA_OPEN.Name" xml:space="preserve">
     <value>pinNameA_OPEN</value>
@@ -989,7 +989,7 @@ in the direction to the paired port.</value>
     <value>MiddleLeft</value>
   </data>
   <data name="pinNameB_OPEN.ToolTip" xml:space="preserve">
-    <value>OPEN - logical ON if remote/local port is open.</value>
+    <value>OPEN - logical ON if the port is open.</value>
   </data>
   <data name="&gt;&gt;pinNameB_OPEN.Name" xml:space="preserve">
     <value>pinNameB_OPEN</value>
