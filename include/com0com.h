@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.8  2008/05/04 09:44:05  vfrolov
+ * Added C0C_DEFAULT_HIDDENMODE
+ *
  * Revision 1.7  2008/04/08 06:44:35  vfrolov
  * Added pin OUT2
  *
@@ -81,5 +84,6 @@
 #define C0C_DEFAULT_EMUOVERRUN      0x00000000
 #define C0C_DEFAULT_PLUGINMODE      0x00000000
 #define C0C_DEFAULT_EXCLUSIVEMODE   0x00000000
+#define C0C_DEFAULT_HIDDENMODE      0x00000000
 
 #endif /* _INCLUDE_C0C_COM0COM_H_ */
