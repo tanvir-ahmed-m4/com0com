@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2006-2007 Vyacheslav Frolov
+ * Copyright (c) 2006-2008 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.6  2008/05/04 09:53:51  vfrolov
+ * Implemented HiddenMode option
+ *
  * Revision 1.5  2007/10/19 16:09:55  vfrolov
  * Implemented --detail-prms option
  *
@@ -33,7 +36,6 @@
  *
  * Revision 1.1  2006/07/28 12:16:43  vfrolov
  * Initial revision
- *
  *
  */
 
@@ -70,6 +72,7 @@ class PortParameters {
     DWORD emuOverrun;
     DWORD plugInMode;
     DWORD exclusiveMode;
+    DWORD hiddenMode;
     DWORD pinCTS;
     DWORD pinDSR;
     DWORD pinDCD;

@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.43  2008/05/04 09:51:45  vfrolov
+ * Implemented HiddenMode option
+ *
  * Revision 1.42  2008/04/08 10:27:44  vfrolov
  * Fixed C0C_MCR_MASK
  *
@@ -359,7 +362,18 @@ typedef struct _C0C_FDOPORT_EXTENSION {
   UNICODE_STRING          ntDeviceName;
   UNICODE_STRING          win32DeviceName;
   UNICODE_STRING          symbolicLinkName;
-  unsigned short          shown;
+
+  #define C0C_SHOW_SETNAME    0x01
+  #define C0C_SHOW_SYMLINK    0x02
+  #define C0C_SHOW_DEVICEMAP  0x04
+  #define C0C_SHOW_INTERFACE  0x08
+  #define C0C_SHOW_WMIREG     0x10
+
+  UCHAR                   hide;
+
+  #define C0C_SHOW_SHOWN      0x80
+
+  UCHAR                   shown;
 
   LONG                    openCount;
 

@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.11  2008/05/04 09:53:51  vfrolov
+ * Implemented HiddenMode option
+ *
  * Revision 1.10  2008/04/08 06:49:44  vfrolov
  * Added pin OUT2
  *
@@ -66,6 +69,7 @@ enum {
   m_emuOverrun     = 0x0004,
   m_plugInMode     = 0x0008,
   m_exclusiveMode  = 0x0010,
+  m_hiddenMode     = 0x0020,
   m_pinCTS         = 0x0100,
   m_pinDSR         = 0x0200,
   m_pinDCD         = 0x0400,
@@ -76,7 +80,8 @@ static DWORD flagBits[] = {
   m_emuBR,
   m_emuOverrun,
   m_plugInMode,
-  m_exclusiveMode
+  m_exclusiveMode,
+  m_hiddenMode
 };
 ///////////////////////////////////////////////////////////////
 static DWORD pinBits[] = {
@@ -101,6 +106,7 @@ void PortParameters::Init()
   emuOverrun = 0;
   plugInMode = 0;
   exclusiveMode = 0;
+  hiddenMode = 0;
 
   pinCTS = 0;
   pinDSR = 0;
@@ -144,6 +150,7 @@ DWORD *PortParameters::GetDwPtr(DWORD bit)
     case m_emuOverrun:     return &emuOverrun;
     case m_plugInMode:     return &plugInMode;
     case m_exclusiveMode:  return &exclusiveMode;
+    case m_hiddenMode:     return &hiddenMode;
     case m_pinCTS:         return &pinCTS;
     case m_pinDSR:         return &pinDSR;
     case m_pinDCD:         return &pinDCD;
@@ -159,6 +166,7 @@ static const DWORD *GetDwPtrDefault(DWORD bit)
   static const DWORD emuOverrun = C0C_DEFAULT_EMUOVERRUN;
   static const DWORD plugInMode = C0C_DEFAULT_PLUGINMODE;
   static const DWORD exclusiveMode = C0C_DEFAULT_EXCLUSIVEMODE;
+  static const DWORD hiddenMode = C0C_DEFAULT_HIDDENMODE;
   static const DWORD pinCTS = C0C_DEFAULT_PIN_CTS;
   static const DWORD pinDSR = C0C_DEFAULT_PIN_DSR;
   static const DWORD pinDCD = C0C_DEFAULT_PIN_DCD;
@@ -169,6 +177,7 @@ static const DWORD *GetDwPtrDefault(DWORD bit)
     case m_emuOverrun:     return &emuOverrun;
     case m_plugInMode:     return &plugInMode;
     case m_exclusiveMode:  return &exclusiveMode;
+    case m_hiddenMode:     return &hiddenMode;
     case m_pinCTS:         return &pinCTS;
     case m_pinDSR:         return &pinDSR;
     case m_pinDCD:         return &pinDCD;
@@ -186,6 +195,7 @@ static const char *GetBitName(DWORD bit)
     case m_emuOverrun:     return "EmuOverrun";
     case m_plugInMode:     return "PlugInMode";
     case m_exclusiveMode:  return "ExclusiveMode";
+    case m_hiddenMode:     return "HiddenMode";
     case m_pinCTS:         return "cts";
     case m_pinDSR:         return "dsr";
     case m_pinDCD:         return "dcd";
@@ -742,6 +752,9 @@ const char *PortParameters::GetHelp()
     "                            not open (disabled by default)\n"
     "  ExclusiveMode={yes|no}  - enable/disable exclusive mode, the exclusive mode\n"
     "                            port is hidden if it is open (disabled by default)\n"
+    "  HiddenMode={yes|no}     - enable/disable hidden mode, the hidden mode port is\n"
+    "                            hidden as it is possible for port enumerators\n"
+    "                            (disabled by default)\n"
     "  cts=[!]<p>              - wire CTS pin to <p> (rrts by default)\n"
     "  dsr=[!]<p>              - wire DSR pin to <p> (rdtr by default)\n"
     "  dcd=[!]<p>              - wire DCD pin to <p> (rdtr by default)\n"

@@ -148,7 +148,7 @@
     <value>$this</value>
   </data>
   <data name="&gt;&gt;PortNameB.ZOrder" xml:space="preserve">
-    <value>33</value>
+    <value>37</value>
   </data>
   <data name="PortNameA.Location" type="System.Drawing.Point, System.Drawing">
     <value>233, 12</value>
@@ -172,7 +172,7 @@
     <value>$this</value>
   </data>
   <data name="&gt;&gt;PortNameA.ZOrder" xml:space="preserve">
-    <value>34</value>
+    <value>38</value>
   </data>
   <data name="pinNameON.Font" type="System.Drawing.Font, System.Drawing">
     <value>Courier New, 10.2pt</value>
@@ -181,7 +181,7 @@
     <value>NoControl</value>
   </data>
   <data name="pinNameON.Location" type="System.Drawing.Point, System.Drawing">
-    <value>282, 337</value>
+    <value>282, 355</value>
   </data>
   <data name="pinNameON.Size" type="System.Drawing.Size, System.Drawing">
     <value>250, 20</value>
@@ -208,13 +208,13 @@
     <value>$this</value>
   </data>
   <data name="&gt;&gt;pinNameON.ZOrder" xml:space="preserve">
-    <value>35</value>
+    <value>39</value>
   </data>
   <data name="picturePinMap.ImeMode" type="System.Windows.Forms.ImeMode, System.Windows.Forms">
     <value>NoControl</value>
   </data>
   <data name="picturePinMap.Location" type="System.Drawing.Point, System.Drawing">
-    <value>282, 116</value>
+    <value>282, 134</value>
   </data>
   <data name="picturePinMap.Size" type="System.Drawing.Size, System.Drawing">
     <value>250, 220</value>
@@ -237,7 +237,7 @@ Double click a green pin to add/remove inverter.</value>
     <value>$this</value>
   </data>
   <data name="&gt;&gt;picturePinMap.ZOrder" xml:space="preserve">
-    <value>36</value>
+    <value>40</value>
   </data>
   <data name="EmuBrB.Location" type="System.Drawing.Point, System.Drawing">
     <value>411, 35</value>
@@ -265,7 +265,7 @@ in the direction to the paired port.</value>
     <value>$this</value>
   </data>
   <data name="&gt;&gt;EmuBrB.ZOrder" xml:space="preserve">
-    <value>27</value>
+    <value>31</value>
   </data>
   <data name="EmuOverrunB.Location" type="System.Drawing.Point, System.Drawing">
     <value>411, 53</value>
@@ -292,7 +292,7 @@ in the direction to the paired port.</value>
     <value>$this</value>
   </data>
   <data name="&gt;&gt;EmuOverrunB.ZOrder" xml:space="preserve">
-    <value>26</value>
+    <value>30</value>
   </data>
   <data name="PlugInModeB.Location" type="System.Drawing.Point, System.Drawing">
     <value>411, 71</value>
@@ -321,7 +321,7 @@ be open if the paired port is not open.</value>
     <value>$this</value>
   </data>
   <data name="&gt;&gt;PlugInModeB.ZOrder" xml:space="preserve">
-    <value>25</value>
+    <value>29</value>
   </data>
   <data name="ExclusiveModeB.Location" type="System.Drawing.Point, System.Drawing">
     <value>411, 89</value>
@@ -349,7 +349,7 @@ The exclusive mode port is hidden if it is open.</value>
     <value>$this</value>
   </data>
   <data name="&gt;&gt;ExclusiveModeB.ZOrder" xml:space="preserve">
-    <value>24</value>
+    <value>28</value>
   </data>
   <data name="ExclusiveModeA.ImeMode" type="System.Windows.Forms.ImeMode, System.Windows.Forms">
     <value>NoControl</value>
@@ -383,7 +383,7 @@ The exclusive mode port is hidden if it is open.</value>
     <value>$this</value>
   </data>
   <data name="&gt;&gt;ExclusiveModeA.ZOrder" xml:space="preserve">
-    <value>20</value>
+    <value>24</value>
   </data>
   <data name="PlugInModeA.ImeMode" type="System.Windows.Forms.ImeMode, System.Windows.Forms">
     <value>NoControl</value>
@@ -418,7 +418,7 @@ be open if the paired port is not open.</value>
     <value>$this</value>
   </data>
   <data name="&gt;&gt;PlugInModeA.ZOrder" xml:space="preserve">
-    <value>21</value>
+    <value>25</value>
   </data>
   <data name="EmuOverrunA.ImeMode" type="System.Windows.Forms.ImeMode, System.Windows.Forms">
     <value>NoControl</value>
@@ -451,7 +451,7 @@ be open if the paired port is not open.</value>
     <value>$this</value>
   </data>
   <data name="&gt;&gt;EmuOverrunA.ZOrder" xml:space="preserve">
-    <value>22</value>
+    <value>26</value>
   </data>
   <data name="EmuBrA.ImeMode" type="System.Windows.Forms.ImeMode, System.Windows.Forms">
     <value>NoControl</value>
@@ -485,13 +485,13 @@ in the direction to the paired port.</value>
     <value>$this</value>
   </data>
   <data name="&gt;&gt;EmuBrA.ZOrder" xml:space="preserve">
-    <value>23</value>
+    <value>27</value>
   </data>
   <data name="pinNameA_RX.ImeMode" type="System.Windows.Forms.ImeMode, System.Windows.Forms">
     <value>NoControl</value>
   </data>
   <data name="pinNameA_RX.Location" type="System.Drawing.Point, System.Drawing">
-    <value>232, 116</value>
+    <value>232, 134</value>
   </data>
   <data name="pinNameA_RX.Size" type="System.Drawing.Size, System.Drawing">
     <value>50, 20</value>
@@ -518,13 +518,13 @@ in the direction to the paired port.</value>
     <value>$this</value>
   </data>
   <data name="&gt;&gt;pinNameA_RX.ZOrder" xml:space="preserve">
-    <value>19</value>
+    <value>23</value>
   </data>
   <data name="pinNameA_DTR.ImeMode" type="System.Windows.Forms.ImeMode, System.Windows.Forms">
     <value>NoControl</value>
   </data>
   <data name="pinNameA_DTR.Location" type="System.Drawing.Point, System.Drawing">
-    <value>232, 156</value>
+    <value>232, 174</value>
   </data>
   <data name="pinNameA_DTR.Size" type="System.Drawing.Size, System.Drawing">
     <value>50, 20</value>
@@ -551,13 +551,13 @@ in the direction to the paired port.</value>
     <value>$this</value>
   </data>
   <data name="&gt;&gt;pinNameA_DTR.ZOrder" xml:space="preserve">
-    <value>18</value>
+    <value>22</value>
   </data>
   <data name="pinNameA_TX.ImeMode" type="System.Windows.Forms.ImeMode, System.Windows.Forms">
     <value>NoControl</value>
   </data>
   <data name="pinNameA_TX.Location" type="System.Drawing.Point, System.Drawing">
-    <value>232, 136</value>
+    <value>232, 154</value>
   </data>
   <data name="pinNameA_TX.Size" type="System.Drawing.Size, System.Drawing">
     <value>50, 20</value>
@@ -584,13 +584,13 @@ in the direction to the paired port.</value>
     <value>$this</value>
   </data>
   <data name="&gt;&gt;pinNameA_TX.ZOrder" xml:space="preserve">
-    <value>17</value>
+    <value>21</value>
   </data>
   <data name="pinNameA_DSR.ImeMode" type="System.Windows.Forms.ImeMode, System.Windows.Forms">
     <value>NoControl</value>
   </data>
   <data name="pinNameA_DSR.Location" type="System.Drawing.Point, System.Drawing">
-    <value>232, 176</value>
+    <value>232, 194</value>
   </data>
   <data name="pinNameA_DSR.Size" type="System.Drawing.Size, System.Drawing">
     <value>50, 20</value>
@@ -617,13 +617,13 @@ in the direction to the paired port.</value>
     <value>$this</value>
   </data>
   <data name="&gt;&gt;pinNameA_DSR.ZOrder" xml:space="preserve">
-    <value>16</value>
+    <value>20</value>
   </data>
   <data name="pinNameA_DCD.ImeMode" type="System.Windows.Forms.ImeMode, System.Windows.Forms">
     <value>NoControl</value>
   </data>
   <data name="pinNameA_DCD.Location" type="System.Drawing.Point, System.Drawing">
-    <value>232, 196</value>
+    <value>232, 214</value>
   </data>
   <data name="pinNameA_DCD.Size" type="System.Drawing.Size, System.Drawing">
     <value>50, 20</value>
@@ -650,13 +650,13 @@ in the direction to the paired port.</value>
     <value>$this</value>
   </data>
   <data name="&gt;&gt;pinNameA_DCD.ZOrder" xml:space="preserve">
-    <value>15</value>
+    <value>19</value>
   </data>
   <data name="pinNameA_RTS.ImeMode" type="System.Windows.Forms.ImeMode, System.Windows.Forms">
     <value>NoControl</value>
   </data>
   <data name="pinNameA_RTS.Location" type="System.Drawing.Point, System.Drawing">
-    <value>232, 216</value>
+    <value>232, 234</value>
   </data>
   <data name="pinNameA_RTS.Size" type="System.Drawing.Size, System.Drawing">
     <value>50, 20</value>
@@ -683,13 +683,13 @@ in the direction to the paired port.</value>
     <value>$this</value>
   </data>
   <data name="&gt;&gt;pinNameA_RTS.ZOrder" xml:space="preserve">
-    <value>14</value>
+    <value>18</value>
   </data>
   <data name="pinNameA_CTS.ImeMode" type="System.Windows.Forms.ImeMode, System.Windows.Forms">
     <value>NoControl</value>
   </data>
   <data name="pinNameA_CTS.Location" type="System.Drawing.Point, System.Drawing">
-    <value>232, 236</value>
+    <value>232, 254</value>
   </data>
   <data name="pinNameA_CTS.Size" type="System.Drawing.Size, System.Drawing">
     <value>50, 20</value>
@@ -716,13 +716,13 @@ in the direction to the paired port.</value>
     <value>$this</value>
   </data>
   <data name="&gt;&gt;pinNameA_CTS.ZOrder" xml:space="preserve">
-    <value>13</value>
+    <value>17</value>
   </data>
   <data name="pinNameA_RI.ImeMode" type="System.Windows.Forms.ImeMode, System.Windows.Forms">
     <value>NoControl</value>
   </data>
   <data name="pinNameA_RI.Location" type="System.Drawing.Point, System.Drawing">
-    <value>232, 256</value>
+    <value>232, 274</value>
   </data>
   <data name="pinNameA_RI.Size" type="System.Drawing.Size, System.Drawing">
     <value>50, 20</value>
@@ -749,13 +749,13 @@ in the direction to the paired port.</value>
     <value>$this</value>
   </data>
   <data name="&gt;&gt;pinNameA_RI.ZOrder" xml:space="preserve">
-    <value>12</value>
+    <value>16</value>
   </data>
   <data name="pinNameA_OUT1.ImeMode" type="System.Windows.Forms.ImeMode, System.Windows.Forms">
     <value>NoControl</value>
   </data>
   <data name="pinNameA_OUT1.Location" type="System.Drawing.Point, System.Drawing">
-    <value>232, 276</value>
+    <value>232, 294</value>
   </data>
   <data name="pinNameA_OUT1.Size" type="System.Drawing.Size, System.Drawing">
     <value>50, 20</value>
@@ -782,13 +782,13 @@ in the direction to the paired port.</value>
     <value>$this</value>
   </data>
   <data name="&gt;&gt;pinNameA_OUT1.ZOrder" xml:space="preserve">
-    <value>11</value>
+    <value>14</value>
   </data>
   <data name="pinNameA_OUT2.ImeMode" type="System.Windows.Forms.ImeMode, System.Windows.Forms">
     <value>NoControl</value>
   </data>
   <data name="pinNameA_OUT2.Location" type="System.Drawing.Point, System.Drawing">
-    <value>232, 296</value>
+    <value>232, 314</value>
   </data>
   <data name="pinNameA_OUT2.Size" type="System.Drawing.Size, System.Drawing">
     <value>50, 20</value>
@@ -815,13 +815,13 @@ in the direction to the paired port.</value>
     <value>$this</value>
   </data>
   <data name="&gt;&gt;pinNameA_OUT2.ZOrder" xml:space="preserve">
-    <value>11</value>
+    <value>15</value>
   </data>
   <data name="pinNameA_OPEN.ImeMode" type="System.Windows.Forms.ImeMode, System.Windows.Forms">
     <value>NoControl</value>
   </data>
   <data name="pinNameA_OPEN.Location" type="System.Drawing.Point, System.Drawing">
-    <value>232, 316</value>
+    <value>232, 334</value>
   </data>
   <data name="pinNameA_OPEN.Size" type="System.Drawing.Size, System.Drawing">
     <value>50, 20</value>
@@ -848,133 +848,13 @@ in the direction to the paired port.</value>
     <value>$this</value>
   </data>
   <data name="&gt;&gt;pinNameA_OPEN.ZOrder" xml:space="preserve">
-    <value>10</value>
-  </data>
-  <data name="pairList.Location" type="System.Drawing.Point, System.Drawing">
-    <value>12, 12</value>
-  </data>
-  <data name="pairList.Size" type="System.Drawing.Size, System.Drawing">
-    <value>206, 325</value>
-  </data>
-  <data name="pairList.TabIndex" type="System.Int32, mscorlib">
-    <value>23</value>
-  </data>
-  <data name="&gt;&gt;pairList.Name" xml:space="preserve">
-    <value>pairList</value>
-  </data>
-  <data name="&gt;&gt;pairList.Type" xml:space="preserve">
-    <value>System.Windows.Forms.TreeView, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
-  </data>
-  <data name="&gt;&gt;pairList.Parent" xml:space="preserve">
-    <value>$this</value>
-  </data>
-  <data name="&gt;&gt;pairList.ZOrder" xml:space="preserve">
-    <value>32</value>
-  </data>
-  <data name="buttonRemovePair.Location" type="System.Drawing.Point, System.Drawing">
-    <value>118, 343</value>
-  </data>
-  <data name="buttonRemovePair.Size" type="System.Drawing.Size, System.Drawing">
-    <value>100, 26</value>
-  </data>
-  <data name="buttonRemovePair.TabIndex" type="System.Int32, mscorlib">
-    <value>24</value>
-  </data>
-  <data name="buttonRemovePair.Text" xml:space="preserve">
-    <value>Remove Pair</value>
-  </data>
-  <data name="&gt;&gt;buttonRemovePair.Name" xml:space="preserve">
-    <value>buttonRemovePair</value>
-  </data>
-  <data name="&gt;&gt;buttonRemovePair.Type" xml:space="preserve">
-    <value>System.Windows.Forms.Button, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
-  </data>
-  <data name="&gt;&gt;buttonRemovePair.Parent" xml:space="preserve">
-    <value>$this</value>
-  </data>
-  <data name="&gt;&gt;buttonRemovePair.ZOrder" xml:space="preserve">
-    <value>31</value>
-  </data>
-  <data name="buttonAddPair.ImeMode" type="System.Windows.Forms.ImeMode, System.Windows.Forms">
-    <value>NoControl</value>
-  </data>
-  <data name="buttonAddPair.Location" type="System.Drawing.Point, System.Drawing">
-    <value>12, 343</value>
-  </data>
-  <data name="buttonAddPair.Size" type="System.Drawing.Size, System.Drawing">
-    <value>100, 26</value>
-  </data>
-  <data name="buttonAddPair.TabIndex" type="System.Int32, mscorlib">
-    <value>25</value>
-  </data>
-  <data name="buttonAddPair.Text" xml:space="preserve">
-    <value>Add Pair</value>
-  </data>
-  <data name="&gt;&gt;buttonAddPair.Name" xml:space="preserve">
-    <value>buttonAddPair</value>
-  </data>
-  <data name="&gt;&gt;buttonAddPair.Type" xml:space="preserve">
-    <value>System.Windows.Forms.Button, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
-  </data>
-  <data name="&gt;&gt;buttonAddPair.Parent" xml:space="preserve">
-    <value>$this</value>
-  </data>
-  <data name="&gt;&gt;buttonAddPair.ZOrder" xml:space="preserve">
-    <value>30</value>
-  </data>
-  <data name="buttonApply.Location" type="System.Drawing.Point, System.Drawing">
-    <value>481, 343</value>
-  </data>
-  <data name="buttonApply.Size" type="System.Drawing.Size, System.Drawing">
-    <value>100, 26</value>
-  </data>
-  <data name="buttonApply.TabIndex" type="System.Int32, mscorlib">
-    <value>26</value>
-  </data>
-  <data name="buttonApply.Text" xml:space="preserve">
-    <value>Apply</value>
-  </data>
-  <data name="&gt;&gt;buttonApply.Name" xml:space="preserve">
-    <value>buttonApply</value>
-  </data>
-  <data name="&gt;&gt;buttonApply.Type" xml:space="preserve">
-    <value>System.Windows.Forms.Button, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
-  </data>
-  <data name="&gt;&gt;buttonApply.Parent" xml:space="preserve">
-    <value>$this</value>
-  </data>
-  <data name="&gt;&gt;buttonApply.ZOrder" xml:space="preserve">
-    <value>29</value>
-  </data>
-  <data name="buttonReset.Location" type="System.Drawing.Point, System.Drawing">
-    <value>233, 343</value>
-  </data>
-  <data name="buttonReset.Size" type="System.Drawing.Size, System.Drawing">
-    <value>100, 26</value>
-  </data>
-  <data name="buttonReset.TabIndex" type="System.Int32, mscorlib">
-    <value>27</value>
-  </data>
-  <data name="buttonReset.Text" xml:space="preserve">
-    <value>Reset</value>
-  </data>
-  <data name="&gt;&gt;buttonReset.Name" xml:space="preserve">
-    <value>buttonReset</value>
-  </data>
-  <data name="&gt;&gt;buttonReset.Type" xml:space="preserve">
-    <value>System.Windows.Forms.Button, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
-  </data>
-  <data name="&gt;&gt;buttonReset.Parent" xml:space="preserve">
-    <value>$this</value>
-  </data>
-  <data name="&gt;&gt;buttonReset.ZOrder" xml:space="preserve">
-    <value>28</value>
+    <value>13</value>
   </data>
   <data name="pinNameB_OPEN.ImeMode" type="System.Windows.Forms.ImeMode, System.Windows.Forms">
     <value>NoControl</value>
   </data>
   <data name="pinNameB_OPEN.Location" type="System.Drawing.Point, System.Drawing">
-    <value>532, 316</value>
+    <value>532, 334</value>
   </data>
   <data name="pinNameB_OPEN.Size" type="System.Drawing.Size, System.Drawing">
     <value>50, 20</value>
@@ -1001,13 +881,13 @@ in the direction to the paired port.</value>
     <value>$this</value>
   </data>
   <data name="&gt;&gt;pinNameB_OPEN.ZOrder" xml:space="preserve">
-    <value>0</value>
+    <value>2</value>
   </data>
   <data name="pinNameB_OUT1.ImeMode" type="System.Windows.Forms.ImeMode, System.Windows.Forms">
     <value>NoControl</value>
   </data>
   <data name="pinNameB_OUT1.Location" type="System.Drawing.Point, System.Drawing">
-    <value>532, 276</value>
+    <value>532, 294</value>
   </data>
   <data name="pinNameB_OUT1.Size" type="System.Drawing.Size, System.Drawing">
     <value>50, 20</value>
@@ -1034,13 +914,13 @@ in the direction to the paired port.</value>
     <value>$this</value>
   </data>
   <data name="&gt;&gt;pinNameB_OUT1.ZOrder" xml:space="preserve">
-    <value>1</value>
+    <value>3</value>
   </data>
   <data name="pinNameB_OUT2.ImeMode" type="System.Windows.Forms.ImeMode, System.Windows.Forms">
     <value>NoControl</value>
   </data>
   <data name="pinNameB_OUT2.Location" type="System.Drawing.Point, System.Drawing">
-    <value>532, 296</value>
+    <value>532, 314</value>
   </data>
   <data name="pinNameB_OUT2.Size" type="System.Drawing.Size, System.Drawing">
     <value>50, 20</value>
@@ -1067,13 +947,13 @@ in the direction to the paired port.</value>
     <value>$this</value>
   </data>
   <data name="&gt;&gt;pinNameB_OUT2.ZOrder" xml:space="preserve">
-    <value>1</value>
+    <value>4</value>
   </data>
   <data name="pinNameB_RI.ImeMode" type="System.Windows.Forms.ImeMode, System.Windows.Forms">
     <value>NoControl</value>
   </data>
   <data name="pinNameB_RI.Location" type="System.Drawing.Point, System.Drawing">
-    <value>532, 256</value>
+    <value>532, 274</value>
   </data>
   <data name="pinNameB_RI.Size" type="System.Drawing.Size, System.Drawing">
     <value>50, 20</value>
@@ -1100,13 +980,13 @@ in the direction to the paired port.</value>
     <value>$this</value>
   </data>
   <data name="&gt;&gt;pinNameB_RI.ZOrder" xml:space="preserve">
-    <value>2</value>
+    <value>5</value>
   </data>
   <data name="pinNameB_CTS.ImeMode" type="System.Windows.Forms.ImeMode, System.Windows.Forms">
     <value>NoControl</value>
   </data>
   <data name="pinNameB_CTS.Location" type="System.Drawing.Point, System.Drawing">
-    <value>532, 236</value>
+    <value>532, 254</value>
   </data>
   <data name="pinNameB_CTS.Size" type="System.Drawing.Size, System.Drawing">
     <value>50, 20</value>
@@ -1133,13 +1013,13 @@ in the direction to the paired port.</value>
     <value>$this</value>
   </data>
   <data name="&gt;&gt;pinNameB_CTS.ZOrder" xml:space="preserve">
-    <value>3</value>
+    <value>6</value>
   </data>
   <data name="pinNameB_RTS.ImeMode" type="System.Windows.Forms.ImeMode, System.Windows.Forms">
     <value>NoControl</value>
   </data>
   <data name="pinNameB_RTS.Location" type="System.Drawing.Point, System.Drawing">
-    <value>532, 216</value>
+    <value>532, 234</value>
   </data>
   <data name="pinNameB_RTS.Size" type="System.Drawing.Size, System.Drawing">
     <value>50, 20</value>
@@ -1166,13 +1046,13 @@ in the direction to the paired port.</value>
     <value>$this</value>
   </data>
   <data name="&gt;&gt;pinNameB_RTS.ZOrder" xml:space="preserve">
-    <value>4</value>
+    <value>7</value>
   </data>
   <data name="pinNameB_DCD.ImeMode" type="System.Windows.Forms.ImeMode, System.Windows.Forms">
     <value>NoControl</value>
   </data>
   <data name="pinNameB_DCD.Location" type="System.Drawing.Point, System.Drawing">
-    <value>532, 196</value>
+    <value>532, 214</value>
   </data>
   <data name="pinNameB_DCD.Size" type="System.Drawing.Size, System.Drawing">
     <value>50, 20</value>
@@ -1199,13 +1079,13 @@ in the direction to the paired port.</value>
     <value>$this</value>
   </data>
   <data name="&gt;&gt;pinNameB_DCD.ZOrder" xml:space="preserve">
-    <value>5</value>
+    <value>8</value>
   </data>
   <data name="pinNameB_DSR.ImeMode" type="System.Windows.Forms.ImeMode, System.Windows.Forms">
     <value>NoControl</value>
   </data>
   <data name="pinNameB_DSR.Location" type="System.Drawing.Point, System.Drawing">
-    <value>532, 176</value>
+    <value>532, 194</value>
   </data>
   <data name="pinNameB_DSR.Size" type="System.Drawing.Size, System.Drawing">
     <value>50, 20</value>
@@ -1232,13 +1112,13 @@ in the direction to the paired port.</value>
     <value>$this</value>
   </data>
   <data name="&gt;&gt;pinNameB_DSR.ZOrder" xml:space="preserve">
-    <value>6</value>
+    <value>9</value>
   </data>
   <data name="pinNameB_TX.ImeMode" type="System.Windows.Forms.ImeMode, System.Windows.Forms">
     <value>NoControl</value>
   </data>
   <data name="pinNameB_TX.Location" type="System.Drawing.Point, System.Drawing">
-    <value>532, 136</value>
+    <value>532, 154</value>
   </data>
   <data name="pinNameB_TX.Size" type="System.Drawing.Size, System.Drawing">
     <value>50, 20</value>
@@ -1265,13 +1145,13 @@ in the direction to the paired port.</value>
     <value>$this</value>
   </data>
   <data name="&gt;&gt;pinNameB_TX.ZOrder" xml:space="preserve">
-    <value>7</value>
+    <value>10</value>
   </data>
   <data name="pinNameB_DTR.ImeMode" type="System.Windows.Forms.ImeMode, System.Windows.Forms">
     <value>NoControl</value>
   </data>
   <data name="pinNameB_DTR.Location" type="System.Drawing.Point, System.Drawing">
-    <value>532, 156</value>
+    <value>532, 174</value>
   </data>
   <data name="pinNameB_DTR.Size" type="System.Drawing.Size, System.Drawing">
     <value>50, 20</value>
@@ -1298,13 +1178,13 @@ in the direction to the paired port.</value>
     <value>$this</value>
   </data>
   <data name="&gt;&gt;pinNameB_DTR.ZOrder" xml:space="preserve">
-    <value>8</value>
+    <value>11</value>
   </data>
   <data name="pinNameB_RX.ImeMode" type="System.Windows.Forms.ImeMode, System.Windows.Forms">
     <value>NoControl</value>
   </data>
   <data name="pinNameB_RX.Location" type="System.Drawing.Point, System.Drawing">
-    <value>532, 116</value>
+    <value>532, 134</value>
   </data>
   <data name="pinNameB_RX.Size" type="System.Drawing.Size, System.Drawing">
     <value>50, 20</value>
@@ -1331,7 +1211,194 @@ in the direction to the paired port.</value>
     <value>$this</value>
   </data>
   <data name="&gt;&gt;pinNameB_RX.ZOrder" xml:space="preserve">
-    <value>9</value>
+    <value>12</value>
+  </data>
+  <data name="HiddenModeA.ImeMode" type="System.Windows.Forms.ImeMode, System.Windows.Forms">
+    <value>NoControl</value>
+  </data>
+  <data name="HiddenModeA.Location" type="System.Drawing.Point, System.Drawing">
+    <value>225, 107</value>
+  </data>
+  <data name="HiddenModeA.RightToLeft" type="System.Windows.Forms.RightToLeft, System.Windows.Forms">
+    <value>Yes</value>
+  </data>
+  <data name="HiddenModeA.Size" type="System.Drawing.Size, System.Drawing">
+    <value>180, 21</value>
+  </data>
+  <data name="HiddenModeA.TabIndex" type="System.Int32, mscorlib">
+    <value>57</value>
+  </data>
+  <data name="HiddenModeA.Text" xml:space="preserve">
+    <value>enable hidden mode</value>
+  </data>
+  <data name="HiddenModeA.ToolTip" xml:space="preserve">
+    <value>Enable/disable hidden mode.
+The hidden mode port is hidden as
+it is possible for port enumerators.</value>
+  </data>
+  <data name="&gt;&gt;HiddenModeA.Name" xml:space="preserve">
+    <value>HiddenModeA</value>
+  </data>
+  <data name="&gt;&gt;HiddenModeA.Type" xml:space="preserve">
+    <value>System.Windows.Forms.CheckBox, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="&gt;&gt;HiddenModeA.Parent" xml:space="preserve">
+    <value>$this</value>
+  </data>
+  <data name="&gt;&gt;HiddenModeA.ZOrder" xml:space="preserve">
+    <value>0</value>
+  </data>
+  <data name="HiddenModeB.ImeMode" type="System.Windows.Forms.ImeMode, System.Windows.Forms">
+    <value>NoControl</value>
+  </data>
+  <data name="HiddenModeB.Location" type="System.Drawing.Point, System.Drawing">
+    <value>411, 107</value>
+  </data>
+  <data name="HiddenModeB.Size" type="System.Drawing.Size, System.Drawing">
+    <value>180, 21</value>
+  </data>
+  <data name="HiddenModeB.TabIndex" type="System.Int32, mscorlib">
+    <value>56</value>
+  </data>
+  <data name="HiddenModeB.Text" xml:space="preserve">
+    <value>enable hidden mode</value>
+  </data>
+  <data name="HiddenModeB.ToolTip" xml:space="preserve">
+    <value>Enable/disable hidden mode.
+The hidden mode port is hidden as
+it is possible for port enumerators.</value>
+  </data>
+  <data name="&gt;&gt;HiddenModeB.Name" xml:space="preserve">
+    <value>HiddenModeB</value>
+  </data>
+  <data name="&gt;&gt;HiddenModeB.Type" xml:space="preserve">
+    <value>System.Windows.Forms.CheckBox, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="&gt;&gt;HiddenModeB.Parent" xml:space="preserve">
+    <value>$this</value>
+  </data>
+  <data name="&gt;&gt;HiddenModeB.ZOrder" xml:space="preserve">
+    <value>1</value>
+  </data>
+  <data name="pairList.Location" type="System.Drawing.Point, System.Drawing">
+    <value>12, 12</value>
+  </data>
+  <data name="pairList.Size" type="System.Drawing.Size, System.Drawing">
+    <value>206, 363</value>
+  </data>
+  <data name="pairList.TabIndex" type="System.Int32, mscorlib">
+    <value>23</value>
+  </data>
+  <data name="&gt;&gt;pairList.Name" xml:space="preserve">
+    <value>pairList</value>
+  </data>
+  <data name="&gt;&gt;pairList.Type" xml:space="preserve">
+    <value>System.Windows.Forms.TreeView, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="&gt;&gt;pairList.Parent" xml:space="preserve">
+    <value>$this</value>
+  </data>
+  <data name="&gt;&gt;pairList.ZOrder" xml:space="preserve">
+    <value>36</value>
+  </data>
+  <data name="buttonRemovePair.Location" type="System.Drawing.Point, System.Drawing">
+    <value>118, 385</value>
+  </data>
+  <data name="buttonRemovePair.Size" type="System.Drawing.Size, System.Drawing">
+    <value>100, 26</value>
+  </data>
+  <data name="buttonRemovePair.TabIndex" type="System.Int32, mscorlib">
+    <value>24</value>
+  </data>
+  <data name="buttonRemovePair.Text" xml:space="preserve">
+    <value>Remove Pair</value>
+  </data>
+  <data name="&gt;&gt;buttonRemovePair.Name" xml:space="preserve">
+    <value>buttonRemovePair</value>
+  </data>
+  <data name="&gt;&gt;buttonRemovePair.Type" xml:space="preserve">
+    <value>System.Windows.Forms.Button, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="&gt;&gt;buttonRemovePair.Parent" xml:space="preserve">
+    <value>$this</value>
+  </data>
+  <data name="&gt;&gt;buttonRemovePair.ZOrder" xml:space="preserve">
+    <value>35</value>
+  </data>
+  <data name="buttonAddPair.ImeMode" type="System.Windows.Forms.ImeMode, System.Windows.Forms">
+    <value>NoControl</value>
+  </data>
+  <data name="buttonAddPair.Location" type="System.Drawing.Point, System.Drawing">
+    <value>12, 385</value>
+  </data>
+  <data name="buttonAddPair.Size" type="System.Drawing.Size, System.Drawing">
+    <value>100, 26</value>
+  </data>
+  <data name="buttonAddPair.TabIndex" type="System.Int32, mscorlib">
+    <value>25</value>
+  </data>
+  <data name="buttonAddPair.Text" xml:space="preserve">
+    <value>Add Pair</value>
+  </data>
+  <data name="&gt;&gt;buttonAddPair.Name" xml:space="preserve">
+    <value>buttonAddPair</value>
+  </data>
+  <data name="&gt;&gt;buttonAddPair.Type" xml:space="preserve">
+    <value>System.Windows.Forms.Button, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="&gt;&gt;buttonAddPair.Parent" xml:space="preserve">
+    <value>$this</value>
+  </data>
+  <data name="&gt;&gt;buttonAddPair.ZOrder" xml:space="preserve">
+    <value>34</value>
+  </data>
+  <data name="buttonApply.Location" type="System.Drawing.Point, System.Drawing">
+    <value>481, 385</value>
+  </data>
+  <data name="buttonApply.Size" type="System.Drawing.Size, System.Drawing">
+    <value>100, 26</value>
+  </data>
+  <data name="buttonApply.TabIndex" type="System.Int32, mscorlib">
+    <value>26</value>
+  </data>
+  <data name="buttonApply.Text" xml:space="preserve">
+    <value>Apply</value>
+  </data>
+  <data name="&gt;&gt;buttonApply.Name" xml:space="preserve">
+    <value>buttonApply</value>
+  </data>
+  <data name="&gt;&gt;buttonApply.Type" xml:space="preserve">
+    <value>System.Windows.Forms.Button, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="&gt;&gt;buttonApply.Parent" xml:space="preserve">
+    <value>$this</value>
+  </data>
+  <data name="&gt;&gt;buttonApply.ZOrder" xml:space="preserve">
+    <value>33</value>
+  </data>
+  <data name="buttonReset.Location" type="System.Drawing.Point, System.Drawing">
+    <value>233, 385</value>
+  </data>
+  <data name="buttonReset.Size" type="System.Drawing.Size, System.Drawing">
+    <value>100, 26</value>
+  </data>
+  <data name="buttonReset.TabIndex" type="System.Int32, mscorlib">
+    <value>27</value>
+  </data>
+  <data name="buttonReset.Text" xml:space="preserve">
+    <value>Reset</value>
+  </data>
+  <data name="&gt;&gt;buttonReset.Name" xml:space="preserve">
+    <value>buttonReset</value>
+  </data>
+  <data name="&gt;&gt;buttonReset.Type" xml:space="preserve">
+    <value>System.Windows.Forms.Button, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="&gt;&gt;buttonReset.Parent" xml:space="preserve">
+    <value>$this</value>
+  </data>
+  <data name="&gt;&gt;buttonReset.ZOrder" xml:space="preserve">
+    <value>32</value>
   </data>
   <metadata name="$this.Localizable" type="System.Boolean, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089">
     <value>True</value>
@@ -1340,7 +1407,7 @@ in the direction to the paired port.</value>
     <value>8, 16</value>
   </data>
   <data name="$this.ClientSize" type="System.Drawing.Size, System.Drawing">
-    <value>593, 381</value>
+    <value>593, 423</value>
   </data>
   <data name="$this.Icon" type="System.Drawing.Icon, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
     <value>

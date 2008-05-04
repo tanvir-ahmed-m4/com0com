@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.33  2008/05/04 09:51:44  vfrolov
+ * Implemented HiddenMode option
+ *
  * Revision 1.32  2008/03/14 15:28:39  vfrolov
  * Implemented ability to get paired port settings with
  * extended IOCTL_SERIAL_LSRMST_INSERT
@@ -184,7 +187,7 @@ NTSTATUS AddFdoPort(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
   PDEVICE_OBJECT pNewDevObj;
   PC0C_FDOPORT_EXTENSION pDevExt;
   PC0C_PDOPORT_EXTENSION pPhDevExt;
-  ULONG emuBR, emuOverrun, plugInMode, exclusiveMode;
+  ULONG emuBR, emuOverrun, plugInMode, exclusiveMode, hiddenMode;
   ULONG pinCTS, pinDSR, pinDCD, pinRI;
   UNICODE_STRING ntDeviceName;
   PWCHAR pPortName;
@@ -262,10 +265,11 @@ NTSTATUS AddFdoPort(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
     emuOverrun = C0C_DEFAULT_EMUOVERRUN;
     plugInMode = C0C_DEFAULT_PLUGINMODE;
     exclusiveMode = C0C_DEFAULT_EXCLUSIVEMODE;
+    hiddenMode = C0C_DEFAULT_HIDDENMODE;
     pinCTS = pinDSR = pinDCD = pinRI = 0;
 
     if (NT_SUCCESS(status)) {
-      RTL_QUERY_REGISTRY_TABLE queryTable[9];
+      RTL_QUERY_REGISTRY_TABLE queryTable[10];
       ULONG zero = 0;
       int i;
 
@@ -297,6 +301,11 @@ NTSTATUS AddFdoPort(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
       queryTable[i].Name          = L"ExclusiveMode";
       queryTable[i].EntryContext  = &exclusiveMode;
       queryTable[i].DefaultData   = &exclusiveMode;
+
+      i++;
+      queryTable[i].Name          = L"HiddenMode";
+      queryTable[i].EntryContext  = &hiddenMode;
+      queryTable[i].DefaultData   = &hiddenMode;
 
       i++;
       queryTable[i].Name          = L"cts";
@@ -389,6 +398,8 @@ NTSTATUS AddFdoPort(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
     pDevExt->pIoPortLocal->exclusiveMode = FALSE;
     Trace0((PC0C_COMMON_EXTENSION)pDevExt, L"Disabled exclusive mode");
   }
+
+  SetHiddenMode(pDevExt, hiddenMode);
 
   AllocTimeouts(pDevExt->pIoPortLocal);
 

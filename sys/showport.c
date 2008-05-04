@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2007 Vyacheslav Frolov
+ * Copyright (c) 2007-2008 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,9 +19,11 @@
  *
  *
  * $Log$
+ * Revision 1.2  2008/05/04 09:51:45  vfrolov
+ * Implemented HiddenMode option
+ *
  * Revision 1.1  2007/06/01 16:22:40  vfrolov
  * Implemented plug-in and exclusive modes
- *
  *
  */
 
@@ -32,13 +34,6 @@
  * FILE_ID used by HALT_UNLESS to put it on BSOD
  */
 #define FILE_ID 0xD
-
-#define C0C_SHOW_SETNAME    0x01
-#define C0C_SHOW_SYMLINK    0x02
-#define C0C_SHOW_DEVICEMAP  0x04
-#define C0C_SHOW_INTERFACE  0x08
-#define C0C_SHOW_WMIREG     0x10
-#define C0C_SHOW_SHOWN      0x80
 
 #ifndef NTDDI_VERSION
 /* ZwDeleteValueKey is missing in old DDKs */
@@ -154,7 +149,7 @@ BOOLEAN ShowPort(IN PC0C_FDOPORT_EXTENSION pDevExt)
 
   res = TRUE;
 
-  if ((pDevExt->shown & C0C_SHOW_SETNAME) == 0) {
+  if ((pDevExt->shown & C0C_SHOW_SETNAME) == 0 && (pDevExt->hide & C0C_SHOW_SETNAME) == 0) {
     HANDLE hKey;
 
     status = IoOpenDeviceRegistryKey(pDevExt->pIoPortLocal->pPhDevObj,
@@ -189,7 +184,10 @@ BOOLEAN ShowPort(IN PC0C_FDOPORT_EXTENSION pDevExt)
   }
 
   if (pDevExt->ntDeviceName.Buffer) {
-    if (pDevExt->win32DeviceName.Buffer && (pDevExt->shown & C0C_SHOW_SYMLINK) == 0) {
+    if (pDevExt->win32DeviceName.Buffer &&
+        (pDevExt->shown & C0C_SHOW_SYMLINK) == 0 &&
+        (pDevExt->hide & C0C_SHOW_SYMLINK) == 0)
+    {
       status = IoCreateSymbolicLink(&pDevExt->win32DeviceName, &pDevExt->ntDeviceName);
 
       if (NT_SUCCESS(status)) {
@@ -200,7 +198,10 @@ BOOLEAN ShowPort(IN PC0C_FDOPORT_EXTENSION pDevExt)
       }
     }
 
-    if ((pDevExt->shown & C0C_SHOW_SYMLINK) != 0 && (pDevExt->shown & C0C_SHOW_DEVICEMAP) == 0) {
+    if ((pDevExt->shown & C0C_SHOW_SYMLINK) != 0 &&
+        (pDevExt->shown & C0C_SHOW_DEVICEMAP) == 0 &&
+        (pDevExt->hide & C0C_SHOW_DEVICEMAP) == 0)
+    {
       status = RtlWriteRegistryValue(RTL_REGISTRY_DEVICEMAP, C0C_SERIAL_DEVICEMAP,
                                      pDevExt->ntDeviceName.Buffer, REG_SZ,
                                      pDevExt->portName,
@@ -215,7 +216,10 @@ BOOLEAN ShowPort(IN PC0C_FDOPORT_EXTENSION pDevExt)
     }
   }
 
-  if (pDevExt->symbolicLinkName.Buffer && (pDevExt->shown & C0C_SHOW_INTERFACE) == 0) {
+  if (pDevExt->symbolicLinkName.Buffer &&
+      (pDevExt->shown & C0C_SHOW_INTERFACE) == 0 &&
+      (pDevExt->hide & C0C_SHOW_INTERFACE) == 0)
+  {
     status = IoSetDeviceInterfaceState(&pDevExt->symbolicLinkName, TRUE);
 
     if (NT_SUCCESS(status)) {
@@ -226,7 +230,7 @@ BOOLEAN ShowPort(IN PC0C_FDOPORT_EXTENSION pDevExt)
     }
   }
 
-  if ((pDevExt->shown & C0C_SHOW_WMIREG) == 0) {
+  if ((pDevExt->shown & C0C_SHOW_WMIREG) == 0 && (pDevExt->hide & C0C_SHOW_WMIREG) == 0) {
     status = IoWMIRegistrationControl(pDevExt->pDevObj, WMIREG_ACTION_REGISTER);
 
     if (NT_SUCCESS(status)) {
@@ -242,4 +246,19 @@ BOOLEAN ShowPort(IN PC0C_FDOPORT_EXTENSION pDevExt)
   Trace00((PC0C_COMMON_EXTENSION)pDevExt, L"ShowPort - ", res ? L"OK" : L"FAIL");
 
   return res;
+}
+
+VOID SetHiddenMode(IN PC0C_FDOPORT_EXTENSION pDevExt, ULONG hiddenMode)
+{
+  if (hiddenMode == 0xFFFFFFFF)
+    pDevExt->hide = (C0C_SHOW_SETNAME|C0C_SHOW_DEVICEMAP|C0C_SHOW_WMIREG);
+  else
+    pDevExt->hide = (UCHAR)hiddenMode;
+
+#if DBG
+  if (pDevExt->hide)
+    TraceMask((PC0C_COMMON_EXTENSION)pDevExt, "Enabled hidden mode ", codeNameTableShowPort, pDevExt->hide);
+  else
+    Trace0((PC0C_COMMON_EXTENSION)pDevExt, L"Disabled hidden mode");
+#endif /* DBG */
 }
