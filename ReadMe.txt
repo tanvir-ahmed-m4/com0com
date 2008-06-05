@@ -87,8 +87,8 @@ HINT: To uninstall the old version of com0com (distributed w/o installer)
 install the new one and then uninstall it.
 
 
-FAQ & HOWTO
-===========
+FAQs & HOWTOs
+=============
 
 Q. Is it possible to change the names CNCA0 and CNCB0 to COM2 and COM3?
 A. Yes, it's possible. To change the names:
@@ -171,3 +171,16 @@ A. It's because there is not signed com0com.cat catalog file. It can be created 
    The inf2cat tool can be installed with the Winqual Submission Tool.
    The makecert, pvk2pfx, signtool and certmgr tools can be installed with the
    Platform Software Development Kit (SDK).
+
+Q. How to monitor and get the paired port settings?
+A. It can be done with extended IOCTL_SERIAL_LSRMST_INSERT. See example in
+
+   http://com0com.sourceforge.net/examples/LSRMST_INSERT/tstser.cpp
+
+Q. To transfer state to CTS and DSR they wired to RTS and DTR. How to transfer
+   state to DCD and RING?
+A. The OUT1 can be wired to DCD and OUT2 to RING. Use extended
+   IOCTL_SERIAL_SET_MODEM_CONTROL and IOCTL_SERIAL_GET_MODEM_CONTROL to change
+   state of OUT1 and OUT2.  See example in
+
+   http://com0com.sourceforge.net/examples/MODEM_CONTROL/tstser.cpp
