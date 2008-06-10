@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.31  2008/06/10 11:24:20  vfrolov
+ * Disabled tracing if traceFileName is empty
+ *
  * Revision 1.30  2008/04/08 10:37:56  vfrolov
  * Implemented ability to set individual pins with extended
  * IOCTL_SERIAL_SET_MODEM_CONTROL and IOCTL_SERIAL_GET_MODEM_CONTROL
@@ -1177,7 +1180,7 @@ VOID TraceOpen(
   QueryRegistryTrace(pRegistryPath);
   QueryRegistryTraceEnable(pRegistryPath);
 
-  if (!pTraceData->traceFileName.Buffer)
+  if (!pTraceData->traceFileName.Buffer || !pTraceData->traceFileName.Length)
     TraceDisable();
 
   if (TRACE_FILE_OK) {
