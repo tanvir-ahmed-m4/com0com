@@ -19,6 +19,10 @@
  *
  *
  * $Log$
+ * Revision 1.36  2008/06/10 11:32:35  vfrolov
+ * Fixed break interrupt indicator for C0CE_INSERT_IOCTL_GET
+ * Added parameter checking for IOCTL_SERIAL_SET_LINE_CONTROL
+ *
  * Revision 1.35  2008/04/08 10:36:16  vfrolov
  * Implemented ability to set individual pins with extended
  * IOCTL_SERIAL_SET_MODEM_CONTROL and IOCTL_SERIAL_GET_MODEM_CONTROL
@@ -692,10 +696,13 @@ NTSTATUS FdoPortIoCtl(
 
         if (optsAndBits & C0CE_INSERT_IOCTL_GET) {
           if (optsAndBits & C0CE_INSERT_ENABLE_LSR) {
-            UCHAR lsr = 0x10;  /* break interrupt indicator */
+            UCHAR lsr = 0;
 
             if (!pIoPortLocal->amountInWriteQueue || pIoPortLocal->writeHolding)
               lsr |= 0x60;  /* transmit holding register empty and transmitter empty indicators */
+
+            if (pIoPortLocal->pIoPortRemote->writeHolding & SERIAL_TX_WAITING_ON_BREAK)
+              lsr |= 0x10;  /* break interrupt indicator */
 
             *pSysBuf++ = escapeChar;
             *pSysBuf++ = SERIAL_LSRMST_LSR_NODATA;
@@ -756,6 +763,39 @@ NTSTATUS FdoPortIoCtl(
       }
 
       pLineControl = (PSERIAL_LINE_CONTROL)pIrp->AssociatedIrp.SystemBuffer;
+
+      switch (pLineControl->WordLength) {
+        case 5:
+        case 6:
+        case 7:
+        case 8:
+          break;
+        default:
+          status = STATUS_INVALID_PARAMETER;
+      }
+
+      switch (pLineControl->Parity) {
+        case NO_PARITY:
+        case ODD_PARITY:
+        case EVEN_PARITY:
+        case MARK_PARITY:
+        case SPACE_PARITY:
+          break;
+        default:
+          status = STATUS_INVALID_PARAMETER;
+      }
+
+      switch (pLineControl->StopBits) {
+        case STOP_BIT_1:
+        case STOP_BITS_1_5:
+        case STOP_BITS_2:
+          break;
+        default:
+          status = STATUS_INVALID_PARAMETER;
+      }
+
+      if (status == STATUS_INVALID_PARAMETER)
+        break;
 
       KeAcquireSpinLock(pIoPortLocal->pIoLock, &oldIrql);
       if (pIoPortLocal->lineControl.StopBits != pLineControl->StopBits ||
