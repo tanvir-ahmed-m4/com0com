@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.34  2008/06/26 13:37:10  vfrolov
+ * Implemented noise emulation
+ *
  * Revision 1.33  2008/05/04 09:51:44  vfrolov
  * Implemented HiddenMode option
  *
@@ -161,6 +164,7 @@ VOID RemoveFdoPort(IN PC0C_FDOPORT_EXTENSION pDevExt)
     pDevExt->pIoPortLocal->exclusiveMode = FALSE;
     pDevExt->pIoPortLocal->pDevExt = NULL;
     FreeTxBuffer(&pDevExt->pIoPortLocal->txBuf);
+    pDevExt->pIoPortLocal->brokeChars = 0;  /* reset on idle */
   }
 
   if (!HidePort(pDevExt))
@@ -188,6 +192,7 @@ NTSTATUS AddFdoPort(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
   PC0C_FDOPORT_EXTENSION pDevExt;
   PC0C_PDOPORT_EXTENSION pPhDevExt;
   ULONG emuBR, emuOverrun, plugInMode, exclusiveMode, hiddenMode;
+  ULONG brokeCharsProbability;
   ULONG pinCTS, pinDSR, pinDCD, pinRI;
   UNICODE_STRING ntDeviceName;
   PWCHAR pPortName;
@@ -266,11 +271,14 @@ NTSTATUS AddFdoPort(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
     plugInMode = C0C_DEFAULT_PLUGINMODE;
     exclusiveMode = C0C_DEFAULT_EXCLUSIVEMODE;
     hiddenMode = C0C_DEFAULT_HIDDENMODE;
-    pinCTS = pinDSR = pinDCD = pinRI = 0;
+    pinCTS = C0C_DEFAULT_PIN_CTS;
+    pinDSR = C0C_DEFAULT_PIN_DSR;
+    pinDCD = C0C_DEFAULT_PIN_DCD;
+    pinRI = C0C_DEFAULT_PIN_RI;
+    brokeCharsProbability = C0C_DEFAULT_EMUNOISE;
 
     if (NT_SUCCESS(status)) {
-      RTL_QUERY_REGISTRY_TABLE queryTable[10];
-      ULONG zero = 0;
+      RTL_QUERY_REGISTRY_TABLE queryTable[11];
       int i;
 
       RtlZeroMemory(queryTable, sizeof(queryTable));
@@ -278,7 +286,6 @@ NTSTATUS AddFdoPort(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
       for (i = 0 ; i < (sizeof(queryTable)/sizeof(queryTable[0]) - 1) ; i++) {
         queryTable[i].Flags         = RTL_QUERY_REGISTRY_DIRECT;
         queryTable[i].DefaultType   = REG_DWORD;
-        queryTable[i].DefaultData   = &zero;
         queryTable[i].DefaultLength = sizeof(ULONG);
       }
 
@@ -310,18 +317,27 @@ NTSTATUS AddFdoPort(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
       i++;
       queryTable[i].Name          = L"cts";
       queryTable[i].EntryContext  = &pinCTS;
+      queryTable[i].DefaultData   = &pinCTS;
 
       i++;
       queryTable[i].Name          = L"dsr";
       queryTable[i].EntryContext  = &pinDSR;
+      queryTable[i].DefaultData   = &pinDSR;
 
       i++;
       queryTable[i].Name          = L"dcd";
       queryTable[i].EntryContext  = &pinDCD;
+      queryTable[i].DefaultData   = &pinDCD;
 
       i++;
       queryTable[i].Name          = L"ri";
       queryTable[i].EntryContext  = &pinRI;
+      queryTable[i].DefaultData   = &pinRI;
+
+      i++;
+      queryTable[i].Name          = L"EmuNoise";
+      queryTable[i].EntryContext  = &brokeCharsProbability;
+      queryTable[i].DefaultData   = &brokeCharsProbability;
 
       RtlQueryRegistryValues(
           RTL_REGISTRY_ABSOLUTE,
@@ -423,6 +439,15 @@ NTSTATUS AddFdoPort(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
   pDevExt->pIoPortLocal->modemControl |= C0C_MCR_OUT2;
 
   PinMap(pDevExt->pIoPortLocal, pinCTS, pinDSR, pinDCD, pinRI);
+
+  pDevExt->pIoPortLocal->brokeCharsProbability = brokeCharsProbability;
+
+#if DBG
+  if (brokeCharsProbability)
+    Trace0((PC0C_COMMON_EXTENSION)pDevExt, L"Enabled noise emulation");
+  else
+    Trace0((PC0C_COMMON_EXTENSION)pDevExt, L"Disabled noise emulation");
+#endif /* DBG */
 
   pDevExt->pLowDevObj = IoAttachDeviceToDeviceStack(pNewDevObj, pPhDevObj);
 

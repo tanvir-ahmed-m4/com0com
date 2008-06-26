@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.44  2008/06/26 13:37:10  vfrolov
+ * Implemented noise emulation
+ *
  * Revision 1.43  2008/05/04 09:51:45  vfrolov
  * Implemented HiddenMode option
  *
@@ -217,7 +220,6 @@ typedef struct _C0C_BUFFER {
   SIZE_T                  busy;
   SIZE_T                  limit;
   SIZE_T                  size80;
-  BOOLEAN                 escape;
   C0C_RAW_DATA            insertData;
 } C0C_BUFFER, *PC0C_BUFFER;
 
@@ -236,8 +238,8 @@ typedef struct _C0C_TX_BUFFER {
   UCHAR                   leastBuf[14 + 1];  /* transmitter holding and shift registers */
 } C0C_TX_BUFFER, *PC0C_TX_BUFFER;
 
-#define C0C_TX_BUFFER_BUSY(pTxBuf) \
-  ((pTxBuf)->busy)
+#define C0C_TX_BUFFER_EMPTY(pTxBuf) \
+  (!(pTxBuf)->busy)
 
 #define C0C_TX_BUFFER_THR_EMPTY(pTxBuf) \
   ((pTxBuf)->busy <= 1)
@@ -330,6 +332,10 @@ typedef struct _C0C_IO_PORT {
 
   C0C_BUFFER              readBuf;
   C0C_TX_BUFFER           txBuf;
+
+  ULONG                   brokeCharsProbability;
+  short                   brokeChars;  /* number of subsequent chars that should be broken */
+  SIZE_T                  brokeIdleChars;
 
   short                   sendXonXoff;
   ULONG                   writeHolding;

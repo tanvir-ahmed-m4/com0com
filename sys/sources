@@ -27,6 +27,8 @@ SOURCES= \
         delay.c \
         bufutils.c \
         strutils.c \
+        noise.c \
+        rand.c \
         syslog.c \
         trace.c \
         tracetbl.c \

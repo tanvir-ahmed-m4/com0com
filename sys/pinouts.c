@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.5  2008/06/26 13:37:10  vfrolov
+ * Implemented noise emulation
+ *
  * Revision 1.4  2008/04/08 06:47:37  vfrolov
  * Added pin OUT2
  *
@@ -170,19 +173,8 @@ VOID PinMap(
   for (i = 0 ; i < sizeof(pIoPortRemote->pinOuts)/sizeof(pIoPortRemote->pinOuts[0]) ; i++)
     RtlZeroMemory(&pIoPortRemote->pinOuts[i].remote, sizeof(pIoPortRemote->pinOuts[i].remote));
 
-  if (!pinCTS)
-    pinCTS = C0C_DEFAULT_PIN_CTS;
   PinWire(pIoPort, pIoPortRemote, pinCTS, C0C_MSB_CTS, &pIoPort->modemStatus);
-
-  if (!pinDSR)
-    pinDSR = C0C_DEFAULT_PIN_DSR;
   PinWire(pIoPort, pIoPortRemote, pinDSR, C0C_MSB_DSR, &pIoPort->modemStatus);
-
-  if (!pinDCD)
-    pinDCD = C0C_DEFAULT_PIN_DCD;
   PinWire(pIoPort, pIoPortRemote, pinDCD, C0C_MSB_RLSD, &pIoPort->modemStatus);
-
-  if (!pinRI)
-    pinRI = C0C_DEFAULT_PIN_RI;
   PinWire(pIoPort, pIoPortRemote, pinRI, C0C_MSB_RING, &pIoPort->modemStatus);
 }

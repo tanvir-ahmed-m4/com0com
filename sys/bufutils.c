@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2004-2007 Vyacheslav Frolov
+ * Copyright (c) 2004-2008 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.11  2008/06/26 13:37:10  vfrolov
+ * Implemented noise emulation
+ *
  * Revision 1.10  2007/10/05 07:34:21  vfrolov
  * Added missing *pOverrun initialization
  * Changed TX FIFO writing emulation to be interrupt driven
@@ -60,6 +63,7 @@
 
 #include "precomp.h"
 #include "bufutils.h"
+#include "noise.h"
 
 /*
  * FILE_ID used by HALT_UNLESS to put it on BSOD
@@ -81,36 +85,43 @@ VOID CompactRawData(PC0C_RAW_DATA pRawData, SIZE_T writeDone)
   }
 }
 
-NTSTATUS MoveRawData(PC0C_RAW_DATA pDstRawData, PC0C_RAW_DATA pSrcRawData)
+SIZE_T AddRawData(PC0C_RAW_DATA pDstRawData, PUCHAR pSrc, SIZE_T length)
 {
-  SIZE_T free;
+  SIZE_T len;
 
-  if (!pSrcRawData->size)
-    return STATUS_SUCCESS;
+  if (!length)
+    return 0;
 
   HALT_UNLESS2(pDstRawData->size <= sizeof(pDstRawData->data),
       pDstRawData->size, sizeof(pDstRawData->data));
 
-  free = sizeof(pDstRawData->data) - pDstRawData->size;
+  len = sizeof(pDstRawData->data) - pDstRawData->size;
 
-  if (free) {
-    SIZE_T length;
+  if (!len)
+    return 0;
 
-    if (free > pSrcRawData->size)
-      length = pSrcRawData->size;
-    else
-      length = free;
+  if (len > length)
+    len = length;
 
-    HALT_UNLESS3((pDstRawData->size + length) <= sizeof(pDstRawData->data),
-        pDstRawData->size, length, sizeof(pDstRawData->data));
+  HALT_UNLESS3((pDstRawData->size + len) <= sizeof(pDstRawData->data),
+      pDstRawData->size, len, sizeof(pDstRawData->data));
 
-    RtlCopyMemory(pDstRawData->data + pDstRawData->size, pSrcRawData->data, length);
-    pDstRawData->size = (UCHAR)(pDstRawData->size + length);
-    CompactRawData(pSrcRawData, length);
-  }
+  RtlCopyMemory(pDstRawData->data + pDstRawData->size, pSrc, len);
+  pDstRawData->size = (UCHAR)(pDstRawData->size + len);
+
+  return len;
+}
+
+NTSTATUS MoveRawData(PC0C_RAW_DATA pDstRawData, PC0C_RAW_DATA pSrcRawData)
+{
+  CompactRawData(pSrcRawData, AddRawData(pDstRawData, pSrcRawData->data, pSrcRawData->size));
+
   return pSrcRawData->size ? STATUS_PENDING : STATUS_SUCCESS;
 }
 /********************************************************************/
+#define C0C_FLOW_FILTER_FL_AUTO_TRANSMIT   0x01
+#define C0C_FLOW_FILTER_FL_NULL_STRIPPING  0x02
+#define C0C_FLOW_FILTER_FL_IGNORE_RECEIVED 0x04
 
 VOID FlowFilterInit(PC0C_IO_PORT pIoPort, PC0C_FLOW_FILTER pFlowFilter)
 {
@@ -118,35 +129,22 @@ VOID FlowFilterInit(PC0C_IO_PORT pIoPort, PC0C_FLOW_FILTER pFlowFilter)
 
   RtlZeroMemory(pFlowFilter, sizeof(*pFlowFilter));
 
+  pFlowFilter->pIoPort = pIoPort;
+
   pHandFlow = &pIoPort->handFlow;
 
   if ((pHandFlow->ControlHandShake & SERIAL_DSR_SENSITIVITY) &&
       (pIoPort->modemStatus & C0C_MSB_DSR) == 0)
   {
-    pFlowFilter->flags |= C0C_FLOW_FILTER_IGNORE_RECEIVED;
-    return;
+    pFlowFilter->flags |= C0C_FLOW_FILTER_FL_IGNORE_RECEIVED;
   }
 
-  if (pHandFlow->FlowReplace & SERIAL_AUTO_TRANSMIT) {
-    pFlowFilter->flags |= C0C_FLOW_FILTER_AUTO_TRANSMIT;
-    pFlowFilter->xonChar = pIoPort->specialChars.XonChar;
-    pFlowFilter->xoffChar = pIoPort->specialChars.XoffChar;
-  }
+  if (pHandFlow->FlowReplace & SERIAL_AUTO_TRANSMIT)
+    pFlowFilter->flags |= C0C_FLOW_FILTER_FL_AUTO_TRANSMIT;
 
   if (pHandFlow->FlowReplace & SERIAL_NULL_STRIPPING)
-    pFlowFilter->flags |= C0C_FLOW_FILTER_NULL_STRIPPING;
-
-  if (pIoPort->waitMask & SERIAL_EV_RXCHAR)
-    pFlowFilter->flags |= C0C_FLOW_FILTER_EV_RXCHAR;
-
-  if (pIoPort->waitMask & SERIAL_EV_RXFLAG) {
-    pFlowFilter->flags |= C0C_FLOW_FILTER_EV_RXFLAG;
-    pFlowFilter->eventChar = pIoPort->specialChars.EventChar;
-  }
-
-  pFlowFilter->escapeChar = pIoPort->escapeChar;
+    pFlowFilter->flags |= C0C_FLOW_FILTER_FL_NULL_STRIPPING;
 }
-/********************************************************************/
 
 VOID CopyCharsWithEscape(
     PC0C_BUFFER pBuf,
@@ -159,16 +157,10 @@ VOID CopyCharsWithEscape(
   SIZE_T readDone;
   SIZE_T writeDone;
 
-  HALT_UNLESS(pReadBuf || (pFlowFilter && !readLength));
+  HALT_UNLESS3(pReadBuf || (pFlowFilter && !readLength), pReadBuf != NULL, pFlowFilter != NULL, readLength);
+  HALT_UNLESS2(pWriteBuf || pFlowFilter, pReadBuf != NULL, pFlowFilter != NULL);
 
   readDone = 0;
-
-  if (pBuf->escape && readLength) {
-    pBuf->escape = FALSE;
-    *pReadBuf++ = SERIAL_LSRMST_ESCAPE;
-    readDone++;
-    readLength--;
-  }
 
   if (pBuf->insertData.size && readLength) {
     SIZE_T length = pBuf->insertData.size;
@@ -195,24 +187,113 @@ VOID CopyCharsWithEscape(
     }
   }
   else
-  if (pFlowFilter->flags & C0C_FLOW_FILTER_IGNORE_RECEIVED) {
+  if (pFlowFilter->flags & C0C_FLOW_FILTER_FL_IGNORE_RECEIVED) {
     writeDone = writeLength;
   }
   else {
+    PC0C_IO_PORT pIoPort = pFlowFilter->pIoPort;
+    PC0C_IO_PORT pIoPortRemote = pIoPort->pIoPortRemote;
+
     writeDone = 0;
 
     while (writeLength--) {
       UCHAR curChar;
+      UCHAR lsr = 0;
 
-      curChar = *pWriteBuf++;
+      if (pWriteBuf) {
+        curChar = *pWriteBuf++;
 
-      if (!curChar && (pFlowFilter->flags & C0C_FLOW_FILTER_NULL_STRIPPING)) {
+        if (pIoPortRemote->brokeCharsProbability > 0)
+          BrokeChar(pIoPortRemote, pIoPort, &curChar, &lsr);
+      } else {
+        if (pIoPortRemote->writeHolding & SERIAL_TX_WAITING_ON_BREAK && !pIoPortRemote->sendBreak) {
+          BreakError(pIoPort, &lsr);
+          pFlowFilter->events |= SERIAL_EV_BREAK;
+
+          curChar = 0x00;
+        } else {
+          curChar = 0xFF;
+        }
+      }
+
+      if (lsr) {
+        pFlowFilter->events |= SERIAL_EV_ERR;
+
+        if (pIoPort->handFlow.FlowReplace & SERIAL_ERROR_CHAR) {
+          UCHAR errorChar = pIoPort->specialChars.ErrorChar;
+
+          if (!readLength--) {
+#if DBG
+            SIZE_T done =
+#endif /* DBG */
+            AddRawData(&pBuf->insertData, &errorChar, sizeof(errorChar));
+            HALT_UNLESS1(done == sizeof(errorChar), done);
+
+            readLength++;
+          } else {
+            *pReadBuf++ = errorChar;
+            readDone++;
+          }
+        }
+
+        if (pIoPort->escapeChar) {
+          UCHAR buf[4];
+          SIZE_T length = sizeof(buf);
+          SIZE_T len;
+
+          lsr |= 0x80;    /* errornous data in FIFO */
+
+          if (C0C_TX_BUFFER_THR_EMPTY(&pIoPort->txBuf)) {
+            lsr |= 0x20;  /* transmit holding register empty */
+
+            if (C0C_TX_BUFFER_EMPTY(&pIoPort->txBuf))
+              lsr |= 0x40;  /* transmit holding register empty and line is idle */
+          }
+
+          if (pIoPortRemote->writeHolding & SERIAL_TX_WAITING_ON_BREAK && !pIoPortRemote->sendBreak)
+            lsr |= 0x10;  /* break interrupt indicator */
+
+          buf[0] = pIoPort->escapeChar;
+          buf[1] = SERIAL_LSRMST_LSR_DATA;
+          buf[2] = lsr;
+          buf[3] = curChar;
+
+          writeDone++;
+
+          if (length > readLength)
+            len = readLength;
+          else
+            len = length;
+
+          if (len) {
+            RtlCopyMemory(pReadBuf, buf, len);
+            pReadBuf += len;
+            readDone += len;
+            readLength -= len;
+            length -= len;
+          }
+
+          if (length) {
+#if DBG
+            SIZE_T done =
+#endif /* DBG */
+            AddRawData(&pBuf->insertData, buf + len, length);
+            HALT_UNLESS2(done == length, done, length);
+
+            break;
+          }
+
+          continue;
+        }
+      }
+
+      if (!curChar && (pFlowFilter->flags & C0C_FLOW_FILTER_FL_NULL_STRIPPING)) {
       }
       else
-      if ((pFlowFilter->flags & C0C_FLOW_FILTER_AUTO_TRANSMIT) &&
-          (curChar == pFlowFilter->xoffChar || curChar == pFlowFilter->xonChar))
+      if ((pFlowFilter->flags & C0C_FLOW_FILTER_FL_AUTO_TRANSMIT) &&
+          (curChar == pIoPort->specialChars.XoffChar || curChar == pIoPort->specialChars.XonChar))
       {
-        if (curChar == pFlowFilter->xoffChar)
+        if (curChar == pIoPort->specialChars.XoffChar)
           pFlowFilter->lastXonXoff = C0C_XCHAR_OFF;
         else
           pFlowFilter->lastXonXoff = C0C_XCHAR_ON;
@@ -224,21 +305,27 @@ VOID CopyCharsWithEscape(
 
           *pReadBuf++ = curChar;
 
-          if (pFlowFilter->flags & C0C_FLOW_FILTER_EV_RXCHAR)
-            pFlowFilter->events |= C0C_FLOW_FILTER_EV_RXCHAR;
+          pFlowFilter->events |= SERIAL_EV_RXCHAR;
 
-          if ((pFlowFilter->flags & C0C_FLOW_FILTER_EV_RXFLAG) &&
-              curChar == pFlowFilter->eventChar)
+          if ((pIoPort->waitMask & SERIAL_EV_RXFLAG) &&
+              curChar == pIoPort->specialChars.EventChar)
           {
-            pFlowFilter->events |= C0C_FLOW_FILTER_EV_RXFLAG;
+            pFlowFilter->events |= SERIAL_EV_RXFLAG;
           }
 
-          if (pFlowFilter->escapeChar && curChar == pFlowFilter->escapeChar) {
+          if (pIoPort->escapeChar && curChar == pIoPort->escapeChar) {
+            curChar = SERIAL_LSRMST_ESCAPE;
+
             if (!readLength--) {
-              pBuf->escape = TRUE;
+#if DBG
+              SIZE_T done =
+#endif /* DBG */
+              AddRawData(&pBuf->insertData, &curChar, sizeof(curChar));
+              HALT_UNLESS1(done == sizeof(curChar), done);
+
               readLength++;
             } else {
-              *pReadBuf++ = SERIAL_LSRMST_ESCAPE;
+              *pReadBuf++ = curChar;
               readDone++;
             }
           }
@@ -262,13 +349,6 @@ SIZE_T ReadFromBuffer(PC0C_BUFFER pBuf, PVOID pRead, SIZE_T readLength)
     PUCHAR pWriteBuf;
 
     if (!pBuf->busy) {
-      if (pBuf->escape) {
-        pBuf->escape = FALSE;
-        *pReadBuf++ = SERIAL_LSRMST_ESCAPE;
-        readLength--;
-        if (!readLength)
-          break;
-      }
       if (pBuf->insertData.size) {
         length = pBuf->insertData.size;
 
@@ -318,6 +398,7 @@ SIZE_T WriteToBuffer(
     PC0C_FLOW_FILTER pFlowFilter,
     PSIZE_T pOverrun)
 {
+  SIZE_T writeDoneTotal = 0;
   PUCHAR pWriteBuf = (PUCHAR)pWrite;
 
   if (pOverrun)
@@ -339,7 +420,7 @@ SIZE_T WriteToBuffer(
               pWriteBuf, writeLength,
               &writeDone, pOverrun);
 
-          pWriteBuf += writeDone;
+          writeDoneTotal += writeDone;
         }
       }
       break;
@@ -364,11 +445,14 @@ SIZE_T WriteToBuffer(
     if (pBuf->pFree == pBuf->pEnd)
       pBuf->pFree = pBuf->pBase;
 
-    pWriteBuf += writeDone;
+    writeDoneTotal += writeDone;
     writeLength -= writeDone;
+
+    if (pWriteBuf)
+      pWriteBuf += writeDone;
   }
 
-  return pWriteBuf - (PUCHAR)pWrite;
+  return writeDoneTotal;
 }
 
 VOID WriteMandatoryToBuffer(PC0C_BUFFER pBuf, UCHAR mandatoryChar)
@@ -505,7 +589,6 @@ BOOLEAN SetNewBufferBase(PC0C_BUFFER pBuf, PUCHAR pBase, SIZE_T size)
     C0C_FREE_POOL(pBuf->pBase);
   }
 
-  newBuf.escape = pBuf->escape;
   newBuf.insertData = pBuf->insertData;
 
   *pBuf = newBuf;
@@ -517,7 +600,6 @@ VOID PurgeBuffer(PC0C_BUFFER pBuf)
 {
   pBuf->pFree = pBuf->pBusy = pBuf->pBase;
   pBuf->busy = 0;
-  pBuf->escape = FALSE;
   pBuf->insertData.size = 0;
 }
 

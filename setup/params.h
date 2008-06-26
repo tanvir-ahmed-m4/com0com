@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.7  2008/06/26 13:39:19  vfrolov
+ * Implemented noise emulation
+ *
  * Revision 1.6  2008/05/04 09:53:51  vfrolov
  * Implemented HiddenMode option
  *
@@ -42,6 +45,8 @@
 #ifndef _C0C_PARAMS_H_
 #define _C0C_PARAMS_H_
 
+struct Bit;
+
 class PortParameters {
   public:
     PortParameters(const char *pService, const char *pPhPortName);
@@ -58,12 +63,15 @@ class PortParameters {
 
   protected:
     BOOL FillParametersKey(char *pRegKey, int size);
-    BOOL SetPortName(const char *pNewPortName);
     DWORD *GetDwPtr(DWORD bit);
-    BOOL SetFlag(const char *pNewVal, DWORD bit);
-    BOOL SetPin(const char *pNewVal, DWORD bit);
     void LoadDw(HKEY hKey, DWORD bit);
     LONG SaveDw(HKEY hKey, DWORD bit);
+
+    BOOL SetPortName(const char *pNewPortName);
+    BOOL SetFlag(const char *pNewVal, DWORD bit);
+    BOOL SetPin(const char *pNewVal, DWORD bit);
+    BOOL SetProbability(const char *pNewVal, DWORD bit);
+    BOOL SetBit(const char *pVal, const Bit &bit);
 
     DWORD maskChanged;
     DWORD maskExplicit;
@@ -77,6 +85,7 @@ class PortParameters {
     DWORD pinDSR;
     DWORD pinDCD;
     DWORD pinRI;
+    DWORD emuNoise;
 
     char service[20];
     char phPortName[20];
