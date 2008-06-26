@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.9  2008/06/26 13:31:54  vfrolov
+ * Implemented noise emulation
+ *
  * Revision 1.8  2008/05/04 09:44:05  vfrolov
  * Added C0C_DEFAULT_HIDDENMODE
  *
@@ -85,5 +88,8 @@
 #define C0C_DEFAULT_PLUGINMODE      0x00000000
 #define C0C_DEFAULT_EXCLUSIVEMODE   0x00000000
 #define C0C_DEFAULT_HIDDENMODE      0x00000000
+#define C0C_DEFAULT_EMUNOISE        0x00000000
+
+#define C0C_PROBABILITY_ONE         100000000
 
 #endif /* _INCLUDE_C0C_COM0COM_H_ */
