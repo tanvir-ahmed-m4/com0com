@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.3  2008/07/10 11:18:27  vfrolov
+ * Added noise representation
+ *
  * Revision 1.2  2008/04/08 06:52:12  vfrolov
  * Added pin OUT2
  *
@@ -56,6 +59,7 @@ namespace SetupApp {
           L(l),
           IC(ic),
           isFixed(_isFixed),
+          isNoise(false),
           source(nullptr) {}
 
       void Link(PinSource ^_source) { source = gcnew PinSource(_source); }
@@ -69,6 +73,7 @@ namespace SetupApp {
       int L;
       int IC;
       bool isFixed;
+      bool isNoise;
 
       PinSource ^source;
   };
@@ -152,6 +157,22 @@ void PinMap::Init(PortPair ^pair)
 {
   MouseInit();
 
+  for (int i = 0 ; i < 2 ; i++) {
+    String ^tx = (i == 0) ? "TX(A)" : "TX(B)";
+
+    if (pins->ContainsKey(tx)) {
+      if (pair != nullptr &&
+          pair[i] != nullptr &&
+          pair[i]->ContainsKey("emunoise") &&
+          pair[i]["emunoise"]->IndexOfAny((gcnew String("123456789"))->ToCharArray()) != -1)
+      {
+        pins[tx]->isNoise = true;
+      } else {
+        pins[tx]->isNoise = false;
+      }
+    }
+  }
+
   array<String ^> ^dstPins = {"DSR", "DCD", "CTS", "RI"};
 
   for each (String ^dst in dstPins) {
@@ -202,7 +223,7 @@ void PinMap::GetChanges(PortPair ^pair)
       array<Char> ^separator = {'('};
 
       array<String ^> ^fields;
-      
+
       fields = kvp.Key->Split(separator);
 
       if (fields->Length != 2)
@@ -420,7 +441,6 @@ void PinMap::Paint(PaintEventArgs ^e, Control ^control)
             Point(line[3].X + INVERT_SIZE/2, line[3].Y),
           };
 
-          Pen ^pCur = (pin->isFixed || pin->source->IsEqual(pinsOrg[kvp.Key])) ? pOrg : pNew;
           e->Graphics->DrawPolygon(pCur, poly);
         }
       }
@@ -438,7 +458,6 @@ void PinMap::Paint(PaintEventArgs ^e, Control ^control)
             Point(line[3].X, line[3].Y - INVERT_SIZE/2),
           };
 
-          Pen ^pCur = (pin->isFixed || pin->source->IsEqual(pinsOrg[kvp.Key])) ? pOrg : pNew;
           e->Graphics->DrawPolygon(pCur, poly);
         }
       }
@@ -456,7 +475,6 @@ void PinMap::Paint(PaintEventArgs ^e, Control ^control)
             Point(line[3].X, line[3].Y + INVERT_SIZE/2),
           };
 
-          Pen ^pCur = (pin->isFixed || pin->source->IsEqual(pinsOrg[kvp.Key])) ? pOrg : pNew;
           e->Graphics->DrawPolygon(pCur, poly);
         }
       }
@@ -504,6 +522,15 @@ void PinMap::Paint(PaintEventArgs ^e, Control ^control)
       }
 
       e->Graphics->DrawLines(pCur, line);
+
+      if (pinS->isNoise) {
+        Pen ^pNoise = gcnew Pen(pCur->Color, 3);
+
+        pNoise->EndCap = pCur->EndCap;
+        pNoise->DashStyle = Drawing2D::DashStyle::Dot;
+
+        e->Graphics->DrawLines(pNoise, line);
+      }
     }
   }
 
