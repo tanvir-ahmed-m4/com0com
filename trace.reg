@@ -4,10 +4,10 @@ Windows Registry Editor Version 5.00
 "TraceFile"="\\??\\C:\\com0com.log"
 
 [HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\com0com\Trace\Enable]
-"Read"=dword:00000000
-"Write"=dword:00000000
-"GetTimeouts"=dword:00000000
-"SetTimeouts"=dword:00000000
-"GetCommStatus"=dword:00000000
-"GetModemStatus"=dword:00000000
-"ModemStatus"=dword:00000000
+"Read"=dword:FFFFFFFF
+"Write"=dword:FFFFFFFF
+"GetTimeouts"=dword:FFFFFFFF
+"SetTimeouts"=dword:FFFFFFFF
+"GetCommStatus"=dword:FFFFFFFF
+"GetModemStatus"=dword:FFFFFFFF
+"ModemStatus"=dword:FFFFFFFF
