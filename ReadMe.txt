@@ -184,3 +184,9 @@ A. The OUT1 can be wired to DCD and OUT2 to RING. Use extended
    state of OUT1 and OUT2.  See example in
 
    http://com0com.sourceforge.net/examples/MODEM_CONTROL/tstser.cpp
+
+Q. What version am I running?
+A. In the device manager, the driver properties page shows the version and date
+   of the com0com.inf file, while the driver details page shows a version of
+   com0com.sys file. The version of com0com.sys file is the version that you
+   are running.
