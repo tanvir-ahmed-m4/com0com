@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.12  2008/07/11 10:30:39  vfrolov
+ * Added missing data available bit to LSR
+ *
  * Revision 1.11  2008/06/26 13:37:10  vfrolov
  * Implemented noise emulation
  *
@@ -241,7 +244,7 @@ VOID CopyCharsWithEscape(
           SIZE_T length = sizeof(buf);
           SIZE_T len;
 
-          lsr |= 0x80;    /* errornous data in FIFO */
+          lsr |= 0x81;    /* errornous data in FIFO and data available */
 
           if (C0C_TX_BUFFER_THR_EMPTY(&pIoPort->txBuf)) {
             lsr |= 0x20;  /* transmit holding register empty */
