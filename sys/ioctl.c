@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.37  2008/07/11 10:38:00  vfrolov
+ * Added nonstandard ability to enable LSR insertion on BREAK OFF
+ *
  * Revision 1.36  2008/06/10 11:32:35  vfrolov
  * Fixed break interrupt indicator for C0CE_INSERT_IOCTL_GET
  * Added parameter checking for IOCTL_SERIAL_SET_LINE_CONTROL
@@ -352,7 +355,7 @@ NTSTATUS FdoPortIoCtl(
 
       KeAcquireSpinLock(pIoPortLocal->pIoLock, &oldIrql);
 
-      SetBreakHolding(pIoPortLocal, TRUE);
+      SetBreakHolding(pIoPortLocal, TRUE, &queueToComplete);
       UpdateTransmitToggle(pIoPortLocal, &queueToComplete);
 
       ReadWrite(
@@ -371,7 +374,7 @@ NTSTATUS FdoPortIoCtl(
 
       KeAcquireSpinLock(pIoPortLocal->pIoLock, &oldIrql);
 
-      SetBreakHolding(pIoPortLocal, FALSE);
+      SetBreakHolding(pIoPortLocal, FALSE, &queueToComplete);
       UpdateTransmitToggle(pIoPortLocal, &queueToComplete);
 
       if (pIoPortLocal->tryWrite || pIoPortLocal->pIoPortRemote->tryWrite) {
@@ -631,12 +634,12 @@ NTSTATUS FdoPortIoCtl(
             C0CE_INSERT_ENABLE_LSR| \
             C0CE_INSERT_ENABLE_MST| \
             C0CE_INSERT_ENABLE_RBR| \
-            C0CE_INSERT_ENABLE_RLC)
+            C0CE_INSERT_ENABLE_RLC| \
+            C0CE_INSERT_ENABLE_LSR_NBI)
 
         #define C0CE_INSERT_CAPS (C0CE_INSERT_OPTS|C0CE_INSERT_BITS)
 
         if (optsAndBits == C0CE_INSERT_IOCTL_CAPS) {
-          optsAndBits = (C0CE_INSERT_ENABLE_LSR|C0CE_INSERT_ENABLE_MST);
           optsAndBits = 0;
 
           Information += C0CE_SIGNATURE_SIZE + sizeof(ULONG);
@@ -655,7 +658,7 @@ NTSTATUS FdoPortIoCtl(
           }
 
           if (optsAndBits & C0CE_INSERT_IOCTL_GET) {
-            if (optsAndBits & C0CE_INSERT_ENABLE_LSR)
+            if (optsAndBits & (C0CE_INSERT_ENABLE_LSR|C0CE_INSERT_ENABLE_LSR_NBI))
               Information += sizeof(UCHAR)*2 + sizeof(UCHAR);
             if (optsAndBits & C0CE_INSERT_ENABLE_MST)
               Information += sizeof(UCHAR)*2 + sizeof(UCHAR);
@@ -691,17 +694,23 @@ NTSTATUS FdoPortIoCtl(
 
       if (extended) {
         LIST_ENTRY queueToComplete;
+        PC0C_IO_PORT pIoPortRemote;
 
         InitializeListHead(&queueToComplete);
+        pIoPortRemote = pIoPortLocal->pIoPortRemote;
 
         if (optsAndBits & C0CE_INSERT_IOCTL_GET) {
-          if (optsAndBits & C0CE_INSERT_ENABLE_LSR) {
+          if (optsAndBits & (C0CE_INSERT_ENABLE_LSR|C0CE_INSERT_ENABLE_LSR_NBI)) {
             UCHAR lsr = 0;
 
-            if (!pIoPortLocal->amountInWriteQueue || pIoPortLocal->writeHolding)
-              lsr |= 0x60;  /* transmit holding register empty and transmitter empty indicators */
+            if (C0C_TX_BUFFER_THR_EMPTY(&pIoPortLocal->txBuf)) {
+              lsr |= 0x20;  /* transmit holding register empty */
 
-            if (pIoPortLocal->pIoPortRemote->writeHolding & SERIAL_TX_WAITING_ON_BREAK)
+              if (C0C_TX_BUFFER_EMPTY(&pIoPortLocal->txBuf))
+                lsr |= 0x40;  /* transmit holding register empty and line is idle */
+            }
+
+            if (pIoPortRemote->writeHolding & SERIAL_TX_WAITING_ON_BREAK && !pIoPortRemote->sendBreak)
               lsr |= 0x10;  /* break interrupt indicator */
 
             *pSysBuf++ = escapeChar;
@@ -718,16 +727,16 @@ NTSTATUS FdoPortIoCtl(
           if (optsAndBits & C0CE_INSERT_ENABLE_RBR) {
             *pSysBuf++ = escapeChar;
             *pSysBuf++ = C0CE_INSERT_RBR;
-            *(ULONG *)pSysBuf = pIoPortLocal->pIoPortRemote->baudRate.BaudRate;
+            *(ULONG *)pSysBuf = pIoPortRemote->baudRate.BaudRate;
             pSysBuf += sizeof(ULONG);
           }
 
           if (optsAndBits & C0CE_INSERT_ENABLE_RLC) {
             *pSysBuf++ = escapeChar;
             *pSysBuf++ = C0CE_INSERT_RLC;
-            *pSysBuf++ = pIoPortLocal->pIoPortRemote->lineControl.WordLength;
-            *pSysBuf++ = pIoPortLocal->pIoPortRemote->lineControl.Parity;
-            *pSysBuf++ = pIoPortLocal->pIoPortRemote->lineControl.StopBits;
+            *pSysBuf++ = pIoPortRemote->lineControl.WordLength;
+            *pSysBuf++ = pIoPortRemote->lineControl.Parity;
+            *pSysBuf++ = pIoPortRemote->lineControl.StopBits;
           }
         }
 
@@ -736,10 +745,10 @@ NTSTATUS FdoPortIoCtl(
         if (optsAndBits & C0CE_INSERT_IOCTL_RXCLEAR) {
           PurgeBuffer(&pIoPortLocal->readBuf);
           UpdateHandFlow(pIoPortLocal, TRUE, &queueToComplete);
-          if (pIoPortLocal->tryWrite || pIoPortLocal->pIoPortRemote->tryWrite) {
+          if (pIoPortLocal->tryWrite || pIoPortRemote->tryWrite) {
             ReadWrite(
                 pIoPortLocal, FALSE,
-                pIoPortLocal->pIoPortRemote, FALSE,
+                pIoPortRemote, FALSE,
                 &queueToComplete);
           }
         }

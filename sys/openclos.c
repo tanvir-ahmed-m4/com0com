@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.24  2008/07/11 10:38:00  vfrolov
+ * Added nonstandard ability to enable LSR insertion on BREAK OFF
+ *
  * Revision 1.23  2008/06/26 13:37:10  vfrolov
  * Implemented noise emulation
  *
@@ -242,7 +245,7 @@ NTSTATUS FdoPortClose(IN PC0C_FDOPORT_EXTENSION pDevExt, IN PIRP pIrp)
   pIoPort->sendXonXoff = 0;
   SetModemControl(pIoPort, C0C_MCR_OUT2, C0C_MCR_MASK | C0C_MCR_OPEN, &queueToComplete);
   FreeBuffer(&pIoPort->readBuf);
-  SetBreakHolding(pIoPort, FALSE);
+  SetBreakHolding(pIoPort, FALSE, &queueToComplete);
 
   KeReleaseSpinLock(pIoPort->pIoLock, oldIrql);
 

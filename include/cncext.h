@@ -50,9 +50,10 @@
 #define C0CE_INSERT_IOCTL_GET       0x01000000  /* IOCTL returns current values of enabled insertions */
 #define C0CE_INSERT_IOCTL_RXCLEAR   0x02000000  /* IOCTL clears the driver's input buffer */
 
-#define C0CE_INSERT_ENABLE_LSR      0x00000001  /* enable SERIAL_LSRMST_LSR_[NO]DATA insertion */
-#define C0CE_INSERT_ENABLE_MST      0x00000002  /* enable SERIAL_LSRMST_MST insertion */
+#define C0CE_INSERT_ENABLE_LSR      0x00000001  /* enable standard SERIAL_LSRMST_LSR_[NO]DATA insertion */
+#define C0CE_INSERT_ENABLE_MST      0x00000002  /* enable standard SERIAL_LSRMST_MST insertion */
 #define C0CE_INSERT_ENABLE_RBR      0x00000100  /* enable C0CE_INSERT_RBR insertion */
 #define C0CE_INSERT_ENABLE_RLC      0x00000200  /* enable C0CE_INSERT_RLC insertion */
+#define C0CE_INSERT_ENABLE_LSR_NBI  0x00010000  /* enable SERIAL_LSRMST_LSR_[NO]DATA insertion on BREAK OFF */
 
 #endif /* _INCLUDE_C0C_CNCEXT_H_ */
