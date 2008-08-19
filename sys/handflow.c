@@ -19,6 +19,10 @@
  *
  *
  * $Log$
+ * Revision 1.10  2008/08/19 12:40:58  vfrolov
+ * Replaces C0CE_INSERT_ENABLE_LSR_NBI (insertion on BREAK OFF)
+ * by C0CE_INSERT_ENABLE_LSR_BI (insertion on BREAK change)
+ *
  * Revision 1.9  2008/07/11 10:38:00  vfrolov
  * Added nonstandard ability to enable LSR insertion on BREAK OFF
  *
@@ -404,7 +408,7 @@ VOID SetBreakHolding(PC0C_IO_PORT pIoPort, BOOLEAN on, PLIST_ENTRY pQueueToCompl
 
       pIoPortRead = pIoPort->pIoPortRemote;
 
-      if (pIoPortRead->escapeChar && (pIoPortRead->insertMask & C0CE_INSERT_ENABLE_LSR_NBI)) {
+      if (pIoPortRead->escapeChar && (pIoPortRead->insertMask & C0CE_INSERT_ENABLE_LSR_BI)) {
         UCHAR lsr = 0;
 
         if (C0C_TX_BUFFER_THR_EMPTY(&pIoPortRead->txBuf)) {

@@ -19,6 +19,10 @@
  *
  *
  * $Log$
+ * Revision 1.39  2008/08/19 12:40:58  vfrolov
+ * Replaces C0CE_INSERT_ENABLE_LSR_NBI (insertion on BREAK OFF)
+ * by C0CE_INSERT_ENABLE_LSR_BI (insertion on BREAK change)
+ *
  * Revision 1.38  2008/06/26 13:37:10  vfrolov
  * Implemented noise emulation
  *
@@ -1397,7 +1401,9 @@ NTSTATUS TryReadWrite(
         if (pIoPortRead->eventMask)
           WaitComplete(pIoPortRead, pQueueToComplete);
 
-        if (pIoPortRead->escapeChar && (pIoPortRead->insertMask & C0CE_INSERT_ENABLE_LSR)) {
+        if (pIoPortRead->escapeChar &&
+            (pIoPortRead->insertMask & (C0CE_INSERT_ENABLE_LSR|C0CE_INSERT_ENABLE_LSR_BI)))
+        {
           UCHAR lsr = 0x10;  /* break interrupt indicator */
 
           if (C0C_TX_BUFFER_THR_EMPTY(&pIoPortRead->txBuf)) {
