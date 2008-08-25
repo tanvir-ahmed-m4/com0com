@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.11  2008/08/25 14:18:58  vfrolov
+ * Fixed SERIAL_TRANSMIT_TOGGLE
+ *
  * Revision 1.10  2008/08/19 12:40:58  vfrolov
  * Replaces C0CE_INSERT_ENABLE_LSR_NBI (insertion on BREAK OFF)
  * by C0CE_INSERT_ENABLE_LSR_BI (insertion on BREAK change)
@@ -304,8 +307,10 @@ VOID UpdateTransmitToggle(
   if ((pIoPort->handFlow.FlowReplace & SERIAL_RTS_MASK) == SERIAL_TRANSMIT_TOGGLE) {
     UCHAR bits;
 
-    if ((pIoPort->writeHolding & SERIAL_TX_WAITING_ON_BREAK) == 0 &&
-        (pIoPort->sendXonXoff || pIoPort->irpQueues[C0C_QUEUE_WRITE].pCurrent))
+    if ((pIoPort->writeHolding & SERIAL_TX_WAITING_ON_BREAK) != 0 ||
+        !C0C_TX_BUFFER_EMPTY(&pIoPort->txBuf) ||
+        (pIoPort->irpQueues[C0C_QUEUE_WRITE].pCurrent && !pIoPort->writeHolding) ||
+        (pIoPort->sendXonXoff && (pIoPort->writeHolding & ~SERIAL_TX_WAITING_FOR_XON) == 0))
     {
       bits = C0C_MCR_RTS;
     } else {
