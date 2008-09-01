@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.13  2008/09/01 16:54:28  vfrolov
+ * Replaced SERIAL_LSRMST_LSR_NODATA by SERIAL_LSRMST_LSR_DATA for BREAK
+ *
  * Revision 1.12  2008/07/11 10:30:39  vfrolov
  * Added missing data available bit to LSR
  *
@@ -67,6 +70,7 @@
 #include "precomp.h"
 #include "bufutils.h"
 #include "noise.h"
+#include "../include/cncext.h"
 
 /*
  * FILE_ID used by HALT_UNLESS to put it on BSOD
@@ -189,10 +193,6 @@ VOID CopyCharsWithEscape(
       readDone += writeDone;
     }
   }
-  else
-  if (pFlowFilter->flags & C0C_FLOW_FILTER_FL_IGNORE_RECEIVED) {
-    writeDone = writeLength;
-  }
   else {
     PC0C_IO_PORT pIoPort = pFlowFilter->pIoPort;
     PC0C_IO_PORT pIoPortRemote = pIoPort->pIoPortRemote;
@@ -206,8 +206,13 @@ VOID CopyCharsWithEscape(
       if (pWriteBuf) {
         curChar = *pWriteBuf++;
 
-        if (pIoPortRemote->brokeCharsProbability > 0)
-          BrokeChar(pIoPortRemote, pIoPort, &curChar, &lsr);
+        if (pIoPortRemote->sendBreak) {
+          pIoPortRemote->sendBreak = FALSE;
+          BreakError(pIoPort, &lsr);
+        } else {
+          if (pIoPortRemote->brokeCharsProbability > 0)
+            BrokeChar(pIoPortRemote, pIoPort, &curChar, &lsr);
+        }
       } else {
         if (pIoPortRemote->writeHolding & SERIAL_TX_WAITING_ON_BREAK && !pIoPortRemote->sendBreak) {
           BreakError(pIoPort, &lsr);
@@ -220,26 +225,13 @@ VOID CopyCharsWithEscape(
       }
 
       if (lsr) {
+        BOOLEAN noCurChar = FALSE;
+        BOOLEAN isBreak = ((lsr & 0x10) != 0);
         pFlowFilter->events |= SERIAL_EV_ERR;
 
-        if (pIoPort->handFlow.FlowReplace & SERIAL_ERROR_CHAR) {
-          UCHAR errorChar = pIoPort->specialChars.ErrorChar;
-
-          if (!readLength--) {
-#if DBG
-            SIZE_T done =
-#endif /* DBG */
-            AddRawData(&pBuf->insertData, &errorChar, sizeof(errorChar));
-            HALT_UNLESS1(done == sizeof(errorChar), done);
-
-            readLength++;
-          } else {
-            *pReadBuf++ = errorChar;
-            readDone++;
-          }
-        }
-
-        if (pIoPort->escapeChar) {
+        if (pIoPort->escapeChar &&
+            (pIoPort->insertMask & (C0CE_INSERT_ENABLE_LSR|C0CE_INSERT_ENABLE_LSR_BI)))
+        {
           UCHAR buf[4];
           SIZE_T length = sizeof(buf);
           SIZE_T len;
@@ -262,6 +254,7 @@ VOID CopyCharsWithEscape(
           buf[3] = curChar;
 
           writeDone++;
+          noCurChar = TRUE;
 
           if (length > readLength)
             len = readLength;
@@ -285,11 +278,51 @@ VOID CopyCharsWithEscape(
 
             break;
           }
-
-          continue;
         }
+
+        if (isBreak) {
+          if (pIoPort->handFlow.FlowReplace & SERIAL_BREAK_CHAR) {
+            UCHAR errorChar = pIoPort->specialChars.BreakChar;
+
+            if (!readLength--) {
+#if DBG
+              SIZE_T done =
+#endif /* DBG */
+              AddRawData(&pBuf->insertData, &errorChar, sizeof(errorChar));
+              HALT_UNLESS1(done == sizeof(errorChar), done);
+
+              readLength++;
+            } else {
+              *pReadBuf++ = errorChar;
+              readDone++;
+            }
+          }
+        }
+        else
+        if (pIoPort->handFlow.FlowReplace & SERIAL_ERROR_CHAR) {
+          UCHAR errorChar = pIoPort->specialChars.ErrorChar;
+
+          if (!readLength--) {
+#if DBG
+            SIZE_T done =
+#endif /* DBG */
+            AddRawData(&pBuf->insertData, &errorChar, sizeof(errorChar));
+            HALT_UNLESS1(done == sizeof(errorChar), done);
+
+            readLength++;
+          } else {
+            *pReadBuf++ = errorChar;
+            readDone++;
+          }
+        }
+
+        if (noCurChar)
+          continue;
       }
 
+      if (pFlowFilter->flags & C0C_FLOW_FILTER_FL_IGNORE_RECEIVED) {
+      }
+      else
       if (!curChar && (pFlowFilter->flags & C0C_FLOW_FILTER_FL_NULL_STRIPPING)) {
       }
       else

@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.40  2008/09/01 16:54:28  vfrolov
+ * Replaced SERIAL_LSRMST_LSR_NODATA by SERIAL_LSRMST_LSR_DATA for BREAK
+ *
  * Revision 1.39  2008/08/19 12:40:58  vfrolov
  * Replaces C0CE_INSERT_ENABLE_LSR_NBI (insertion on BREAK OFF)
  * by C0CE_INSERT_ENABLE_LSR_BI (insertion on BREAK change)
@@ -943,28 +946,6 @@ VOID InsertLsrMst(
   }
 }
 
-VOID InsertChar(
-    PC0C_IO_PORT pIoPortRead,
-    UCHAR value,
-    PLIST_ENTRY pQueueToComplete)
-{
-  C0C_RAW_DATA insertData;
-
-  insertData.size = 1;
-  insertData.data[0] = value;
-
-  if (FdoPortIo(
-      C0C_IO_TYPE_INSERT,
-      &insertData,
-      pIoPortRead,
-      &pIoPortRead->irpQueues[C0C_QUEUE_READ],
-      pQueueToComplete) == STATUS_PENDING)
-  {
-    AlertOverrun(pIoPortRead, pQueueToComplete);
-    Trace0((PC0C_COMMON_EXTENSION)pIoPortRead->pDevExt, L"WARNING: Lost char");
-  }
-}
-
 VOID InsertRemoteBr(
     PC0C_IO_PORT pIoPortRead,
     PLIST_ENTRY pQueueToComplete)
@@ -1390,35 +1371,6 @@ NTSTATUS TryReadWrite(
     switch (dataChar.data.chr.type) {
     case RW_DATA_TYPE_CHR_XCHR:
       pIoPortWrite->sendXonXoff = 0;
-      break;
-    case RW_DATA_TYPE_CHR_BREAK:
-      if (pIoPortWrite->sendBreak) {
-        pIoPortWrite->sendBreak = FALSE;
-
-        pIoPortRead->errors |= SERIAL_ERROR_BREAK;
-        pIoPortRead->eventMask |= pIoPortRead->waitMask & (SERIAL_EV_BREAK | SERIAL_EV_ERR);
-
-        if (pIoPortRead->eventMask)
-          WaitComplete(pIoPortRead, pQueueToComplete);
-
-        if (pIoPortRead->escapeChar &&
-            (pIoPortRead->insertMask & (C0CE_INSERT_ENABLE_LSR|C0CE_INSERT_ENABLE_LSR_BI)))
-        {
-          UCHAR lsr = 0x10;  /* break interrupt indicator */
-
-          if (C0C_TX_BUFFER_THR_EMPTY(&pIoPortRead->txBuf)) {
-            lsr |= 0x20;  /* transmit holding register empty */
-
-            if (C0C_TX_BUFFER_EMPTY(&pIoPortRead->txBuf))
-              lsr |= 0x40;  /* transmit holding register empty and line is idle */
-          }
-
-          InsertLsrMst(pIoPortRead, FALSE,  lsr, pQueueToComplete);
-        }
-
-        if (pIoPortRead->handFlow.FlowReplace & SERIAL_BREAK_CHAR)
-          InsertChar(pIoPortRead, pIoPortRead->specialChars.BreakChar, pQueueToComplete);
-      }
       break;
     }
   }
