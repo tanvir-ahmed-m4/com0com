@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.39  2008/09/12 10:07:50  vfrolov
+ * Fixed LSR insertion
+ *
  * Revision 1.38  2008/08/19 12:40:58  vfrolov
  * Replaces C0CE_INSERT_ENABLE_LSR_NBI (insertion on BREAK OFF)
  * by C0CE_INSERT_ENABLE_LSR_BI (insertion on BREAK change)
@@ -714,8 +717,12 @@ NTSTATUS FdoPortIoCtl(
                 lsr |= 0x40;  /* transmit holding register empty and line is idle */
             }
 
-            if (pIoPortRemote->writeHolding & SERIAL_TX_WAITING_ON_BREAK && !pIoPortRemote->sendBreak)
+            if ((optsAndBits & C0CE_INSERT_ENABLE_LSR_BI) != 0 &&
+                (pIoPortRemote->writeHolding & SERIAL_TX_WAITING_ON_BREAK) != 0 &&
+                !pIoPortRemote->sendBreak)
+            {
               lsr |= 0x10;  /* break interrupt indicator */
+            }
 
             *pSysBuf++ = escapeChar;
             *pSysBuf++ = SERIAL_LSRMST_LSR_NODATA;
