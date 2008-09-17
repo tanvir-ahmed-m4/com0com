@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.13  2008/09/17 07:58:32  vfrolov
+ * Added AddRTTO and AddRITO parameters
+ *
  * Revision 1.12  2008/06/26 13:39:19  vfrolov
  * Implemented noise emulation
  *
@@ -78,6 +81,8 @@ enum {
   m_pinDCD         = 0x00000400,
   m_pinRI          = 0x00000800,
   m_emuNoise       = 0x00010000,
+  m_addRTTO        = 0x00020000,
+  m_addRITO        = 0x00040000,
 };
 ///////////////////////////////////////////////////////////////
 static struct Bit
@@ -88,6 +93,8 @@ static struct Bit
     OTHER,
     FLAG,
     PIN,
+    PROBABILITY,
+    UNSIGNED,
   } type;
 } bits[] = {
   {m_portName,       Bit::OTHER},
@@ -100,7 +107,9 @@ static struct Bit
   {m_pinDSR,         Bit::PIN},
   {m_pinDCD,         Bit::PIN},
   {m_pinRI,          Bit::PIN},
-  {m_emuNoise,       Bit::OTHER},
+  {m_emuNoise,       Bit::PROBABILITY},
+  {m_addRTTO,        Bit::UNSIGNED},
+  {m_addRITO,        Bit::UNSIGNED},
 };
 ///////////////////////////////////////////////////////////////
 PortParameters::PortParameters(const char *pService, const char *pPhPortName)
@@ -113,7 +122,7 @@ PortParameters::PortParameters(const char *pService, const char *pPhPortName)
 ///////////////////////////////////////////////////////////////
 void PortParameters::Init()
 {
-  SNPRINTF(portName, sizeof(portName)/sizeof(portName[0]), "%s", phPortName);
+  portName[0] = 0;
   emuBR = 0;
   emuOverrun = 0;
   plugInMode = 0;
@@ -126,6 +135,8 @@ void PortParameters::Init()
   pinRI = 0;
 
   emuNoise = 0;
+  addRTTO = 0;
+  addRITO = 0;
 
   maskChanged = 0;
   maskExplicit = 0;
@@ -133,19 +144,6 @@ void PortParameters::Init()
 ///////////////////////////////////////////////////////////////
 BOOL PortParameters::SetPortName(const char *pNewPortName)
 {
-  if (lstrcmpi(pNewPortName, "-")) {
-    if ((maskExplicit & m_portName) == 0) {
-      maskExplicit |= m_portName;
-      maskChanged |= m_portName;
-    }
-  } else {
-    pNewPortName = phPortName;
-    if (maskExplicit & m_portName) {
-      maskExplicit &= ~m_portName;
-      maskChanged |= m_portName;
-    }
-  }
-
   if (lstrcmpi(portName, pNewPortName)) {
     SNPRINTF(portName, sizeof(portName)/sizeof(portName[0]), "%s", pNewPortName);
     maskChanged |= m_portName;
@@ -167,6 +165,8 @@ DWORD *PortParameters::GetDwPtr(DWORD bit)
     case m_pinDCD:         return &pinDCD;
     case m_pinRI:          return &pinRI;
     case m_emuNoise:       return &emuNoise;
+    case m_addRTTO:        return &addRTTO;
+    case m_addRITO:        return &addRITO;
   }
 
   return NULL;
@@ -184,6 +184,8 @@ static const DWORD *GetDwPtrDefault(DWORD bit)
   static const DWORD pinDCD = C0C_DEFAULT_PIN_DCD;
   static const DWORD pinRI = C0C_DEFAULT_PIN_RI;
   static const DWORD emuNoise = C0C_DEFAULT_EMUNOISE;
+  static const DWORD addRTTO = C0C_DEFAULT_ADDRTTO;
+  static const DWORD addRITO = C0C_DEFAULT_ADDRITO;
 
   switch (bit) {
     case m_emuBR:          return &emuBR;
@@ -196,6 +198,8 @@ static const DWORD *GetDwPtrDefault(DWORD bit)
     case m_pinDCD:         return &pinDCD;
     case m_pinRI:          return &pinRI;
     case m_emuNoise:       return &emuNoise;
+    case m_addRTTO:        return &addRTTO;
+    case m_addRITO:        return &addRITO;
   }
 
   return NULL;
@@ -215,6 +219,8 @@ static const char *GetBitName(DWORD bit)
     case m_pinDCD:         return "dcd";
     case m_pinRI:          return "ri";
     case m_emuNoise:       return "EmuNoise";
+    case m_addRTTO:        return "AddRTTO";
+    case m_addRITO:        return "AddRITO";
   }
 
   return NULL;
@@ -231,10 +237,6 @@ BOOL PortParameters::SetFlag(const char *pNewVal, DWORD bit)
   if (!lstrcmpi(pNewVal, "no")) {
     newFlag = 0;
   }
-  else
-  if (!lstrcmpi(pNewVal, "-")) {
-    newFlag = 0;
-  }
   else {
     Trace("Invalid value '%s'\n", pNewVal);
     return FALSE;
@@ -244,18 +246,6 @@ BOOL PortParameters::SetFlag(const char *pNewVal, DWORD bit)
 
   if (pFlag == NULL)
     return FALSE;
-
-  if (lstrcmpi("-", pNewVal)) {
-    if ((maskExplicit & bit) == 0) {
-      maskExplicit |= bit;
-      maskChanged |= bit;
-    }
-  } else {
-    if (maskExplicit & bit) {
-      maskExplicit &= ~bit;
-      maskChanged |= bit;
-    }
-  }
 
   if (*pFlag != newFlag) {
     *pFlag = newFlag;
@@ -319,9 +309,6 @@ BOOL PortParameters::SetPin(const char *pNewVal, DWORD bit)
   if (!lstrcmpi(pNewVal, "on")) {
     newPin |= C0C_PIN_ON;
   }
-  else
-  if (!lstrcmpi(pNewVal, "-") && newPin == 0) {
-  }
   else {
     Trace("Invalid value '%s'\n", pNewVal);
     return FALSE;
@@ -331,18 +318,6 @@ BOOL PortParameters::SetPin(const char *pNewVal, DWORD bit)
 
   if (pPin == NULL)
     return FALSE;
-
-  if (lstrcmpi("-", pNewVal)) {
-    if ((maskExplicit & bit) == 0) {
-      maskExplicit |= bit;
-      maskChanged |= bit;
-    }
-  } else {
-    if (maskExplicit & bit) {
-      maskExplicit &= ~bit;
-      maskChanged |= bit;
-    }
-  }
 
   if (*pPin != newPin) {
     *pPin = newPin;
@@ -356,9 +331,6 @@ BOOL PortParameters::SetProbability(const char *pNewVal, DWORD bit)
 {
   DWORD newVal = 0;
 
-  if (!lstrcmpi(pNewVal, "-")) {
-  }
-  else
   if (pNewVal[0] == '0' && pNewVal[1] == '.') {
     const char *p = pNewVal + 2;
 
@@ -397,17 +369,30 @@ BOOL PortParameters::SetProbability(const char *pNewVal, DWORD bit)
   if (pVal == NULL)
     return FALSE;
 
-  if (lstrcmpi("-", pNewVal)) {
-    if ((maskExplicit & bit) == 0) {
-      maskExplicit |= bit;
-      maskChanged |= bit;
-    }
-  } else {
-    if (maskExplicit & bit) {
-      maskExplicit &= ~bit;
-      maskChanged |= bit;
-    }
+  if (*pVal != newVal) {
+    *pVal = newVal;
+    maskChanged |= bit;
   }
+
+  return TRUE;
+}
+///////////////////////////////////////////////////////////////
+BOOL PortParameters::SetUnsigned(const char *pNewVal, DWORD bit)
+{
+  DWORD newVal = 0;
+
+  for (const char *p = pNewVal ; *p ; p++) {
+    if (*p < '0' || *p > '9') {
+      Trace("Invalid value '%s'\n", pNewVal);
+      return FALSE;
+    }
+    newVal = newVal*10 + (*p - '0');
+  }
+
+  DWORD *pVal = GetDwPtr(bit);
+
+  if (pVal == NULL)
+    return FALSE;
 
   if (*pVal != newVal) {
     *pVal = newVal;
@@ -422,22 +407,53 @@ BOOL PortParameters::SetBit(const char *pVal, const Bit &bit)
   if (!lstrcmpi(pVal, "*"))
     return TRUE;
 
+  if (!lstrcmpi("-", pVal)) {
+    if (maskExplicit & bit.bit) {
+      maskExplicit &= ~bit.bit;
+      maskChanged |= bit.bit;
+    }
+    return TRUE;
+  }
+
   if (bit.type == Bit::FLAG) {
-    return SetFlag(pVal, bit.bit);
+    if (!SetFlag(pVal, bit.bit))
+      return FALSE;
   }
   else
   if (bit.type == Bit::PIN) {
-    return SetPin(pVal, bit.bit);
+    if (!SetPin(pVal, bit.bit))
+      return FALSE;
+  }
+  else
+  if (bit.type == Bit::PROBABILITY) {
+    if (!SetProbability(pVal, bit.bit))
+      return FALSE;
+  }
+  else
+  if (bit.type == Bit::UNSIGNED) {
+    if (!SetUnsigned(pVal, bit.bit))
+      return FALSE;
   }
   else
   if (bit.type == Bit::OTHER) {
-    if (bit.bit == m_portName)
-      return SetPortName(pVal);
-    if (bit.bit == m_emuNoise)
-      return SetProbability(pVal, bit.bit);
+    if (bit.bit == m_portName) {
+      if (!SetPortName(pVal))
+        return FALSE;
+    }
+    else {
+      return FALSE;
+    }
+  }
+  else {
+    return FALSE;
   }
 
-  return FALSE;
+  if ((maskExplicit & bit.bit) == 0) {
+    maskExplicit |= bit.bit;
+    maskChanged |= bit.bit;
+  }
+
+  return TRUE;
 }
 ///////////////////////////////////////////////////////////////
 BOOL PortParameters::FillParametersKey(char *pRegKey, int size)
@@ -758,8 +774,8 @@ BOOL PortParameters::FillParametersStr(char *pParameters, int size, BOOL detail)
 
         len = SNPRINTF(pParameters, size, ",%s=%s%s", pName, (*pBit & C0C_PIN_NEGATIVE) == 0 ? "" : "!", pVal);
       }
-      else {
-        if (bit == m_emuNoise) {
+      else
+      if (bits[i].type == Bit::PROBABILITY) {
           if (*pBit == 0) {
             len = SNPRINTF(pParameters, size, ",%s=0", pName);
           } else {
@@ -796,7 +812,10 @@ BOOL PortParameters::FillParametersStr(char *pParameters, int size, BOOL detail)
 
             len = SNPRINTF(pParameters, size, ",%s=0.%s", pName, strVal);
           }
-        }
+      }
+      else
+      if (bits[i].type == Bit::UNSIGNED) {
+        len = SNPRINTF(pParameters, size, ",%s=%lu", pName, (unsigned long)*pBit);
       }
 
       if (len < 0)
@@ -837,6 +856,11 @@ const char *PortParameters::GetHelp()
     "  EmuNoise=<n>            - probability in range 0-0.99999999 of error per\n"
     "                            character frame in the direction to the paired port\n"
     "                            (0 by default)\n"
+    "  AddRTTO=<n>             - add <n> milliseconds to the total time-out period\n"
+    "                            for read operations (0 by default)\n"
+    "  AddRITO=<n>             - add <n> milliseconds to the ìaximum time allowed to\n"
+    "                            elapse between the arrival of two characters for\n"
+    "                            read operations (0 by default)\n"
     "  PlugInMode={yes|no}     - enable/disable plug-in mode, the plug-in mode port\n"
     "                            is hidden and can't be open if the paired port is\n"
     "                            not open (disabled by default)\n"

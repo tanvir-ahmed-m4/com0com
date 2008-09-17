@@ -17,35 +17,6 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- *
- * $Log$
- * Revision 1.9  2008/06/26 13:31:54  vfrolov
- * Implemented noise emulation
- *
- * Revision 1.8  2008/05/04 09:44:05  vfrolov
- * Added C0C_DEFAULT_HIDDENMODE
- *
- * Revision 1.7  2008/04/08 06:44:35  vfrolov
- * Added pin OUT2
- *
- * Revision 1.6  2007/10/19 15:58:18  vfrolov
- * Added default values
- *
- * Revision 1.5  2007/09/17 14:28:07  vfrolov
- * Implemented pseudo pin OPEN
- *
- * Revision 1.4  2007/07/03 14:25:12  vfrolov
- * Implemented pinout customization
- *
- * Revision 1.3  2006/11/03 13:06:33  vfrolov
- * Moved C0C_PORT_NAME_LEN from sys/com0com.h to include/com0com.h
- *
- * Revision 1.2  2006/11/02 15:56:38  vfrolov
- * Defined C0C_REGSTR_VAL_PORT_NUM
- *
- * Revision 1.1  2006/10/13 10:06:13  vfrolov
- * Initial revision
- *
  */
 
 #ifndef _INCLUDE_C0C_COM0COM_H_
@@ -89,6 +60,8 @@
 #define C0C_DEFAULT_EXCLUSIVEMODE   0x00000000
 #define C0C_DEFAULT_HIDDENMODE      0x00000000
 #define C0C_DEFAULT_EMUNOISE        0x00000000
+#define C0C_DEFAULT_ADDRTTO         0x00000000
+#define C0C_DEFAULT_ADDRITO         0x00000000
 
 #define C0C_PROBABILITY_ONE         100000000
 

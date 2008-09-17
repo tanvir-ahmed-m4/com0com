@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.46  2008/09/17 07:58:32  vfrolov
+ * Added AddRTTO and AddRITO parameters
+ *
  * Revision 1.45  2008/07/11 10:38:00  vfrolov
  * Added nonstandard ability to enable LSR insertion on BREAK OFF
  *
@@ -279,10 +282,12 @@ typedef struct _C0C_IO_PORT {
 
   KTIMER                  timerReadTotal;
   KDPC                    timerReadTotalDpc;
+  ULONG                   addRTTO;
 
   KTIMER                  timerReadInterval;
   KDPC                    timerReadIntervalDpc;
   LARGE_INTEGER           timeoutInterval;
+  ULONG                   addRITO;
 
   KTIMER                  timerWriteTotal;
   KDPC                    timerWriteTotalDpc;

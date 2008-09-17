@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.35  2008/09/17 07:58:32  vfrolov
+ * Added AddRTTO and AddRITO parameters
+ *
  * Revision 1.34  2008/06/26 13:37:10  vfrolov
  * Implemented noise emulation
  *
@@ -193,6 +196,7 @@ NTSTATUS AddFdoPort(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
   PC0C_PDOPORT_EXTENSION pPhDevExt;
   ULONG emuBR, emuOverrun, plugInMode, exclusiveMode, hiddenMode;
   ULONG brokeCharsProbability;
+  ULONG addRTTO, addRITO;
   ULONG pinCTS, pinDSR, pinDCD, pinRI;
   UNICODE_STRING ntDeviceName;
   PWCHAR pPortName;
@@ -276,9 +280,11 @@ NTSTATUS AddFdoPort(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
     pinDCD = C0C_DEFAULT_PIN_DCD;
     pinRI = C0C_DEFAULT_PIN_RI;
     brokeCharsProbability = C0C_DEFAULT_EMUNOISE;
+    addRTTO = C0C_DEFAULT_ADDRTTO;
+    addRITO = C0C_DEFAULT_ADDRITO;
 
     if (NT_SUCCESS(status)) {
-      RTL_QUERY_REGISTRY_TABLE queryTable[11];
+      RTL_QUERY_REGISTRY_TABLE queryTable[13];
       int i;
 
       RtlZeroMemory(queryTable, sizeof(queryTable));
@@ -338,6 +344,16 @@ NTSTATUS AddFdoPort(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
       queryTable[i].Name          = L"EmuNoise";
       queryTable[i].EntryContext  = &brokeCharsProbability;
       queryTable[i].DefaultData   = &brokeCharsProbability;
+
+      i++;
+      queryTable[i].Name          = L"AddRTTO";
+      queryTable[i].EntryContext  = &addRTTO;
+      queryTable[i].DefaultData   = &addRTTO;
+
+      i++;
+      queryTable[i].Name          = L"AddRITO";
+      queryTable[i].EntryContext  = &addRITO;
+      queryTable[i].DefaultData   = &addRITO;
 
       RtlQueryRegistryValues(
           RTL_REGISTRY_ABSOLUTE,
@@ -416,6 +432,20 @@ NTSTATUS AddFdoPort(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
   }
 
   SetHiddenMode(pDevExt, hiddenMode);
+
+  pDevExt->pIoPortLocal->addRTTO = addRTTO;
+
+#if DBG
+  if (addRTTO)
+    Trace0((PC0C_COMMON_EXTENSION)pDevExt, L"Enabled ReadTotalTimeoutConstant increase");
+#endif /* DBG */
+
+  pDevExt->pIoPortLocal->addRITO = addRITO;
+
+#if DBG
+  if (addRITO)
+    Trace0((PC0C_COMMON_EXTENSION)pDevExt, L"Enabled ReadIntervalTimeout increase");
+#endif /* DBG */
 
   AllocTimeouts(pDevExt->pIoPortLocal);
 

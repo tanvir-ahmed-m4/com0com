@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.8  2008/09/17 07:58:32  vfrolov
+ * Added AddRTTO and AddRITO parameters
+ *
  * Revision 1.7  2008/06/26 13:39:19  vfrolov
  * Implemented noise emulation
  *
@@ -71,6 +74,7 @@ class PortParameters {
     BOOL SetFlag(const char *pNewVal, DWORD bit);
     BOOL SetPin(const char *pNewVal, DWORD bit);
     BOOL SetProbability(const char *pNewVal, DWORD bit);
+    BOOL SetUnsigned(const char *pNewVal, DWORD bit);
     BOOL SetBit(const char *pVal, const Bit &bit);
 
     DWORD maskChanged;
@@ -86,6 +90,8 @@ class PortParameters {
     DWORD pinDCD;
     DWORD pinRI;
     DWORD emuNoise;
+    DWORD addRTTO;
+    DWORD addRITO;
 
     char service[20];
     char phPortName[20];
