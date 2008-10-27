@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.16  2008/10/27 15:13:58  vfrolov
+ * Fixed buffer overrun bug
+ *
  * Revision 1.15  2008/09/12 10:07:50  vfrolov
  * Fixed LSR insertion
  *
@@ -466,7 +469,7 @@ SIZE_T WriteToBuffer(
               pBuf, pFlowFilter,
               NULL, 0,
               pWriteBuf, writeLength,
-              &writeDone, pOverrun);
+              pOverrun, &writeDone);
 
           writeDoneTotal += writeDone;
         }
