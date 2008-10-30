@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.8  2008/10/30 07:54:37  vfrolov
+ * Improved BREAK emulation
+ *
  * Revision 1.7  2008/06/26 13:37:10  vfrolov
  * Implemented noise emulation
  *
@@ -55,6 +58,7 @@ typedef struct _C0C_FLOW_FILTER {
   UCHAR flags;
 
   UCHAR lastXonXoff;
+  SIZE_T rxCount;
 } C0C_FLOW_FILTER, *PC0C_FLOW_FILTER;
 
 

@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.2  2008/10/30 07:54:37  vfrolov
+ * Improved BREAK emulation
+ *
  * Revision 1.1  2008/06/26 13:37:10  vfrolov
  * Implemented noise emulation
  *
@@ -28,6 +31,7 @@
 #define _C0C_NOISE_H_
 
 VOID BreakError(PC0C_IO_PORT pReadIoPort, PUCHAR pLsr);
+UCHAR GarbageChar(PC0C_IO_PORT pWriteIoPort, PC0C_IO_PORT pReadIoPort, PUCHAR pLsr);
 VOID BrokeChar(PC0C_IO_PORT pWriteIoPort, PC0C_IO_PORT pReadIoPort, PUCHAR pChar, PUCHAR pLsr);
 SIZE_T GetBrokenChars(ULONG brokeCharsProbability, SIZE_T chars);
 

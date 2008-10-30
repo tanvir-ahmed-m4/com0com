@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.47  2008/10/30 07:54:37  vfrolov
+ * Improved BREAK emulation
+ *
  * Revision 1.46  2008/09/17 07:58:32  vfrolov
  * Added AddRTTO and AddRITO parameters
  *
@@ -349,6 +352,7 @@ typedef struct _C0C_IO_PORT {
   ULONG                   writeHolding;
   ULONG                   writeHoldingRemote;
   BOOLEAN                 sendBreak;
+  BOOLEAN                 rcvdBreak;
   BOOLEAN                 tryWrite;
 
   BOOLEAN                 isOpen;

@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.40  2008/10/30 07:54:37  vfrolov
+ * Improved BREAK emulation
+ *
  * Revision 1.39  2008/09/12 10:07:50  vfrolov
  * Fixed LSR insertion
  *
@@ -717,12 +720,8 @@ NTSTATUS FdoPortIoCtl(
                 lsr |= 0x40;  /* transmit holding register empty and line is idle */
             }
 
-            if ((optsAndBits & C0CE_INSERT_ENABLE_LSR_BI) != 0 &&
-                (pIoPortRemote->writeHolding & SERIAL_TX_WAITING_ON_BREAK) != 0 &&
-                !pIoPortRemote->sendBreak)
-            {
+            if ((optsAndBits & C0CE_INSERT_ENABLE_LSR_BI) != 0 && pIoPortLocal->rcvdBreak)
               lsr |= 0x10;  /* break interrupt indicator */
-            }
 
             *pSysBuf++ = escapeChar;
             *pSysBuf++ = SERIAL_LSRMST_LSR_NODATA;

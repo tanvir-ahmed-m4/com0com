@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.12  2008/10/30 07:54:37  vfrolov
+ * Improved BREAK emulation
+ *
  * Revision 1.11  2008/08/25 14:18:58  vfrolov
  * Fixed SERIAL_TRANSMIT_TOGGLE
  *
@@ -412,6 +415,8 @@ VOID SetBreakHolding(PC0C_IO_PORT pIoPort, BOOLEAN on, PLIST_ENTRY pQueueToCompl
       pIoPort->sendBreak = FALSE;
 
       pIoPortRead = pIoPort->pIoPortRemote;
+
+      pIoPortRead->rcvdBreak = FALSE;
 
       if (pIoPortRead->escapeChar && (pIoPortRead->insertMask & C0CE_INSERT_ENABLE_LSR_BI)) {
         UCHAR lsr = 0;
