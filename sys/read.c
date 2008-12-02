@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2004-2006 Vyacheslav Frolov
+ * Copyright (c) 2004-2008 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.7  2008/12/02 16:21:11  vfrolov
+ * Separated tracing and debuging
+ *
  * Revision 1.6  2006/06/23 11:44:52  vfrolov
  * Mass replacement pDevExt by pIoPort
  *
@@ -83,9 +86,9 @@ NTSTATUS c0cRead(IN PDEVICE_OBJECT pDevObj, IN PIRP pIrp)
   NTSTATUS status;
   PC0C_COMMON_EXTENSION pDevExt = pDevObj->DeviceExtension;
 
-#if DBG
+#if ENABLE_TRACING
   ULONG code = IoGetCurrentIrpStackLocation(pIrp)->MajorFunction;
-#endif /* DBG */
+#endif /* ENABLE_TRACING */
 
   TraceIrp("c0cRead", pIrp, NULL, TRACE_FLAG_PARAMS);
 
@@ -100,8 +103,10 @@ NTSTATUS c0cRead(IN PDEVICE_OBJECT pDevObj, IN PIRP pIrp)
     IoCompleteRequest(pIrp, IO_NO_INCREMENT);
   }
 
+#if ENABLE_TRACING
   if (!NT_SUCCESS(status))
     TraceCode(pDevExt, "IRP_MJ_", codeNameTableIrpMj, code, &status);
+#endif /* ENABLE_TRACING */
 
   return status;
 }
