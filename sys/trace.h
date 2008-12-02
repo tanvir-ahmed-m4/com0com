@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.13  2008/12/02 16:10:09  vfrolov
+ * Separated tracing and debuging
+ *
  * Revision 1.12  2008/05/04 09:51:45  vfrolov
  * Implemented HiddenMode option
  *
@@ -61,15 +64,7 @@
 #ifndef _TRACE_H_
 #define _TRACE_H_
 
-#if DBG
-
-#define HALT_UNLESS3(exp, p1, p2, p3) \
-  if (!(exp)) \
-    KeBugCheckEx(0xDEADC0CD, (FILE_ID << 16) + __LINE__, p1, p2, p3)
-
-#define HALT_UNLESS2(exp, p1, p2) HALT_UNLESS3(exp, p1, p2, 0)
-#define HALT_UNLESS1(exp, p1)     HALT_UNLESS3(exp, p1, 0, 0)
-#define HALT_UNLESS(exp)          HALT_UNLESS3(exp, 0, 0, 0)
+#if ENABLE_TRACING
 
 #define TRACE_FLAG_PARAMS         0x0001
 #define TRACE_FLAG_RESULTS        0x0002
@@ -147,12 +142,8 @@ CODE2NAME codeNameTableShowPort[];
 FIELD2NAME codeNameTableControlHandShake[];
 FIELD2NAME codeNameTableFlowReplace[];
 
-#else /* DBG */
+#else /* ENABLE_TRACING */
 
-#define HALT_UNLESS3(exp, p1, p2, p3)
-#define HALT_UNLESS2(exp, p1, p2)
-#define HALT_UNLESS1(exp, p1)
-#define HALT_UNLESS(exp)
 #define TraceOpen(a1, a2)
 #define TraceClose()
 #define Trace0(a1, a2)
@@ -162,6 +153,6 @@ FIELD2NAME codeNameTableFlowReplace[];
 #define TraceModemStatus(a1)
 #define TraceIrp(a1, a2, a3, a4)
 
-#endif /* DBG */
+#endif /* ENABLE_TRACING */
 
 #endif /* _TRACE_H_ */

@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.36  2008/12/02 16:10:08  vfrolov
+ * Separated tracing and debuging
+ *
  * Revision 1.35  2008/09/17 07:58:32  vfrolov
  * Added AddRTTO and AddRITO parameters
  *
@@ -435,17 +438,17 @@ NTSTATUS AddFdoPort(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
 
   pDevExt->pIoPortLocal->addRTTO = addRTTO;
 
-#if DBG
+#if ENABLE_TRACING
   if (addRTTO)
     Trace0((PC0C_COMMON_EXTENSION)pDevExt, L"Enabled ReadTotalTimeoutConstant increase");
-#endif /* DBG */
+#endif /* ENABLE_TRACING */
 
   pDevExt->pIoPortLocal->addRITO = addRITO;
 
-#if DBG
+#if ENABLE_TRACING
   if (addRITO)
     Trace0((PC0C_COMMON_EXTENSION)pDevExt, L"Enabled ReadIntervalTimeout increase");
-#endif /* DBG */
+#endif /* ENABLE_TRACING */
 
   AllocTimeouts(pDevExt->pIoPortLocal);
 
@@ -472,12 +475,12 @@ NTSTATUS AddFdoPort(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
 
   pDevExt->pIoPortLocal->brokeCharsProbability = brokeCharsProbability;
 
-#if DBG
+#if ENABLE_TRACING
   if (brokeCharsProbability)
     Trace0((PC0C_COMMON_EXTENSION)pDevExt, L"Enabled noise emulation");
   else
     Trace0((PC0C_COMMON_EXTENSION)pDevExt, L"Disabled noise emulation");
-#endif /* DBG */
+#endif /* ENABLE_TRACING */
 
   pDevExt->pLowDevObj = IoAttachDeviceToDeviceStack(pNewDevObj, pPhDevObj);
 

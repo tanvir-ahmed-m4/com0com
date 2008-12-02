@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.32  2008/12/02 16:10:09  vfrolov
+ * Separated tracing and debuging
+ *
  * Revision 1.31  2008/06/10 11:24:20  vfrolov
  * Disabled tracing if traceFileName is empty
  *
@@ -125,7 +128,7 @@
 
 #include "precomp.h"
 
-#if DBG
+#if ENABLE_TRACING
 
 #include "version.h"
 
@@ -1718,6 +1721,6 @@ VOID TraceIrp(
 }
 /********************************************************************/
 
-#else /* DBG */
+#else /* ENABLE_TRACING */
   #pragma warning(disable:4206) // nonstandard extension used : translation unit is empty
-#endif /* DBG */
+#endif /* ENABLE_TRACING */

@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2004-2007 Vyacheslav Frolov
+ * Copyright (c) 2004-2008 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.10  2008/12/02 16:10:09  vfrolov
+ * Separated tracing and debuging
+ *
  * Revision 1.9  2007/02/20 12:05:11  vfrolov
  * Implemented IOCTL_SERIAL_XOFF_COUNTER
  * Fixed cancel and timeout routines
@@ -123,9 +126,9 @@ NTSTATUS c0cWrite(IN PDEVICE_OBJECT pDevObj, IN PIRP pIrp)
   NTSTATUS status;
   PC0C_COMMON_EXTENSION pDevExt = pDevObj->DeviceExtension;
 
-#if DBG
+#if ENABLE_TRACING
   ULONG code = IoGetCurrentIrpStackLocation(pIrp)->MajorFunction;
-#endif /* DBG */
+#endif /* ENABLE_TRACING */
 
   TraceIrp("c0cWrite", pIrp, NULL, TRACE_FLAG_PARAMS);
 

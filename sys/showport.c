@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.3  2008/12/02 16:10:09  vfrolov
+ * Separated tracing and debuging
+ *
  * Revision 1.2  2008/05/04 09:51:45  vfrolov
  * Implemented HiddenMode option
  *
@@ -255,10 +258,10 @@ VOID SetHiddenMode(IN PC0C_FDOPORT_EXTENSION pDevExt, ULONG hiddenMode)
   else
     pDevExt->hide = (UCHAR)hiddenMode;
 
-#if DBG
+#if ENABLE_TRACING
   if (pDevExt->hide)
     TraceMask((PC0C_COMMON_EXTENSION)pDevExt, "Enabled hidden mode ", codeNameTableShowPort, pDevExt->hide);
   else
     Trace0((PC0C_COMMON_EXTENSION)pDevExt, L"Disabled hidden mode");
-#endif /* DBG */
+#endif /* ENABLE_TRACING */
 }
