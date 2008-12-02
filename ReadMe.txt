@@ -18,7 +18,7 @@ requires a COM port to communicate with a device and other port is
 used by device emulation program.
 
 For example, to send/receive faxes over IP you can connect Windows Fax
-application to CNCA0 port and t38modem (part of the OpenH323 project)
+application to CNCA0 port and t38modem (http://t38modem.sourceforge.net/)
 to CNCB0 port. In this case the t38modem is a fax modem emulation program.
 
 The homepage for com0com project is http://com0com.sourceforge.net/.
@@ -190,3 +190,25 @@ A. In the device manager, the driver properties page shows the version and date
    of the com0com.inf file, while the driver details page shows a version of
    com0com.sys file. The version of com0com.sys file is the version that you
    are running.
+
+Q. I'm able to use some application to talk to some hardware using com2tcp when
+   both the com2tcp 'server' and 'client' are running on the same computer.
+   When I try to move the client to a remote computer the application gives me
+   a timeout message and has no settings to increase the timeout. How to fix
+   the problem?
+A. Try to ajust AddRTTO and AddRITO params for application's COM port:
+
+   1. Launch the Setup Command Prompt shortcut.
+   2. Enter the change command, for example:
+
+      command> change CNCA0 AddRTTO=100,AddRITO=100
+
+Q. I would like to be able to add, remove and rename virtual comm ports from my
+   own custom application. Is there an API that I can use or some command line
+   utility that will do the job?
+A. The setupc.exe is a command line utility that will do the job. To get more
+   info enter:
+
+      setupc help
+
+   BTW: The setupg.exe is a GUI wrapper for setupc.exe.
