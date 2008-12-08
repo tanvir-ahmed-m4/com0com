@@ -21,20 +21,30 @@ For example, to send/receive faxes over IP you can connect Windows Fax
 application to CNCA0 port and t38modem (http://t38modem.sourceforge.net/)
 to CNCB0 port. In this case the t38modem is a fax modem emulation program.
 
+In conjunction with the hub4com the com0com allows you to
+  - handle data and signals from a single real serial device by a number of
+    different applications. For example, several applications can share data
+    from one GPS device;
+  - use real serial ports of remote computer like if they exist on the local
+    computer (supports RFC 2217).
+
 The homepage for com0com project is http://com0com.sourceforge.net/.
 
 
 INSTALLING
 ==========
 
-NOTE (Windows Vista):
+NOTE (Windows Vista/Windows Server 2008):
   Before installing/uninstalling the com0com driver or adding/removing/changing
-  ports on Windows Vista the User Account Control (UAC) should be turned off.
+  ports the User Account Control (UAC) should be turned off (require reboot).
 
-NOTE (x64-based Windows Vista):
+NOTE (x64-based Windows Vista/Windows Server 2008):
   The com0com.sys is a test-signed kernel-mode driver that will not load by
-  default on x64-based Windows Vista. To enable test signing, use the following
-  BCDedit command: bcdedit.exe -set TESTSIGNING ON
+  default. To enable test signing, enter command:
+
+    bcdedit.exe -set TESTSIGNING ON
+
+  and reboot the computer.
 
 NOTE:
   Turning off UAC or enabling test signing will impair computer security.
@@ -212,3 +222,35 @@ A. The setupc.exe is a command line utility that will do the job. To get more
       setupc help
 
    BTW: The setupg.exe is a GUI wrapper for setupc.exe.
+
+Q. I need to use com0com ports with an application that doesn't recognize
+   com0com ports as "real" com ports. It does not see a com0com port even
+   though I have changed it's name to COMx. Is there a com0com settings that
+   will make the port appear to be a "real" com port?
+A. No, there is not, but you can "deceive" the application this way:
+
+   1. With the "Add/Remove Hardware" wizard install new standard serial port.
+      You don't need a real serial hardware to do it. Select non conflicted
+      IO/IRQ resources.
+   2. With the "Device Manager" disable the newly created port (let it be
+      COM4).
+   3. Launch the Setup Command Prompt shortcut.
+   4. Install the pair of ports, were one of them has name COM4, for example:
+
+      command> install PortName=COM4 -
+
+      Ignore a warning about the COM4 is "in use" (press Continue).
+
+Q. Is it possible to configure the com0com to randomly corrupt the data? It
+   would be nice to have this feature so that we can test our application
+   robustness.
+A. Yes, it's possible by setting EmuNoise parameter:
+
+   1. Launch the Setup Command Prompt shortcut.
+   2. Enter the change command, for example:
+
+      command> change CNCA0 EmuNoise=0.00001,EmuBR=yes,EmuOverrun=yes
+      command> change CNCB0 EmuNoise=0.00001,EmuBR=yes,EmuOverrun=yes
+
+   Now each character frame (including idle frames) will be corrupted with
+   probability 0.00001.
