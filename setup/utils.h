@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2006-2007 Vyacheslav Frolov
+ * Copyright (c) 2006-2008 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.6  2008/12/24 15:22:44  vfrolov
+ * Added BusyMask::Clear() and BusyMask::DelNum()
+ *
  * Revision 1.5  2007/09/25 12:28:22  vfrolov
  * Implemented Stack class
  *
@@ -48,9 +51,11 @@ BOOL StrToInt(const char *pStr, int *pNum);
 class BusyMask {
 public:
   BusyMask() : pBusyMask(NULL), busyMaskLen(0) {}
-  ~BusyMask();
+  ~BusyMask() { Clear(); }
 
+  void Clear();
   BOOL AddNum(int num);
+  void DelNum(int num);
   BOOL IsFreeNum(int num) const;
   int GetFirstFreeNum() const;
 private:
