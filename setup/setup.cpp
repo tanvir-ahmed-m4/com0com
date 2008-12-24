@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.26  2008/12/24 15:32:22  vfrolov
+ * Added logging COM port numbers in the COM port database
+ *
  * Revision 1.25  2008/09/12 12:21:49  vfrolov
  * Added --silent option
  *
@@ -110,7 +113,7 @@
 #include "msg.h"
 #include "utils.h"
 #include "portnum.h"
-#include <msports.h>
+#include "comdb.h"
 
 #define TEXT_PREF
 #include "../include/com0com.h"
@@ -149,8 +152,7 @@ static BOOL IsValidPortNum(int num)
 }
 ///////////////////////////////////////////////////////////////
 static BOOL IsValidPortName(
-    const char *pPortName,
-    const char *pPhDevName)
+    const char *pPortName)
 {
   int res;
 
@@ -170,83 +172,37 @@ static BOOL IsValidPortName(
     char phDevName[80];
 
     if (!QueryDosDevice(pPortName, phDevName, sizeof(phDevName)/sizeof(phDevName[0]))) {
-      if (GetLastError() != ERROR_INSUFFICIENT_BUFFER) {
-        if ((pPortName[0] == 'C' || pPortName[0] == 'c') &&
-            (pPortName[1] == 'O' || pPortName[1] == 'o') &&
-            (pPortName[2] == 'M' || pPortName[2] == 'm'))
-        {
-          int num;
-
-          if (StrToInt(pPortName + 3, &num) && num > 0) {
-            HCOMDB  hComDB;
-            LONG err;
-
-            err = ComDBOpen(&hComDB);
-
-            if (err != ERROR_SUCCESS) {
-              res = ShowLastError(MB_CANCELTRYCONTINUE, "ComDBOpen()");
-              continue;
-            }
-
-            DWORD maxPortsReported;
-
-            err = ComDBGetCurrentPortUsage(hComDB, NULL, 0, CDB_REPORT_BYTES, &maxPortsReported);
-
-            if (err != ERROR_SUCCESS) {
-              ComDBClose(hComDB);
-              res = ShowError(MB_CANCELTRYCONTINUE, err, "ComDBGetCurrentPortUsage()");
-              continue;
-            }
-
-            if (maxPortsReported < (DWORD)num) {
-              ComDBClose(hComDB);
-              continue;
-            }
-
-            if (maxPortsReported > (DWORD)num)
-              maxPortsReported = num;
-
-            BYTE *pBuf = (BYTE *)LocalAlloc(LPTR, maxPortsReported);
-
-            if (!pBuf) {
-              ComDBClose(hComDB);
-
-              SetLastError(ERROR_NOT_ENOUGH_MEMORY);
-              res = ShowLastError(MB_CANCELTRYCONTINUE, "LocalAlloc(%lu)", (unsigned long)maxPortsReported);
-              continue;
-            }
-
-            err = ComDBGetCurrentPortUsage(hComDB, pBuf, num, CDB_REPORT_BYTES, &maxPortsReported);
-            ComDBClose(hComDB);
-
-            if (err != ERROR_SUCCESS) {
-              LocalFree(pBuf);
-              res = ShowError(MB_CANCELTRYCONTINUE, err, "ComDBGetCurrentPortUsage()");
-              continue;
-            }
-
-            if (pBuf[num - 1])
-              res = ShowMsg(MB_CANCELTRYCONTINUE,
-                            "The port name %s is already logged as \"in use\"\n"
-                            "in the COM port database.",
-                            pPortName);
-
-            LocalFree(pBuf);
-          }
-        }
+      if (GetLastError() != ERROR_INSUFFICIENT_BUFFER)
         continue;
-      }
 
       phDevName[0] = 0;
     }
-
-    if (pPhDevName && !lstrcmpi(pPhDevName, phDevName))
-      break;
 
     res = ShowMsg(MB_CANCELTRYCONTINUE,
                   "The port name %s is already used for other device %s.",
                   pPortName, phDevName);
 
+  } while (res == IDTRYAGAIN);
+
+  if (res != IDCONTINUE)
+    return FALSE;
+
+  do {
+    res = IDCONTINUE;
+
+    BOOL inUse;
+
+    if (!ComDbGetInUse(pPortName, inUse)) {
+      res = IDCANCEL;
+      continue;
+    }
+
+    if (inUse) {
+      res = ShowMsg(MB_CANCELTRYCONTINUE,
+                    "The port name %s is already logged as \"in use\"\n"
+                    "in the COM port database.",
+                    pPortName);
+    }
   } while (res == IDTRYAGAIN);
 
   if (res != IDCONTINUE)
@@ -309,11 +265,12 @@ static VOID CleanDevPropertiesStack(InfFile &infFile, Stack &stack, BOOL enable,
 ///////////////////////////////////////////////////////////////
 struct ChangeDeviceParams {
   ChangeDeviceParams(InfFile &_infFile, const char *_pPhPortName, const char *_pParameters)
-    : pInfFile(&_infFile), pPhPortName(_pPhPortName), pParameters(_pParameters) {}
+    : pInfFile(&_infFile), pPhPortName(_pPhPortName), pParameters(_pParameters), changed(FALSE) {}
 
   InfFile *pInfFile;
   const char *pPhPortName;
   const char *pParameters;
+  BOOL changed;
 };
 
 static BOOL ChangeDevice(
@@ -347,6 +304,10 @@ static BOOL ChangeDevice(
 
       if (err == ERROR_SUCCESS) {
         if (pPhPortName && !lstrcmpi(pPhPortName, phPortName)) {
+          char portNameOld[20];
+
+          portParameters.FillPortName(portNameOld, sizeof(portNameOld)/sizeof(portNameOld[0]));
+
           portParameters.ParseParametersStr(pParameters);
 
           char phDevName[40];
@@ -358,10 +319,14 @@ static BOOL ChangeDevice(
 
           portParameters.FillPortName(portName, sizeof(portName)/sizeof(portName[0]));
 
-          if (IsValidPortName(portName, phDevName) && portParameters.Changed()) {
+          if (portParameters.Changed() &&
+              (!lstrcmpi(portName, portNameOld) || IsValidPortName(portName)))
+          {
             err = portParameters.Save();
 
             if (err == ERROR_SUCCESS) {
+              ((ChangeDeviceParams *)pParam)->changed = TRUE;
+
               portParameters.FillParametersStr(buf, sizeof(buf)/sizeof(buf[0]), detailPrms);
               Trace("change %s %s\n", phPortName, buf);
 
@@ -401,6 +366,9 @@ int Change(InfFile &infFile, const char *pPhPortName, const char *pParameters)
     return 1;
 
   EnumDevices(infFile, &devProperties, &rebootRequired, ChangeDevice, &params);
+
+  if (params.changed)
+    ComDbSync(infFile);
 
   if (rebootRequired)
     SetupPromptReboot(NULL, NULL, FALSE);
@@ -473,6 +441,8 @@ int Remove(InfFile &infFile, int num)
     }
   }
 
+  ComDbSync(infFile);
+
   if (rebootRequired)
     SetupPromptReboot(NULL, NULL, FALSE);
 
@@ -529,6 +499,8 @@ int Reload(InfFile &infFile, BOOL update)
   }
 
   CleanDevPropertiesStack(infFile, stack, TRUE, &rebootRequired);
+
+  ComDbSync(infFile);
 
   if (rebootRequired || rr)
     SetupPromptReboot(NULL, NULL, FALSE);
@@ -690,7 +662,7 @@ int Install(InfFile &infFile, const char *pParametersA, const char *pParametersB
 
       portParameters.FillPortName(portName[j], sizeof(portName[j])/sizeof(portName[j][0]));
 
-      if (!IsValidPortName(portName[j], NULL))
+      if (!IsValidPortName(portName[j]))
         goto err;
 
       if (portParameters.Changed()) {
@@ -721,6 +693,8 @@ int Install(InfFile &infFile, const char *pParametersA, const char *pParametersB
 
   if (!InstallBusDevice(infFile, i))
     goto err;
+
+  ComDbSync(infFile);
 
   return  0;
 
@@ -758,6 +732,8 @@ int Uninstall(InfFile &infFile)
 
   if (!RemoveDevices(infFile, NULL, NULL))
     return 1;
+
+  ComDbSync(infFile);
 
   if (rebootRequired) {
     SetupPromptReboot(NULL, NULL, FALSE);
