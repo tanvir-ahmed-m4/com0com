@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.27  2008/12/25 16:58:45  vfrolov
+ * Implemented busynames command
+ *
  * Revision 1.26  2008/12/24 15:32:22  vfrolov
  * Added logging COM port numbers in the COM port database
  *
@@ -921,6 +924,158 @@ int Uninstall(InfFile &infFile)
   return 0;
 }
 ///////////////////////////////////////////////////////////////
+int ShowBusyNames(const char *pPattern)
+{
+  char *pPatternUp;
+  SIZE_T sizePattern;
+
+  sizePattern = (lstrlen(pPattern) + 1) * sizeof(pPatternUp[0]);
+
+  pPatternUp = (char *)LocalAlloc(LPTR, sizePattern);
+
+  if (!pPatternUp) {
+    ShowError(MB_OK|MB_ICONSTOP, ERROR_NOT_ENOUGH_MEMORY, "LocalAlloc(%lu)", (unsigned long)sizePattern);
+    return 1;
+  }
+
+  lstrcpy(pPatternUp, pPattern);
+  CharUpper(pPatternUp);
+
+  char *pNames = NULL;
+  DWORD iNamesEnd = 0;
+
+  for (int i = 0 ; i < 2 ; i++) {
+    char *pBuf = NULL;
+
+    for (DWORD size = 1024 ; size >= 1024 ; size += 1024) {
+      char *pBufNew;
+
+      if (!pBuf)
+        pBufNew = (char *)LocalAlloc(LPTR, size);
+      else
+        pBufNew = (char *)LocalReAlloc(pBuf, size, LMEM_ZEROINIT|LMEM_MOVEABLE);
+
+      if (!pBufNew) {
+        if (pBuf) {
+          LocalFree(pBuf);
+          pBuf = NULL;
+        }
+
+        if (ShowError(MB_OKCANCEL, ERROR_NOT_ENOUGH_MEMORY, "LocalAlloc(%lu)", (unsigned long)size) == IDCANCEL) {
+          if (pNames)
+            LocalFree(pNames);
+
+          LocalFree(pPatternUp);
+          return 1;
+        }
+
+        break;
+      }
+
+      pBuf = pBufNew;
+
+      DWORD res = (i != 0
+                   ? QueryDosDevice(NULL, pBuf, size/sizeof(pBuf[0]))
+                   : ComDbQueryNames(pBuf, size/sizeof(pBuf[0])));
+
+      if (!res) {
+        if (GetLastError() == ERROR_INSUFFICIENT_BUFFER)
+          continue;
+
+        LocalFree(pBuf);
+        pBuf = NULL;
+
+        if (GetLastError() == ERROR_FILE_NOT_FOUND)
+          continue;
+
+        if (ShowLastError(MB_OKCANCEL,
+            i != 0 ? "QueryDosDevice()" : "ComDbNames()") == IDCANCEL)
+        {
+          if (pNames)
+            LocalFree(pNames);
+
+          LocalFree(pPatternUp);
+          return 1;
+        }
+
+        break;
+      }
+
+      // Workaround for succeeds even if buffer cannot hold all returned information
+
+      if ((size/sizeof(pBuf[0]) - res) > 100)
+        break;
+    }
+
+    if (pBuf) {
+      for (char *pName = pBuf ; *pName ; pName += lstrlen(pName) + 1) {
+        static const char strangeChars[] = ":#&$?!{}()[]/\\ \t\r\n";
+
+        if (strpbrk(pName, strangeChars))
+          continue;  // skip strange names
+
+        CharUpper(pName);
+
+        if (!MatchPattern(pPatternUp, pName))
+          continue;
+
+        if (pNames) {
+          char *pNamesName;
+
+          for (pNamesName = pNames ; *pNamesName ; pNamesName += lstrlen(pNamesName) + 1) {
+            if (!lstrcmp(pNamesName, pName))
+              break;
+          }
+
+          if (*pNamesName)
+            continue;
+        }
+
+        DWORD iNamesEndNew = iNamesEnd + lstrlen(pName) + 1;
+        DWORD sizeNamesNew = (iNamesEndNew + 1) * sizeof(pNames[0]);
+
+        char *pNamesNew;
+
+        if (!pNames)
+          pNamesNew = (char *)LocalAlloc(LPTR, sizeNamesNew);
+        else
+          pNamesNew = (char *)LocalReAlloc(pNames, sizeNamesNew, LMEM_ZEROINIT|LMEM_MOVEABLE);
+
+        if (!pNamesNew) {
+          if (ShowError(MB_OKCANCEL, ERROR_NOT_ENOUGH_MEMORY, "LocalAlloc(%lu)", (unsigned long)size) == IDCANCEL) {
+            if (pNames)
+              LocalFree(pNames);
+
+            LocalFree(pPatternUp);
+            return 1;
+          }
+
+          break;
+        }
+
+        pNames = pNamesNew;
+
+        lstrcpy(pNames + iNamesEnd, pName);
+
+        iNamesEnd = iNamesEndNew;
+      }
+
+      LocalFree(pBuf);
+    }
+  }
+
+  if (pNames) {
+    for (char *pName = pNames ; *pName ; pName += lstrlen(pName) + 1)
+      Trace("%s\n", pName);
+
+    LocalFree(pNames);
+  }
+
+  LocalFree(pPatternUp);
+
+  return 0;
+}
+///////////////////////////////////////////////////////////////
 int Help(const char *pProgName)
 {
   SetTitle(C0C_SETUP_TITLE " (HELP)");
@@ -962,6 +1117,8 @@ int Help(const char *pProgName)
     "  update                       - update driver\n"
     "  reload                       - reload driver\n"
     "  uninstall                    - uninstall all ports and the driver\n"
+    "  busynames <pattern>          - show names that already in use and match the\n"
+    "                                 <pattern> (wildcards: '*' and '?')\n"
     "  quit                         - quit\n"
     "  help                         - print this help\n"
     );
@@ -1006,6 +1163,9 @@ int Help(const char *pProgName)
     , pProgName, (pProgName && *pProgName) ? " " : "");
   ConsoleWrite(
     "  %s%suninstall\n"
+    , pProgName, (pProgName && *pProgName) ? " " : "");
+  ConsoleWrite(
+    "  %s%busynames COM?*\n"
     , pProgName, (pProgName && *pProgName) ? " " : "");
   ConsoleWrite(
     "\n");
@@ -1060,6 +1220,11 @@ int Main(int argc, const char* argv[])
   else
   if (argc == 2 && !lstrcmpi(argv[1], "quit")) {
     return 0;
+  }
+  else
+  if (argc == 3 && !lstrcmpi(argv[1], "busynames")) {
+    SetTitle(C0C_SETUP_TITLE " (BUSY NAMES)");
+    return ShowBusyNames(argv[2]);
   }
 
   InfFile infFile(C0C_INF_NAME, C0C_INF_NAME);
