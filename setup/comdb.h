@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.2  2008/12/25 16:57:33  vfrolov
+ * Added ComDbQueryNames()
+ *
  * Revision 1.1  2008/12/24 15:20:35  vfrolov
  * Initial revision
  *
@@ -32,6 +35,7 @@ class InfFile;
 ///////////////////////////////////////////////////////////////
 BOOL ComDbGetInUse(const char *pPortName, BOOL &inUse);
 void ComDbSync(InfFile &infFile);
+DWORD ComDbQueryNames(char *pBuf, DWORD maxChars);
 ///////////////////////////////////////////////////////////////
 
 #endif /* _C0C_COMDB_H_ */
