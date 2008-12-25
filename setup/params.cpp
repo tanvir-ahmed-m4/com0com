@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.15  2008/12/25 16:55:23  vfrolov
+ * Added converting portnames to uppercase
+ *
  * Revision 1.14  2008/12/02 11:54:28  vfrolov
  * Fixed typo
  *
@@ -149,6 +152,7 @@ BOOL PortParameters::SetPortName(const char *pNewPortName)
 {
   if (lstrcmpi(portName, pNewPortName)) {
     SNPRINTF(portName, sizeof(portName)/sizeof(portName[0]), "%s", pNewPortName);
+    CharUpper(portName);
     maskChanged |= m_portName;
   }
 
