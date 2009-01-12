@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2007 Vyacheslav Frolov
+ * Copyright (c) 2007-2009 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,9 +19,11 @@
  *
  *
  * $Log$
+ * Revision 1.2  2009/01/12 13:04:07  vfrolov
+ * Added red painting InUse portnames
+ *
  * Revision 1.1  2007/10/31 10:16:55  vfrolov
  * Initial revision
- *
  *
  */
 
@@ -56,10 +58,13 @@ namespace SetupApp {
       String ^AddPair();
       void RemovePair(String ^keyPair);
       void ChangePair(String ^keyPair, PortPair ^pairChanges);
+      bool IsValidName(String ^name);
 
     private:
       String ^ParseLine(String ^line);
+      void LoadBusyNames();
 
+      array<String ^> ^busyNames;
       System::Windows::Forms::Control ^parent;
   };
 }
