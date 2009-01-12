@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2006-2008 Vyacheslav Frolov
+ * Copyright (c) 2006-2009 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.14  2009/01/12 13:16:20  vfrolov
+ * Added driver updating
+ *
  * Revision 1.13  2008/09/12 12:29:53  vfrolov
  * Added --silent option
  *
@@ -241,6 +244,15 @@ Section "com0com" sec_com0com
   WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\com0com" "NoRepair" 1
 
   WriteUninstaller "uninstall.exe"
+
+  GetTempFileName $0
+
+  StrCpy $1 ""
+  IfSilent 0 +2
+  StrCpy $1 "--silent"
+
+  ExecWait "setupc.exe $1 --output $0 update"
+  !insertmacro MoveFileToDetails $0
 
 SectionEnd
 
