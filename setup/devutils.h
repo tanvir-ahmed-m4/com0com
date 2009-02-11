@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2006-2007 Vyacheslav Frolov
+ * Copyright (c) 2006-2009 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.7  2009/02/11 07:35:22  vfrolov
+ * Added --no-update option
+ *
  * Revision 1.6  2007/10/01 15:01:35  vfrolov
  * Added pDevInstID parameter to InstallDevice()
  *
@@ -132,7 +135,8 @@ BOOL InstallDevice(
     const char *pDevId,
     const char *pDevInstID,
     PDEVCALLBACK pDevCallBack,
-    void *pCallBackParam);
+    void *pCallBackParam,
+    BOOL update);
 
 ///////////////////////////////////////////////////////////////
 
