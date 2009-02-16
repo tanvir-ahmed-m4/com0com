@@ -182,7 +182,8 @@ A. It's because there is not signed com0com.cat catalog file. It can be created 
    The makecert, pvk2pfx, signtool and certmgr tools can be installed with the
    Platform Software Development Kit (SDK).
 
-Q. How to monitor and get the paired port settings?
+Q. How to monitor and get the paired port settings (baud rate, byte size, parity
+   and stop bits)?
 A. It can be done with extended IOCTL_SERIAL_LSRMST_INSERT. See example in
 
    http://com0com.sourceforge.net/examples/LSRMST_INSERT/tstser.cpp
@@ -254,3 +255,28 @@ A. Yes, it's possible by setting EmuNoise parameter:
 
    Now each character frame (including idle frames) will be corrupted with
    probability 0.00001.
+
+Q. What is the maximum number of port pairs that can be defined?
+A. It depends from your system. The com0com itself has internal limit
+   1000000 port pairs.
+
+Q. In my application, users could be installing up to 250 com port pairs.
+   Initially, the installation is fairly quick, but each additional com port
+   generally takes longer to install than the previous one. It quickly
+   becomes unacceptable for a user to be expected to wait for the installation.
+A. It's because the installing of each next port pair requires to update driver
+   for all installed pairs. You can speed up installing of multiple com port
+   pairs by using install commands with --no-update option and finish them by
+   update command, for example:
+
+      command> --no-update install - -
+      command> --no-update install - -
+      ...
+      command> --no-update install - -
+      command> update
+
+   Another example:
+
+      > cd /D "%ProgramFiles%\com0com"
+      > FOR /L %i IN (0,1,249) DO setupc --no-update install - -
+      > setupc update
