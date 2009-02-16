@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.30  2009/02/16 10:32:56  vfrolov
+ * Added Silent() and PromptReboot()
+ *
  * Revision 1.29  2009/02/11 07:35:22  vfrolov
  * Added --no-update option
  *
@@ -138,7 +141,6 @@
 
 ///////////////////////////////////////////////////////////////
 static BOOL detailPrms = FALSE;
-static BOOL silent = FALSE;
 static BOOL no_update = FALSE;
 ///////////////////////////////////////////////////////////////
 static BOOL IsValidPortNum(int num)
@@ -245,8 +247,8 @@ static VOID SetFriendlyName(
   char friendlyName[80];
 
   SNPRINTF(friendlyName, sizeof(friendlyName)/sizeof(friendlyName[0]),
-           "com0com - bus for serial port pair emulator (%s <-> %s)",
-           portName[0], portName[1]);
+           "com0com - bus for serial port pair emulator %d (%s <-> %s)",
+           num, portName[0], portName[1]);
 
   SetupDiSetDeviceRegistryProperty(hDevInfo, pDevInfoData, SPDRP_FRIENDLYNAME,
                                   (LPBYTE)friendlyName, (lstrlen(friendlyName) + 1) * sizeof(*friendlyName));
@@ -381,7 +383,7 @@ int Change(InfFile &infFile, const char *pPhPortName, const char *pParameters)
     ComDbSync(infFile);
 
   if (rebootRequired)
-    SetupPromptReboot(NULL, NULL, FALSE);
+    PromptReboot();
 
   return 0;
 }
@@ -454,7 +456,7 @@ int Remove(InfFile &infFile, int num)
   ComDbSync(infFile);
 
   if (rebootRequired)
-    SetupPromptReboot(NULL, NULL, FALSE);
+    PromptReboot();
 
   if (res != IDCONTINUE)
     return 1;
@@ -513,7 +515,7 @@ int Reload(InfFile &infFile, BOOL update)
   ComDbSync(infFile);
 
   if (rebootRequired || rr)
-    SetupPromptReboot(NULL, NULL, FALSE);
+    PromptReboot();
 
   return 0;
 }
@@ -530,7 +532,7 @@ int Disable(InfFile &infFile)
     return 1;
 
   if (rebootRequired)
-    SetupPromptReboot(NULL, NULL, FALSE);
+    PromptReboot();
 
   return 0;
 }
@@ -548,7 +550,7 @@ int Enable(InfFile &infFile)
   }
 
   if (rebootRequired)
-    SetupPromptReboot(NULL, NULL, FALSE);
+    PromptReboot();
 
   return  0;
 }
@@ -722,32 +724,34 @@ int Uninstall(InfFile &infFile)
 
   devProperties = DevProperties();
   if (!devProperties.DevId(C0C_PORT_DEVICE_ID))
-    return 1;
+    goto err;
 
-  Stack stack;
+  {
+    Stack stack;
 
-  if (!DisableDevices(infFile, &devProperties, &rebootRequired, &stack)) {
-    CleanDevPropertiesStack(infFile, stack, TRUE, &rebootRequired);
-    return 1;
+    if (!DisableDevices(infFile, &devProperties, &rebootRequired, &stack)) {
+      CleanDevPropertiesStack(infFile, stack, TRUE, &rebootRequired);
+      goto err;
+    }
+
+    CleanDevPropertiesStack(infFile, stack, FALSE, &rebootRequired);
   }
-
-  CleanDevPropertiesStack(infFile, stack, FALSE, &rebootRequired);
 
   devProperties = DevProperties();
   if (!devProperties.DevId(C0C_BUS_DEVICE_ID))
-    return 1;
+    goto err;
 
   if (!RemoveDevices(infFile, &devProperties, &rebootRequired))
-    return 1;
+    goto err;
 
   if (!RemoveDevices(infFile, NULL, NULL))
-    return 1;
+    goto err;
 
   ComDbSync(infFile);
 
   if (rebootRequired) {
-    SetupPromptReboot(NULL, NULL, FALSE);
-    return 0;
+    PromptReboot();
+    goto err;
   }
 
   int res;
@@ -771,7 +775,7 @@ int Uninstall(InfFile &infFile)
 
           if (QueryServiceStatus(hSrv, &srvStatus)) {
             if (srvStatus.dwCurrentState == SERVICE_STOPPED) {
-              if (silent ||
+              if (Silent() ||
                   ShowMsg(MB_YESNO,
                   "The deleting %s service will remove your manual settings.\n"
                   "Would you like to delete service?\n",
@@ -816,7 +820,7 @@ int Uninstall(InfFile &infFile)
     Trace("WARNING: Service %s not deleted\n", C0C_SERVICE);
 
   if (res != IDCONTINUE)
-    return 1;
+    goto err;
 
   do {
     notDeleted = TRUE;
@@ -842,7 +846,7 @@ int Uninstall(InfFile &infFile)
     Trace("WARNING: Key %s not deleted\n", C0C_REGKEY_EVENTLOG);
 
   if (res != IDCONTINUE)
-    return 1;
+    goto err;
 
   do {
     notDeleted = TRUE;
@@ -917,18 +921,24 @@ int Uninstall(InfFile &infFile)
     Trace("WARNING: Class %s not deleted\n", infFile.ClassGUID());
 
   if (res != IDCONTINUE)
-    return 1;
+    goto err;
 
   if (!infFile.UninstallOEMInf())
-    return 1;
+    goto err;
 
   if (!infFile.UninstallFiles(C0C_COPY_DRIVERS_SECTION))
-    return 1;
+    goto err;
 
   if (!InfFile::UninstallAllInfFiles(C0C_CLASS_GUID, NULL, NULL))
-    return 1;
+    goto err;
 
   return 0;
+
+err:
+
+  Trace("\nUninstall not completed!\n");
+
+  return  1;
 }
 ///////////////////////////////////////////////////////////////
 int ShowBusyNames(const char *pPattern)
@@ -1187,8 +1197,8 @@ int Main(int argc, const char* argv[])
   if (!SetOutputFile(NULL))
     return 1;
 
+  Silent(FALSE);
   detailPrms = FALSE;
-  silent = FALSE;
   no_update = FALSE;
 
   while (argc > 1) {
@@ -1210,7 +1220,7 @@ int Main(int argc, const char* argv[])
     }
     else
     if (!strcmp(argv[1], "--silent")) {
-      silent = TRUE;
+      Silent(TRUE);
       argv++;
       argc--;
     }

@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2006-2007 Vyacheslav Frolov
+ * Copyright (c) 2006-2009 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.7  2009/02/16 10:32:56  vfrolov
+ * Added Silent() and PromptReboot()
+ *
  * Revision 1.6  2007/10/19 16:11:56  vfrolov
  * Added ability to redirect console output
  *
@@ -47,8 +50,9 @@
 #include "msg.h"
 #include "utils.h"
 
-char *pOutputFile = NULL;
-char title[80] = "";
+static char *pOutputFile = NULL;
+static char title[80] = "";
+static BOOL silent = FALSE;
 
 ///////////////////////////////////////////////////////////////
 static int ShowMsgDefault(LPCSTR pText, UINT type)
@@ -283,5 +287,23 @@ BOOL SetOutputFile(const char *pFile)
 const char *GetOutputFile()
 {
   return pOutputFile;
+}
+///////////////////////////////////////////////////////////////
+BOOL Silent()
+{
+  return silent;
+}
+///////////////////////////////////////////////////////////////
+void Silent(BOOL val)
+{
+  silent = val;
+}
+///////////////////////////////////////////////////////////////
+void PromptReboot()
+{
+  Trace("\nReboot required.\n");
+
+  if (!silent)
+    SetupPromptReboot(NULL, NULL, FALSE);
 }
 ///////////////////////////////////////////////////////////////
