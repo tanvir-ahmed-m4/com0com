@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2006-2008 Vyacheslav Frolov
+ * Copyright (c) 2006-2009 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.7  2009/02/16 10:36:16  vfrolov
+ * Done --silent option more silent
+ *
  * Revision 1.6  2008/04/02 10:30:26  vfrolov
  * Added check pointer for null
  *
@@ -501,7 +504,10 @@ BOOL InfFile::UninstallAllInfFiles(
       InfFile infFile(infPath, NULL);
 
       if (infFile.Compare(_pClassGUID, _pClass, _pProvider, FALSE)) {
-        if (ShowMsg(MB_YESNO,
+        int res;
+
+        if (!Silent()) {
+          res = ShowMsg(MB_YESNO,
             "The file %s possible should be deleted too.\n"
             "\n"
             "%s:\n"
@@ -514,8 +520,21 @@ BOOL InfFile::UninstallAllInfFiles(
             infFile.Path(),
             infFile.ClassGUID(FALSE),
             infFile.Class(FALSE),
-            infFile.Provider(FALSE)) == IDYES)
-        {
+            infFile.Provider(FALSE));
+        } else {
+          Trace("\nThe file %s possible should be deleted too\n"
+                "  ClassGUID = %s\n"
+                "  Class = %s\n"
+                "  Provider = %s\n",
+                infFile.Path(),
+                infFile.ClassGUID(FALSE),
+                infFile.Class(FALSE),
+                infFile.Provider(FALSE));
+
+          res = IDNO;
+        }
+
+        if (res == IDYES) {
           Trace("\n");
           UninstallInf(infFile.Path());
         }

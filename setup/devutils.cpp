@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.11  2009/02/16 10:36:16  vfrolov
+ * Done --silent option more silent
+ *
  * Revision 1.10  2009/02/11 07:35:21  vfrolov
  * Added --no-update option
  *
@@ -240,6 +243,19 @@ static BOOL UpdateRebootRequired(HDEVINFO hDevInfo, PSP_DEVINFO_DATA pDevInfoDat
   if (*pRebootRequired)
     return TRUE;
 
+  ULONG status = 0;
+  ULONG problem = 0;
+
+  *pRebootRequired = 
+      CM_Get_DevNode_Status(&status, &problem, pDevInfoData->DevInst, 0) == CR_SUCCESS &&
+      (status & DN_NEED_RESTART) != 0;
+
+  //if (*pRebootRequired)
+  //  Trace("Enumerated status=0x%lX problem=0x%lX\n", status, problem);
+
+  if (*pRebootRequired)
+    return TRUE;
+
   SP_DEVINSTALL_PARAMS installParams;
 
   memset(&installParams, 0, sizeof(installParams));
@@ -251,6 +267,9 @@ static BOOL UpdateRebootRequired(HDEVINFO hDevInfo, PSP_DEVINFO_DATA pDevInfoDat
   }
 
   *pRebootRequired = (installParams.Flags & DI_NEEDREBOOT) ? TRUE : FALSE;
+
+  //if (*pRebootRequired)
+  //  Trace("Enumerated Flags=0x%lX\n", installParams.Flags);
 
   return TRUE;
 }
@@ -298,7 +317,7 @@ static BOOL IsEnabled(PSP_DEVINFO_DATA pDevInfoData)
   if (CM_Get_DevNode_Status(&status, &problem, pDevInfoData->DevInst, 0) != CR_SUCCESS)
     return FALSE;
 
-  return (status & DN_HAS_PROBLEM) == 0;
+  return (status & (DN_HAS_PROBLEM|DN_NEED_RESTART)) == 0;
 }
 ///////////////////////////////////////////////////////////////
 static int EnumDevice(HDEVINFO hDevInfo, PSP_DEVINFO_DATA pDevInfoData, PDevParams pDevParams)
@@ -358,6 +377,14 @@ int DisableDevice(
   if (IsDisabled(pDevInfoData))
     return IDCONTINUE;
 
+  BOOL rebootRequired = FALSE;
+
+  if (!UpdateRebootRequired(hDevInfo, pDevInfoData, &rebootRequired))
+    return IDCANCEL;
+
+  //if (rebootRequired && pRebootRequired)
+  //  *pRebootRequired = TRUE;
+
   if (!ChangeState(hDevInfo, pDevInfoData, DICS_DISABLE))
     return IDCANCEL;
 
@@ -366,20 +393,29 @@ int DisableDevice(
         pDevProperties->DevId(),
         pDevProperties->PhObjName());
 
-  if (pRebootRequired && !*pRebootRequired) {
-    BOOL rebootRequired = FALSE;
-
+  if (!rebootRequired) {
     if (!UpdateRebootRequired(hDevInfo, pDevInfoData, &rebootRequired))
       return IDCANCEL;
 
     if (rebootRequired) {
-      int res = ShowMsg(MB_CANCELTRYCONTINUE,
-                        "Can't disable device %s %s %s.\n"
+      Trace("Can't stop device %s %s %s\n",
+            pDevProperties->Location(),
+            pDevProperties->DevId(),
+            pDevProperties->PhObjName());
+
+      int res;
+
+      if (!Silent()) {
+        res = ShowMsg(MB_CANCELTRYCONTINUE,
+                        "Can't stop device %s %s %s.\n"
                         "Close application that use this device and Try Again.\n"
                         "Or Continue and then reboot system.\n",
                         pDevProperties->Location(),
                         pDevProperties->DevId(),
                         pDevProperties->PhObjName());
+      } else {
+        res = IDCONTINUE;
+      }
 
       if (res != IDCONTINUE) {
         if (!ChangeState(hDevInfo, pDevInfoData, DICS_ENABLE))
@@ -393,7 +429,8 @@ int DisableDevice(
         return res;
       }
 
-      *pRebootRequired = TRUE;
+      if (pRebootRequired)
+        *pRebootRequired = TRUE;
     }
   }
 
@@ -465,6 +502,8 @@ static int EnableDevice(HDEVINFO hDevInfo, PSP_DEVINFO_DATA pDevInfoData, PDevPa
           pDevParams->devProperties.PhObjName());
   }
 
+  UpdateRebootRequired(hDevInfo, pDevInfoData, pDevParams->pEnumParams->pRebootRequired);
+
   return IDCONTINUE;
 }
 
@@ -495,20 +534,31 @@ static int RestartDevice(HDEVINFO hDevInfo, PSP_DEVINFO_DATA pDevInfoData, PDevP
   if (!ChangeState(hDevInfo, pDevInfoData, DICS_PROPCHANGE))
     return IDCANCEL;
 
-  if (pDevParams->pEnumParams->pRebootRequired && !*pDevParams->pEnumParams->pRebootRequired) {
-    BOOL rebootRequired = FALSE;
+  BOOL rebootRequired = FALSE;
 
-    if (!UpdateRebootRequired(hDevInfo, pDevInfoData, &rebootRequired))
-      return IDCANCEL;
+  if (!UpdateRebootRequired(hDevInfo, pDevInfoData, &rebootRequired))
+    return IDCANCEL;
 
-    if (rebootRequired) {
-      int res = ShowMsg(MB_CANCELTRYCONTINUE,
+  if (rebootRequired) {
+    Trace("Can't reastart device %s %s %s\n",
+          pDevParams->devProperties.Location(),
+          pDevParams->devProperties.DevId(),
+          pDevParams->devProperties.PhObjName());
+
+    if (pDevParams->pEnumParams->pRebootRequired && !*pDevParams->pEnumParams->pRebootRequired) {
+      int res;
+
+      if (!Silent()) {
+        res = ShowMsg(MB_CANCELTRYCONTINUE,
                         "Can't reastart device %s %s %s.\n"
                         "Close application that use this device and Try Again.\n"
                         "Or Continue and then reboot system.\n",
                         pDevParams->devProperties.Location(),
                         pDevParams->devProperties.DevId(),
                         pDevParams->devProperties.PhObjName());
+      } else {
+        res = IDCONTINUE;
+      }
 
       if (res != IDCONTINUE) {
         if (!ChangeState(hDevInfo, pDevInfoData, DICS_ENABLE))
@@ -519,9 +569,7 @@ static int RestartDevice(HDEVINFO hDevInfo, PSP_DEVINFO_DATA pDevInfoData, PDevP
 
       *pDevParams->pEnumParams->pRebootRequired = TRUE;
     }
-  }
-
-  if (!pDevParams->pEnumParams->pRebootRequired || !*pDevParams->pEnumParams->pRebootRequired) {
+  } else {
     Trace("Restarted %s %s %s\n",
         pDevParams->devProperties.Location(),
         pDevParams->devProperties.DevId(),
