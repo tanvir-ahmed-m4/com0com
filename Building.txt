@@ -14,7 +14,8 @@ You will need the following to build com0com from source code:
 
 2.  Microsoft Windows Platform Software Development Kit (SDK).
     It's required for creating a certificate and signing com0com.sys file
-    if you build driver for x64-based versions of Windows Vista.
+    if you build driver for x64-based versions of
+    Windows Vista/Windows Server 2008/Windows 7.
     When the SDK is installed, it defines the Start menu shortcuts for
     several different build environments. To open a SDK build environment
     window choose one of the environment shortcuts.
@@ -42,7 +43,8 @@ BUILDING
     C:\com0com\<CPU>\ directory, where <CPU> is i386, ia64 or amd64
     and depends from choosen DDK build environment.
 
-2.  If you build driver for x64-based versions of Windows Vista then create
+2.  If you build driver for x64-based versions of
+    Windows Vista/Windows Server 2008/Windows 7 then create
     a test certificate and sign com0com.sys file.
 
     For example execute in the SDK build environment window:
