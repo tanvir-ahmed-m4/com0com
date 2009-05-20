@@ -34,11 +34,11 @@ The homepage for com0com project is http://com0com.sourceforge.net/.
 INSTALLING
 ==========
 
-NOTE (Windows Vista/Windows Server 2008):
+NOTE (Windows Vista/Windows Server 2008/Windows 7):
   Before installing/uninstalling the com0com driver or adding/removing/changing
   ports the User Account Control (UAC) should be turned off (require reboot).
 
-NOTE (x64-based Windows Vista/Windows Server 2008):
+NOTE (x64-based Windows Vista/Windows Server 2008/Windows 7):
   The com0com.sys is a test-signed kernel-mode driver that will not load by
   default. To enable test signing, enter command:
 
@@ -99,6 +99,19 @@ install the new one and then uninstall it.
 
 FAQs & HOWTOs
 =============
+
+Q. Is it possible to install or uninstall com0com silently (with no user
+   intervention and no user interface)?
+A. Yes, it's possible with /S option, for example:
+
+     setup.exe /S
+     "%ProgramFiles%\com0com\uninstall.exe" /S
+
+   You can specify the installation directory with /D option, for example:
+
+     setup.exe /S /D=C:\Program Files\com0com
+
+   NOTE: Silent installation of com0com will not install any port pairs.
 
 Q. Is it possible to change the names CNCA0 and CNCB0 to COM2 and COM3?
 A. Yes, it's possible. To change the names:
@@ -280,3 +293,16 @@ A. It's because the installing of each next port pair requires to update driver
       > cd /D "%ProgramFiles%\com0com"
       > FOR /L %i IN (0,1,249) DO setupc --no-update install - -
       > setupc update
+
+Q. I am using the 64-bit version of com0com and I am having trouble. I'd like
+   to debug this, but I can not find any free serial port monitor software,
+   like portmon that works with a 64-bit OS. Does anyone know of any?
+A. You can try to use internal com0com's tracing for debuging:
+
+      - get trace.reg file from com0com's source;
+      - import trace.reg to the Registry;
+      - reload driver (or reboot system);
+      - do your tests and watch results in C:\com0com.log file.
+
+   To disable tracing reinstall com0com or import trace_disable.reg to the
+   Registry and reload driver.
