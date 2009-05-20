@@ -19,6 +19,11 @@
  *
  *
  * $Log$
+ * Revision 1.15  2009/05/20 13:02:18  vfrolov
+ * Changed MUI.nsh to MUI2.nsh
+ * Added .NET check and advise
+ * Disabled silent installing of linked ports
+ *
  * Revision 1.14  2009/01/12 13:16:20  vfrolov
  * Added driver updating
  *
@@ -72,8 +77,10 @@
 
 ;--------------------------------
 
-  !include "MUI.nsh"
+  !include "MUI2.nsh"
   !include "x64.nsh"
+  !include WordFunc.nsh
+  !insertmacro VersionCompare
 
 ;--------------------------------
 
@@ -96,25 +103,44 @@
 
 ;--------------------------------
 
-Function .onInit
-  ${If} ${RunningX64}
-    !if "${TARGET_CPU}" == "i386"
-      MessageBox MB_YESNO|MB_DEFBUTTON2|MB_ICONEXCLAMATION \
-        "The 32-bit driver cannot run under 64-bit System.$\n$\nContinue?" \
-        /SD IDNO IDYES end_x64
-      Abort
-    !endif
-  ${Else}
-    !if "${TARGET_CPU}" != "i386"
-      MessageBox MB_YESNO|MB_DEFBUTTON2|MB_ICONEXCLAMATION \
-        "The 64-bit driver cannot run under 32-bit System.$\n$\nContinue?" \
-        /SD IDNO IDYES end_x64
-      Abort
-    !endif
+Function GetDotNETVersion
+  Push $0
+  Push $1
+
+  System::Call "mscoree::GetCORVersion(w .r0, i ${NSIS_MAX_STRLEN}, *i) i .r1 ?u"
+  StrCmp $1 0 +2
+    StrCpy $0 "v0"
+
+  StrCpy $0 $0 "" 1 # skip "v"
+
+  Pop $1
+  Exch $0
+FunctionEnd
+
+;--------------------------------
+
+Function AdviseDotNETVersion
+  IfSilent 0 +2
+    return
+
+  Push $0
+  Push $1
+  Push $2
+
+  Call GetDotNETVersion
+  Pop $0
+
+  StrCpy $1 "2.0"
+
+  ${VersionCompare} $0 $1 $2
+  ${If} $2 == 2
+    MessageBox MB_OK|MB_ICONINFORMATION \
+      "To use GUI-based Setup utility you will need to$\ninstall Microsoft .NET Framework v$1 or newer."
   ${EndIf}
 
-end_x64:
-
+  Pop $2
+  Pop $1
+  Pop $0
 FunctionEnd
 
 ;--------------------------------
@@ -235,6 +261,7 @@ Section "com0com" sec_com0com
 
   ; Write the uninstall keys for Windows
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\com0com" "DisplayName" "Null-modem emulator (com0com)"
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\com0com" "Publisher" "Vyacheslav Frolov"
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\com0com" "HelpLink" "http://com0com.sourceforge.net/"
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\com0com" "URLUpdateInfo" "http://com0com.sourceforge.net/"
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\com0com" "Readme" "$INSTDIR\ReadMe.txt"
@@ -282,6 +309,43 @@ Section "CNCA0<->CNCB0" sec_ports
   !insertmacro MoveFileToDetails $0
 
 SectionEnd
+
+;--------------------------------
+
+Function .onInit
+
+  ; Check CPU
+
+  ${If} ${RunningX64}
+    !if "${TARGET_CPU}" == "i386"
+      MessageBox MB_YESNO|MB_DEFBUTTON2|MB_ICONEXCLAMATION \
+        "The 32-bit driver cannot run under 64-bit System.$\n$\nContinue?" \
+        /SD IDNO IDYES +2
+      Abort
+    !endif
+  ${Else}
+    !if "${TARGET_CPU}" != "i386"
+      MessageBox MB_YESNO|MB_DEFBUTTON2|MB_ICONEXCLAMATION \
+        "The 64-bit driver cannot run under 32-bit System.$\n$\nContinue?" \
+        /SD IDNO IDYES +2
+      Abort
+    !endif
+  ${EndIf}
+
+  ; Disable installing a pair of linked ports if silent
+
+  IfSilent 0 +5
+    SectionGetFlags ${sec_ports} $0
+    IntOp $1 ${SF_SELECTED} ~
+    IntOp $0 $0 & $1
+    SectionSetFlags ${sec_ports} $0
+
+FunctionEnd
+;--------------------------------
+
+Function .onInstSuccess
+  Call AdviseDotNETVersion
+FunctionEnd
 
 ;--------------------------------
 
