@@ -19,6 +19,11 @@
  *
  *
  * $Log$
+ * Revision 1.17  2009/05/22 11:32:52  vfrolov
+ * Added URLInfoAbout, InstallLocation, InstallSource, Language, Version
+ * and EstimatedSize to the registry
+ * Added Windows version check
+ *
  * Revision 1.16  2009/05/21 15:39:34  vfrolov
  * Added DisplayIcon, DisplayVersion, VersionMajor, VersionMinor
  * and QuietUninstallString to the registry
@@ -82,9 +87,11 @@
 ;--------------------------------
 
   !include "MUI2.nsh"
+  !include "WinVer.nsh"
   !include "x64.nsh"
   !include WordFunc.nsh
   !insertmacro VersionCompare
+  !include "FileFunc.nsh"
 
 ;--------------------------------
 
@@ -270,18 +277,47 @@ Section "com0com" sec_com0com
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\com0com" "Publisher" "Vyacheslav Frolov"
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\com0com" "HelpLink" "http://com0com.sourceforge.net/"
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\com0com" "URLUpdateInfo" "http://com0com.sourceforge.net/"
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\com0com" "URLInfoAbout" "http://com0com.sourceforge.net/"
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\com0com" "Readme" "$INSTDIR\ReadMe.txt"
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\com0com" "DisplayIcon" "$INSTDIR\setupg.exe"
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\com0com" "InstallLocation" "$INSTDIR\"
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\com0com" "InstallSource" "$EXEDIR\"
+  WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\com0com" "Language" $LANGUAGE
 
   GetDLLVersionLocal "..\${TARGET_CPU}\com0com.sys" $R0 $R1
   IntOp $R2 $R0 / 0x00010000
   IntOp $R3 $R0 & 0x0000FFFF
   IntOp $R4 $R1 / 0x00010000
   IntOp $R5 $R1 & 0x0000FFFF
+  IntOp $R5 $R1 & 0x0000FFFF
+  IntOp $R6 $R2 * 0x00000100
+  IntOp $R6 $R6 | $R3
+  IntOp $R6 $R6 * 0x00000100
+  IntOp $R6 $R6 | $R4
+  IntOp $R6 $R6 * 0x00000100
+  IntOp $R6 $R6 | $R5
 
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\com0com" "DisplayVersion" "$R2.$R3.$R4.$R5"
+  WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\com0com" "Version" $R6
   WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\com0com" "VersionMajor" $R2
   WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\com0com" "VersionMinor" $R3
+
+  ${GetSize} "$INSTDIR" "/M=ReadMe.txt    /S=0B /G=0" $R0 $R1 $R2
+  ${GetSize} "$INSTDIR" "/M=com0com.inf   /S=0B /G=0" $R3 $R1 $R2
+  IntOp $R0 $R0 + $R3
+  ${GetSize} "$INSTDIR" "/M=com0com.sys   /S=0B /G=0" $R3 $R1 $R2
+  IntOp $R0 $R0 + $R3
+  ${GetSize} "$INSTDIR" "/M=setup.dll     /S=0B /G=0" $R3 $R1 $R2
+  IntOp $R0 $R0 + $R3
+  ${GetSize} "$INSTDIR" "/M=setupc.exe    /S=0B /G=0" $R3 $R1 $R2
+  IntOp $R0 $R0 + $R3
+  ${GetSize} "$INSTDIR" "/M=setupg.exe    /S=0B /G=0" $R3 $R1 $R2
+  IntOp $R0 $R0 + $R3
+  ${GetSize} "$INSTDIR" "/M=uninstall.exe /S=0B /G=0" $R3 $R1 $R2
+  IntOp $R0 $R0 + $R3
+  IntOp $R0 $R0 / 1024  ; in KBytes
+
+  WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\com0com" "EstimatedSize" $R0
 
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\com0com" "UninstallString" '"$INSTDIR\uninstall.exe"'
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\com0com" "QuietUninstallString" '"$INSTDIR\uninstall.exe" /S'
@@ -346,6 +382,15 @@ Function .onInit
         /SD IDNO IDYES +2
       Abort
     !endif
+  ${EndIf}
+
+  ; Check Windows version
+
+  ${IfNot} ${AtLeastWin2000}
+    MessageBox MB_YESNO|MB_DEFBUTTON2|MB_ICONEXCLAMATION \
+      "The driver cannot run under below Windows 2000 System.$\n$\nContinue?" \
+      /SD IDNO IDYES +2
+    Abort
   ${EndIf}
 
   ; Disable installing a pair of linked ports if silent
