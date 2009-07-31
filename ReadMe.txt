@@ -100,6 +100,9 @@ install the new one and then uninstall it.
 FAQs & HOWTOs
 =============
 
+Q. Is it possible to run com0com on Windows 9x platform?
+A. No, it is not possible. You need Windows 2000 platform or newer.
+
 Q. Is it possible to install or uninstall com0com silently (with no user
    intervention and no user interface)?
 A. Yes, it's possible with /S option, for example:
