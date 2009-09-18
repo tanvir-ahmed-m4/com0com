@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.32  2009/09/18 11:21:31  vfrolov
+ * Added --wait option
+ *
  * Revision 1.31  2009/09/18 07:48:11  vfrolov
  * Added missing argv[0] shift
  *
@@ -143,6 +146,7 @@
 #define C0C_SETUP_TITLE          "Setup for com0com"
 
 ///////////////////////////////////////////////////////////////
+static int timeout = 0;
 static BOOL detailPrms = FALSE;
 static BOOL no_update = FALSE;
 ///////////////////////////////////////////////////////////////
@@ -255,6 +259,44 @@ static VOID SetFriendlyName(
 
   SetupDiSetDeviceRegistryProperty(hDevInfo, pDevInfoData, SPDRP_FRIENDLYNAME,
                                   (LPBYTE)friendlyName, (lstrlen(friendlyName) + 1) * sizeof(*friendlyName));
+}
+///////////////////////////////////////////////////////////////
+static int SleepTillPortNotFound(
+    const char *pPortName,
+    int timeLimit)
+{
+  DWORD startTime = GetTickCount();
+  char path[40];
+
+  SNPRINTF(path, sizeof(path)/sizeof(path[0]), "\\\\.\\%s", pPortName);
+
+  Trace("Wating %s ", path);
+
+  for (;;) {
+    HANDLE handle = CreateFile(path, GENERIC_READ|GENERIC_WRITE, 0, NULL,
+                               OPEN_EXISTING, 0, NULL);
+
+    if (handle == INVALID_HANDLE_VALUE) {
+      if (GetLastError() != ERROR_FILE_NOT_FOUND)
+        break;
+    } else {
+      CloseHandle(handle);
+      break;
+    }
+
+    Trace(".");
+
+    if (GetTickCount() - startTime >= DWORD(timeLimit * 1000)) {
+      Trace(" timeout\n");
+      return -1;
+    }
+
+    Sleep(1000);
+  }
+
+  Trace(" OK\n");
+
+  return int((GetTickCount() - startTime) / 1000);
 }
 ///////////////////////////////////////////////////////////////
 static VOID CleanDevPropertiesStack(InfFile &infFile, Stack &stack, BOOL enable, BOOL *pRebootRequired)
@@ -711,6 +753,20 @@ int Install(InfFile &infFile, const char *pParametersA, const char *pParametersB
 
   ComDbSync(infFile);
 
+  if (!no_update && timeout > 0) {
+    for (int j = 0, timeLimit = timeout ; j < 2 ; j++) {
+      int timeElapsed = SleepTillPortNotFound(portName[j], timeLimit);
+
+      if (timeElapsed < 0)
+        break;
+
+      timeLimit -= timeElapsed;
+
+      if (timeLimit < 0)
+        timeLimit = 0;
+    }
+  }
+
   return  0;
 
 err:
@@ -1111,6 +1167,8 @@ int Help(const char *pProgName)
     "\n"
     "Options:\n"
     "  --output <file>              - file for output, default is console\n"
+    "  --wait <to>                  - wait <to> seconds for install completion\n"
+    "                                 (by default <to> is 0 - no wait)\n"
     "  --detail-prms                - show detailed parameters\n"
     "  --silent                     - suppress dialogs if possible\n"
     "  --no-update                  - do not update driver while install command\n"
@@ -1211,6 +1269,17 @@ int Main(int argc, const char* argv[])
     if (!strcmp(argv[1], "--output") && argc > 2) {
       if (!SetOutputFile(argv[2]))
         return 1;
+      argv[2] = argv[0];
+      argv += 2;
+      argc -= 2;
+    }
+    else
+    if (!strcmp(argv[1], "--wait") && argc > 2) {
+      int num;
+
+      if (StrToInt(argv[2], &num) && num >= 0)
+        timeout = num;
+
       argv[2] = argv[0];
       argv += 2;
       argc -= 2;
