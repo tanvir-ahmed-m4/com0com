@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.31  2009/09/18 07:48:11  vfrolov
+ * Added missing argv[0] shift
+ *
  * Revision 1.30  2009/02/16 10:32:56  vfrolov
  * Added Silent() and PromptReboot()
  *
@@ -1215,18 +1218,21 @@ int Main(int argc, const char* argv[])
     else
     if (!strcmp(argv[1], "--detail-prms")) {
       detailPrms = TRUE;
+      argv[1] = argv[0];
       argv++;
       argc--;
     }
     else
     if (!strcmp(argv[1], "--silent")) {
       Silent(TRUE);
+      argv[1] = argv[0];
       argv++;
       argc--;
     }
     else
     if (!strcmp(argv[1], "--no-update")) {
       no_update = TRUE;
+      argv[1] = argv[0];
       argv++;
       argc--;
     }
