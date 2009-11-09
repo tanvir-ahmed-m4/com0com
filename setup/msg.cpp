@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.8  2009/11/09 11:16:43  vfrolov
+ * Added restoring last error
+ *
  * Revision 1.7  2009/02/16 10:32:56  vfrolov
  * Added Silent() and PromptReboot()
  *
@@ -219,7 +222,11 @@ void Trace(const char *pFmt, ...)
 
   va_end(va);
 
+  DWORD err = GetLastError();
+
   pTrace(buf);
+
+  SetLastError(err);
 }
 ///////////////////////////////////////////////////////////////
 void ConsoleWriteRead(char *pReadBuf, int lenReadBuf, const char *pFmt, ...)
@@ -233,7 +240,11 @@ void ConsoleWriteRead(char *pReadBuf, int lenReadBuf, const char *pFmt, ...)
 
   va_end(va);
 
+  DWORD err = GetLastError();
+
   pConsole(pReadBuf, lenReadBuf, buf);
+
+  SetLastError(err);
 }
 ///////////////////////////////////////////////////////////////
 void ConsoleWrite(const char *pFmt, ...)
@@ -247,7 +258,11 @@ void ConsoleWrite(const char *pFmt, ...)
 
   va_end(va);
 
+  DWORD err = GetLastError();
+
   pConsole(NULL, 0, buf);
+
+  SetLastError(err);
 }
 ///////////////////////////////////////////////////////////////
 BOOL IsConsoleOpen()
