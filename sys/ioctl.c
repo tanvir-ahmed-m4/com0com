@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.43  2009/11/09 11:20:17  vfrolov
+ * Added missing Information field setting (thanks Van Rillaer Filip)
+ *
  * Revision 1.42  2009/05/20 13:45:35  vfrolov
  * Added tracing the resulting event mask on nonpending successful
  * completion of WAIT_ON_MASK
@@ -313,6 +316,7 @@ NTSTATUS FdoPortIoCtl(
 
       if (code == IOCTL_SERIAL_GET_DTRRTS) {
         modemControl &= SERIAL_DTR_STATE | SERIAL_RTS_STATE;
+        pIrp->IoStatus.Information = sizeof(ULONG);
       } else {
         ULONG InputBufferLength;
 
