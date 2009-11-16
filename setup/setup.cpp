@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.33  2009/11/16 08:43:44  vfrolov
+ * Fixed endless loop if no ports logged in ComDB
+ *
  * Revision 1.32  2009/09/18 11:21:31  vfrolov
  * Added --wait option
  *
@@ -1062,7 +1065,7 @@ int ShowBusyNames(const char *pPattern)
         pBuf = NULL;
 
         if (GetLastError() == ERROR_FILE_NOT_FOUND)
-          continue;
+          break;
 
         if (ShowLastError(MB_OKCANCEL,
             i != 0 ? "QueryDosDevice()" : "ComDbNames()") == IDCANCEL)
