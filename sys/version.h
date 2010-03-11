@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2005-2009 Vyacheslav Frolov
+ * Copyright (c) 2005-2010 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,12 +22,12 @@
 #ifndef _C0C_VERSION_H_
 #define _C0C_VERSION_H_
 
-#define C0C_COPYRIGHT_YEARS "2004-2009"
+#define C0C_COPYRIGHT_YEARS "2004-2010"
 
 #define C0C_V1 2
 #define C0C_V2 2
 #define C0C_V3 2
-#define C0C_V4 0
+#define C0C_V4 1
 
 #define MK_VERSION_STR1(V1, V2, V3, V4) #V1 "." #V2 "." #V3 "." #V4
 #define MK_VERSION_STR(V1, V2, V3, V4) MK_VERSION_STR1(V1, V2, V3, V4)
