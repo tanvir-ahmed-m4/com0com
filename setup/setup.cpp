@@ -19,6 +19,10 @@
  *
  *
  * $Log$
+ * Revision 1.35  2010/03/30 08:05:15  vfrolov
+ * Fixed bugs item #2979007 "setupc command line limited to 200 chars"
+ * Reported by Henrik Maier (hwmaier)
+ *
  * Revision 1.34  2010/03/11 13:40:57  vfrolov
  * Fixed size typo, bug #2968585
  * Thanks Xlnt (xlnt9568)
@@ -1445,7 +1449,7 @@ int CALLBACK MainA(const char *pProgName, const char *pCmdLine)
 {
   SetTitle(C0C_SETUP_TITLE);
 
-  char cmd[200];
+  char cmd[1024];
 
   SNPRINTF(cmd, sizeof(cmd)/sizeof(cmd[0]), "%s", pCmdLine);
 
