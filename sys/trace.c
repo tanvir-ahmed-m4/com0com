@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2004-2009 Vyacheslav Frolov
+ * Copyright (c) 2004-2010 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.35  2010/05/27 11:02:11  vfrolov
+ * Added multiline tracing for IRP_MN_QUERY_ID
+ *
  * Revision 1.34  2009/05/22 14:25:39  vfrolov
  * Optimized for trace disabled mode
  *
@@ -359,7 +362,7 @@ PCHAR AnsiStrCopyStr(
   SIZE_T len, size;
   PCHAR pStrTmp;
 
-  pStrTmp = pStr;
+  pStrTmp = (pStr != NULL ? pStr : "(null)");
 
   while (*(pStrTmp++))
     ;
@@ -383,17 +386,30 @@ PCHAR AnsiStrCopyStr(
 PCHAR AnsiStrCopyStrW(
     PCHAR pDestStr,
     PSIZE_T pSize,
-    PWCHAR pStr)
+    PWCHAR pStr,
+    BOOLEAN multiStr)
 {
   SIZE_T len, size;
   PWCHAR pStrTmp;
 
-  pStrTmp = pStr;
+  pStrTmp = (pStr != NULL ? pStr : L"(null)" L"\0");
 
-  while (*(pStrTmp++))
-    ;
+  if (multiStr) {
+    do {
+      while (*(pStrTmp++))
+        ;
+    } while (*(pStrTmp++));
+  }
+  else {
+    while (*(pStrTmp++))
+      ;
+  }
 
   len = pStrTmp - pStr;
+
+  if (multiStr)
+    len--;
+
   size = *pSize;
 
   if (len > size)
@@ -403,6 +419,9 @@ PCHAR AnsiStrCopyStrW(
     SIZE_T i;
 
     for (i = 0 ; i < len - 1 ; i++) {
+      if (pStr[i] == 0)
+        pDestStr[i] = '"';
+      else
       if ((pStr[i] & 0xFF00) == 0)
         pDestStr[i] = (CHAR)(pStr[i]);
       else
@@ -506,7 +525,7 @@ PCHAR _AnsiStrVaFormat(
         }
         case 'S': {
           PWCHAR pStr = va_arg(va, PWCHAR);
-          pDestStr = AnsiStrCopyStrW(pDestStr, &size, pStr);
+          pDestStr = AnsiStrCopyStrW(pDestStr, &size, pStr, FALSE);
           format = FALSE;
           break;
         }
@@ -1606,9 +1625,23 @@ VOID InternalTraceIrp(
               pIrpStack->Parameters.QueryId.IdType,
               codeNameTableBusQuery, "BusQuery", 10);
           if (flags & TRACE_FLAG_RESULTS && pIrp->IoStatus.Information) {
-            pDestStr = AnsiStrFormat(pDestStr, &size,
-                " Information: \"%S\"",
-                (PWCHAR)pIrp->IoStatus.Information);
+            BOOLEAN multiStr;
+
+            pDestStr = AnsiStrCopyStr(pDestStr, &size, " Information: '");
+
+            switch (pIrpStack->Parameters.QueryId.IdType) {
+              case BusQueryHardwareIDs:
+              case BusQueryCompatibleIDs:
+                multiStr = TRUE;
+                break;
+              default:
+                multiStr = FALSE;
+            }
+            pDestStr = AnsiStrCopyStrW(pDestStr, &size,
+                (PWCHAR)pIrp->IoStatus.Information,
+                multiStr);
+
+            pDestStr = AnsiStrCopyStr(pDestStr, &size, "'");
           }
           break;
         case IRP_MN_QUERY_DEVICE_TEXT:
