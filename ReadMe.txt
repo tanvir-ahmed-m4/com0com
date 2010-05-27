@@ -125,6 +125,15 @@ A. Yes, it's possible. To change the names:
       command> change CNCA0 PortName=COM2
       command> change CNCB0 PortName=COM3
 
+   Alternatively you can set names to 'COM#', for example:
+
+      command> change CNCA0 PortName=COM#
+      command> change CNCB0 PortName=COM#
+
+   In the last case the Ports class installer will be used to manage port names.
+   The Ports class installer selects the COM port number and sets the port
+   name to COM<n>, where <n> is the selected port number.
+
 Q. The baud rate setting does not seem to make a difference: data is always
    transferred at the same speed. How to enable the baud rate emulation?
 A. To enable baud rate emulation for transferring data from CNCA0 to CNCB0:
@@ -214,7 +223,7 @@ A. The OUT1 can be wired to DCD and OUT2 to RING. Use extended
 
 Q. What version am I running?
 A. In the device manager, the driver properties page shows the version and date
-   of the com0com.inf file, while the driver details page shows a version of
+   of the INF files, while the driver details page shows a version of
    com0com.sys file. The version of com0com.sys file is the version that you
    are running.
 
@@ -244,19 +253,12 @@ Q. I need to use com0com ports with an application that doesn't recognize
    com0com ports as "real" com ports. It does not see a com0com port even
    though I have changed it's name to COMx. Is there a com0com settings that
    will make the port appear to be a "real" com port?
-A. No, there is not, but you can "deceive" the application this way:
+A. Yes, it is. You should put the port to the Ports class, for example:
 
-   1. With the "Add/Remove Hardware" wizard install new standard serial port.
-      You don't need a real serial hardware to do it. Select non conflicted
-      IO/IRQ resources.
-   2. With the "Device Manager" disable the newly created port (let it be
-      COM4).
-   3. Launch the Setup Command Prompt shortcut.
-   4. Install the pair of ports, were one of them has name COM4, for example:
+   1. Launch the Setup Command Prompt shortcut.
+   2. Install the pair of ports, were one of them has name COM#, for example:
 
-      command> install PortName=COM4 -
-
-      Ignore a warning about the COM4 is "in use" (press Continue).
+      command> install PortName=COM# -
 
 Q. Is it possible to configure the com0com to randomly corrupt the data? It
    would be nice to have this feature so that we can test our application

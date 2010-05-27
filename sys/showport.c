@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2007-2008 Vyacheslav Frolov
+ * Copyright (c) 2007-2010 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.4  2010/05/27 11:16:46  vfrolov
+ * Added ability to put the port to the Ports class
+ *
  * Revision 1.3  2008/12/02 16:10:09  vfrolov
  * Separated tracing and debuging
  *
@@ -49,6 +52,9 @@ BOOLEAN HidePortName(IN PC0C_FDOPORT_EXTENSION pDevExt)
   HANDLE hKey;
   NTSTATUS status;
 
+  if (pDevExt->pIoPortLocal->isComClass)
+    return TRUE;
+
   res = TRUE;
 
   status = IoOpenDeviceRegistryKey(pDevExt->pIoPortLocal->pPhDevObj,
@@ -63,7 +69,11 @@ BOOLEAN HidePortName(IN PC0C_FDOPORT_EXTENSION pDevExt)
 
     status = ZwDeleteValueKey(hKey, &keyName);
 
-    if (!NT_SUCCESS(status) && (pDevExt->shown & C0C_SHOW_SETNAME) != 0) {
+    if (NT_SUCCESS(status)) {
+      Trace0((PC0C_COMMON_EXTENSION)pDevExt, L"Hidden PORTNAME");
+    }
+    else
+    if ((pDevExt->shown & C0C_SHOW_PORTNAME) != 0) {
       res = FALSE;
       Trace0((PC0C_COMMON_EXTENSION)pDevExt, L"HidePortName ZwDeleteValueKey(PortName) FAIL");
     }
@@ -71,12 +81,12 @@ BOOLEAN HidePortName(IN PC0C_FDOPORT_EXTENSION pDevExt)
     ZwClose(hKey);
   }
   else
-  if ((pDevExt->shown & C0C_SHOW_SETNAME) != 0) {
+  if ((pDevExt->shown & C0C_SHOW_PORTNAME) != 0) {
     res = FALSE;
     Trace0((PC0C_COMMON_EXTENSION)pDevExt, L"HidePortName IoOpenDeviceRegistryKey(PLUGPLAY_REGKEY_DEVICE) FAIL");
   }
 
-  pDevExt->shown &= ~C0C_SHOW_SETNAME;
+  pDevExt->shown &= ~C0C_SHOW_PORTNAME;
 
   return res;
 }
@@ -95,7 +105,9 @@ BOOLEAN HidePort(IN PC0C_FDOPORT_EXTENSION pDevExt)
     status = IoWMIRegistrationControl(pDevExt->pDevObj, WMIREG_ACTION_DEREGISTER);
     pDevExt->shown &= ~C0C_SHOW_WMIREG;
 
-    if (!NT_SUCCESS(status)) {
+    if (NT_SUCCESS(status)) {
+      Trace0((PC0C_COMMON_EXTENSION)pDevExt, L"Hidden WMIREG");
+    } else {
       res = FALSE;
       Trace0((PC0C_COMMON_EXTENSION)pDevExt, L"HidePort IoWMIRegistrationControl FAIL");
     }
@@ -105,7 +117,9 @@ BOOLEAN HidePort(IN PC0C_FDOPORT_EXTENSION pDevExt)
     status = IoSetDeviceInterfaceState(&pDevExt->symbolicLinkName, FALSE);
     pDevExt->shown &= ~C0C_SHOW_INTERFACE;
 
-    if (!NT_SUCCESS(status)) {
+    if (NT_SUCCESS(status)) {
+      Trace0((PC0C_COMMON_EXTENSION)pDevExt, L"Hidden INTERFACE");
+    } else {
       res = FALSE;
       Trace0((PC0C_COMMON_EXTENSION)pDevExt, L"HidePort IoSetDeviceInterfaceState FAIL");
     }
@@ -116,7 +130,9 @@ BOOLEAN HidePort(IN PC0C_FDOPORT_EXTENSION pDevExt)
                                     pDevExt->ntDeviceName.Buffer);
     pDevExt->shown &= ~C0C_SHOW_DEVICEMAP;
 
-    if (!NT_SUCCESS(status)) {
+    if (NT_SUCCESS(status)) {
+      Trace0((PC0C_COMMON_EXTENSION)pDevExt, L"Hidden DEVICEMAP");
+    } else {
       res = FALSE;
       Trace0((PC0C_COMMON_EXTENSION)pDevExt, L"HidePort RtlDeleteRegistryValue " C0C_SERIAL_DEVICEMAP L" FAIL");
     }
@@ -126,13 +142,15 @@ BOOLEAN HidePort(IN PC0C_FDOPORT_EXTENSION pDevExt)
     status = IoDeleteSymbolicLink(&pDevExt->win32DeviceName);
     pDevExt->shown &= ~C0C_SHOW_SYMLINK;
 
-    if (!NT_SUCCESS(status)) {
+    if (NT_SUCCESS(status)) {
+      Trace0((PC0C_COMMON_EXTENSION)pDevExt, L"Hidden SYMLINK");
+    } else {
       res = FALSE;
       Trace0((PC0C_COMMON_EXTENSION)pDevExt, L"HidePort IoDeleteSymbolicLink FAIL");
     }
   }
 
-  if ((pDevExt->shown & C0C_SHOW_SETNAME) != 0)
+  if ((pDevExt->shown & C0C_SHOW_PORTNAME) != 0)
     res = (HidePortName(pDevExt) && res);
 
   pDevExt->shown &= ~C0C_SHOW_SHOWN;
@@ -152,7 +170,10 @@ BOOLEAN ShowPort(IN PC0C_FDOPORT_EXTENSION pDevExt)
 
   res = TRUE;
 
-  if ((pDevExt->shown & C0C_SHOW_SETNAME) == 0 && (pDevExt->hide & C0C_SHOW_SETNAME) == 0) {
+  if (!pDevExt->pIoPortLocal->isComClass &&
+      (pDevExt->shown & C0C_SHOW_PORTNAME) == 0 &&
+      (pDevExt->hide & C0C_SHOW_PORTNAME) == 0)
+  {
     HANDLE hKey;
 
     status = IoOpenDeviceRegistryKey(pDevExt->pIoPortLocal->pPhDevObj,
@@ -160,7 +181,7 @@ BOOLEAN ShowPort(IN PC0C_FDOPORT_EXTENSION pDevExt)
                                      STANDARD_RIGHTS_WRITE,
                                      &hKey);
 
-    if (status == STATUS_SUCCESS) {
+    if (NT_SUCCESS(status)) {
       UNICODE_STRING keyName;
 
       RtlInitUnicodeString(&keyName, L"PortName");
@@ -173,7 +194,8 @@ BOOLEAN ShowPort(IN PC0C_FDOPORT_EXTENSION pDevExt)
                              (ULONG)((wcslen(pDevExt->portName) + 1) * sizeof(WCHAR)));
 
       if (NT_SUCCESS(status)) {
-        pDevExt->shown |= C0C_SHOW_SETNAME;
+        pDevExt->shown |= C0C_SHOW_PORTNAME;
+        Trace0((PC0C_COMMON_EXTENSION)pDevExt, L"Shown PORTNAME");
       } else {
         res = FALSE;
         Trace0((PC0C_COMMON_EXTENSION)pDevExt, L"ShowPort ZwSetValueKey(PortName) FAIL");
@@ -195,6 +217,7 @@ BOOLEAN ShowPort(IN PC0C_FDOPORT_EXTENSION pDevExt)
 
       if (NT_SUCCESS(status)) {
         pDevExt->shown |= C0C_SHOW_SYMLINK;
+        Trace0((PC0C_COMMON_EXTENSION)pDevExt, L"Shown SYMLINK");
       } else {
         res = FALSE;
         Trace0((PC0C_COMMON_EXTENSION)pDevExt, L"ShowPort IoCreateSymbolicLink FAIL");
@@ -212,6 +235,7 @@ BOOLEAN ShowPort(IN PC0C_FDOPORT_EXTENSION pDevExt)
 
       if (NT_SUCCESS(status)) {
         pDevExt->shown |= C0C_SHOW_DEVICEMAP;
+        Trace0((PC0C_COMMON_EXTENSION)pDevExt, L"Shown DEVICEMAP");
       } else {
         res = FALSE;
         Trace0((PC0C_COMMON_EXTENSION)pDevExt, L"ShowPort RtlWriteRegistryValue " C0C_SERIAL_DEVICEMAP L" FAIL");
@@ -227,6 +251,7 @@ BOOLEAN ShowPort(IN PC0C_FDOPORT_EXTENSION pDevExt)
 
     if (NT_SUCCESS(status)) {
       pDevExt->shown |= C0C_SHOW_INTERFACE;
+      Trace0((PC0C_COMMON_EXTENSION)pDevExt, L"Shown INTERFACE");
     } else {
       res = FALSE;
       Trace0((PC0C_COMMON_EXTENSION)pDevExt, L"ShowPort IoSetDeviceInterfaceState FAIL");
@@ -238,6 +263,7 @@ BOOLEAN ShowPort(IN PC0C_FDOPORT_EXTENSION pDevExt)
 
     if (NT_SUCCESS(status)) {
       pDevExt->shown |= C0C_SHOW_WMIREG;
+      Trace0((PC0C_COMMON_EXTENSION)pDevExt, L"Shown WMIREG");
     } else {
       res = FALSE;
       Trace0((PC0C_COMMON_EXTENSION)pDevExt, L"ShowPort IoWMIRegistrationControl FAIL");
@@ -254,7 +280,7 @@ BOOLEAN ShowPort(IN PC0C_FDOPORT_EXTENSION pDevExt)
 VOID SetHiddenMode(IN PC0C_FDOPORT_EXTENSION pDevExt, ULONG hiddenMode)
 {
   if (hiddenMode == 0xFFFFFFFF)
-    pDevExt->hide = (C0C_SHOW_SETNAME|C0C_SHOW_DEVICEMAP|C0C_SHOW_WMIREG);
+    pDevExt->hide = (C0C_SHOW_PORTNAME|C0C_SHOW_DEVICEMAP|C0C_SHOW_WMIREG);
   else
     pDevExt->hide = (UCHAR)hiddenMode;
 

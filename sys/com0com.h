@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2004-2008 Vyacheslav Frolov
+ * Copyright (c) 2004-2010 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.48  2010/05/27 11:16:46  vfrolov
+ * Added ability to put the port to the Ports class
+ *
  * Revision 1.47  2008/10/30 07:54:37  vfrolov
  * Improved BREAK emulation
  *
@@ -181,8 +184,8 @@
 #define C0C_SERIAL_DEVICEMAP        L"SERIALCOMM"
 #define C0C_PREF_WIN32_DEVICE_NAME  L"\\DosDevices\\"
 
-#define C0C_PORT_HARDWARE_IDS       C0C_PORT_DEVICE_ID L"\0"
-#define C0C_PORT_COMPATIBLE_IDS     L"\0"
+#define C0C_PORT_HARDWARE_IDS_CNCCLASS C0C_PORT_DEVICE_ID L"\0" L"com0com\\cncport" L"\0"
+#define C0C_PORT_HARDWARE_IDS_COMCLASS C0C_PORT_DEVICE_ID L"\0" L"com0com\\comport" L"\0"
 
 #define C0C_DOTYPE_FB     ((unsigned)0xC0C1)
 #define C0C_DOTYPE_PP     ((unsigned)0xC0C2)
@@ -359,6 +362,7 @@ typedef struct _C0C_IO_PORT {
   BOOLEAN                 emuOverrun;
   BOOLEAN                 plugInMode;
   BOOLEAN                 exclusiveMode;
+  BOOLEAN                 isComClass;
 } C0C_IO_PORT, *PC0C_IO_PORT;
 
 #define FDO_PORT_TO_IO_PORT(pDevObj) \
@@ -381,7 +385,7 @@ typedef struct _C0C_FDOPORT_EXTENSION {
   UNICODE_STRING          win32DeviceName;
   UNICODE_STRING          symbolicLinkName;
 
-  #define C0C_SHOW_SETNAME    0x01
+  #define C0C_SHOW_PORTNAME   0x01
   #define C0C_SHOW_SYMLINK    0x02
   #define C0C_SHOW_DEVICEMAP  0x04
   #define C0C_SHOW_INTERFACE  0x08

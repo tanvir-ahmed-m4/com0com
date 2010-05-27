@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2006-2009 Vyacheslav Frolov
+ * Copyright (c) 2006-2010 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.8  2010/05/27 11:16:46  vfrolov
+ * Added ability to put the port to the Ports class
+ *
  * Revision 1.7  2009/02/11 07:35:22  vfrolov
  * Added --no-update option
  *
@@ -47,7 +50,6 @@
 #define _C0C_DEVUTILS_H_
 
 ///////////////////////////////////////////////////////////////
-
 class DevProperties {
   public:
     DevProperties() : pDevId(NULL), pPhObjName(NULL), pLocation(NULL) {}
@@ -77,7 +79,6 @@ class DevProperties {
 
 typedef const DevProperties *PCDevProperties;
 
-class InfFile;
 class Stack;
 
 typedef BOOL (* PDEVCALLBACK)(
@@ -86,11 +87,11 @@ typedef BOOL (* PDEVCALLBACK)(
     PCDevProperties pDevProperties,
     BOOL *pRebootRequired,
     void *pParam);
-
 ///////////////////////////////////////////////////////////////
-
+typedef BOOL (* C0C_ENUM_FILTER)(const char *pHardwareId);
+///////////////////////////////////////////////////////////////
 int EnumDevices(
-    InfFile &infFile,
+    C0C_ENUM_FILTER pFilter,
     PCDevProperties pDevProperties,
     BOOL *pRebootRequired,
     PDEVCALLBACK pDevCallBack,
@@ -104,18 +105,18 @@ int DisableDevice(
     Stack *pDevPropertiesStack);
 
 BOOL DisableDevices(
-    InfFile &infFile,
+    C0C_ENUM_FILTER pFilter,
     PCDevProperties pDevProperties,
     BOOL *pRebootRequired,
     Stack *pDevPropertiesStack);
 
 BOOL EnableDevices(
-    InfFile &infFile,
+    C0C_ENUM_FILTER pFilter,
     PCDevProperties pDevProperties,
     BOOL *pRebootRequired);
 
 BOOL RestartDevices(
-    InfFile &infFile,
+    C0C_ENUM_FILTER pFilter,
     PCDevProperties pDevProperties,
     BOOL *pRebootRequired);
 
@@ -126,18 +127,20 @@ BOOL RemoveDevice(
     BOOL *pRebootRequired);
 
 BOOL RemoveDevices(
-    InfFile &infFile,
+    C0C_ENUM_FILTER pFilter,
     PCDevProperties pDevProperties,
     BOOL *pRebootRequired);
 
+BOOL ReenumerateDeviceNode(
+    PSP_DEVINFO_DATA pDevInfoData);
+
 BOOL InstallDevice(
-    InfFile &infFile,
+    const char *pInfFilePath,
     const char *pDevId,
     const char *pDevInstID,
     PDEVCALLBACK pDevCallBack,
     void *pCallBackParam,
     BOOL update);
-
 ///////////////////////////////////////////////////////////////
 
 #endif /* _C0C_DEVUTILS_H_ */

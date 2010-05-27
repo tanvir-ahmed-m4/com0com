@@ -137,9 +137,9 @@
   </metadata>
   <data name="PortNameB.ToolTip" xml:space="preserve">
     <value>Port name.
+The name is red if it's already in use by other device.
 Enter '-' to reset the name to the default.
-The name is red if it's already in use by
-other device.</value>
+Enter 'COM#' to manage port by Ports class installer.</value>
   </data>
   <data name="&gt;&gt;PortNameB.Name" xml:space="preserve">
     <value>PortNameB</value>
@@ -164,9 +164,9 @@ other device.</value>
   </data>
   <data name="PortNameA.ToolTip" xml:space="preserve">
     <value>Port name.
+The name is red if it's already in use by other device.
 Enter '-' to reset the name to the default.
-The name is red if it's already in use by
-other device.</value>
+Enter 'COM#' to manage port by Ports class installer.</value>
   </data>
   <data name="&gt;&gt;PortNameA.Name" xml:space="preserve">
     <value>PortNameA</value>
@@ -492,6 +492,73 @@ in the direction to the paired port.</value>
   </data>
   <data name="&gt;&gt;EmuBrA.ZOrder" xml:space="preserve">
     <value>27</value>
+  </data>
+  <data name="HiddenModeA.ImeMode" type="System.Windows.Forms.ImeMode, System.Windows.Forms">
+    <value>NoControl</value>
+  </data>
+  <data name="HiddenModeA.Location" type="System.Drawing.Point, System.Drawing">
+    <value>225, 107</value>
+  </data>
+  <data name="HiddenModeA.RightToLeft" type="System.Windows.Forms.RightToLeft, System.Windows.Forms">
+    <value>Yes</value>
+  </data>
+  <data name="HiddenModeA.Size" type="System.Drawing.Size, System.Drawing">
+    <value>180, 21</value>
+  </data>
+  <data name="HiddenModeA.TabIndex" type="System.Int32, mscorlib">
+    <value>57</value>
+  </data>
+  <data name="HiddenModeA.Text" xml:space="preserve">
+    <value>enable hidden mode</value>
+  </data>
+  <data name="HiddenModeA.ToolTip" xml:space="preserve">
+    <value>Enable/disable hidden mode.
+The hidden mode port is hidden as
+it is possible for port enumerators.</value>
+  </data>
+  <data name="&gt;&gt;HiddenModeA.Name" xml:space="preserve">
+    <value>HiddenModeA</value>
+  </data>
+  <data name="&gt;&gt;HiddenModeA.Type" xml:space="preserve">
+    <value>System.Windows.Forms.CheckBox, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="&gt;&gt;HiddenModeA.Parent" xml:space="preserve">
+    <value>$this</value>
+  </data>
+  <data name="&gt;&gt;HiddenModeA.ZOrder" xml:space="preserve">
+    <value>0</value>
+  </data>
+  <data name="HiddenModeB.ImeMode" type="System.Windows.Forms.ImeMode, System.Windows.Forms">
+    <value>NoControl</value>
+  </data>
+  <data name="HiddenModeB.Location" type="System.Drawing.Point, System.Drawing">
+    <value>411, 107</value>
+  </data>
+  <data name="HiddenModeB.Size" type="System.Drawing.Size, System.Drawing">
+    <value>180, 21</value>
+  </data>
+  <data name="HiddenModeB.TabIndex" type="System.Int32, mscorlib">
+    <value>56</value>
+  </data>
+  <data name="HiddenModeB.Text" xml:space="preserve">
+    <value>enable hidden mode</value>
+  </data>
+  <data name="HiddenModeB.ToolTip" xml:space="preserve">
+    <value>Enable/disable hidden mode.
+The hidden mode port is hidden as
+it is possible for port enumerators.</value>
+  </data>
+  <data name="&gt;&gt;HiddenModeB.Name" xml:space="preserve">
+    <value>HiddenModeB</value>
+  </data>
+  <data name="&gt;&gt;HiddenModeB.Type" xml:space="preserve">
+    <value>System.Windows.Forms.CheckBox, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="&gt;&gt;HiddenModeB.Parent" xml:space="preserve">
+    <value>$this</value>
+  </data>
+  <data name="&gt;&gt;HiddenModeB.ZOrder" xml:space="preserve">
+    <value>1</value>
   </data>
   <data name="pinNameA_RX.ImeMode" type="System.Windows.Forms.ImeMode, System.Windows.Forms">
     <value>NoControl</value>
@@ -1218,73 +1285,6 @@ in the direction to the paired port.</value>
   </data>
   <data name="&gt;&gt;pinNameB_RX.ZOrder" xml:space="preserve">
     <value>12</value>
-  </data>
-  <data name="HiddenModeA.ImeMode" type="System.Windows.Forms.ImeMode, System.Windows.Forms">
-    <value>NoControl</value>
-  </data>
-  <data name="HiddenModeA.Location" type="System.Drawing.Point, System.Drawing">
-    <value>225, 107</value>
-  </data>
-  <data name="HiddenModeA.RightToLeft" type="System.Windows.Forms.RightToLeft, System.Windows.Forms">
-    <value>Yes</value>
-  </data>
-  <data name="HiddenModeA.Size" type="System.Drawing.Size, System.Drawing">
-    <value>180, 21</value>
-  </data>
-  <data name="HiddenModeA.TabIndex" type="System.Int32, mscorlib">
-    <value>57</value>
-  </data>
-  <data name="HiddenModeA.Text" xml:space="preserve">
-    <value>enable hidden mode</value>
-  </data>
-  <data name="HiddenModeA.ToolTip" xml:space="preserve">
-    <value>Enable/disable hidden mode.
-The hidden mode port is hidden as
-it is possible for port enumerators.</value>
-  </data>
-  <data name="&gt;&gt;HiddenModeA.Name" xml:space="preserve">
-    <value>HiddenModeA</value>
-  </data>
-  <data name="&gt;&gt;HiddenModeA.Type" xml:space="preserve">
-    <value>System.Windows.Forms.CheckBox, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
-  </data>
-  <data name="&gt;&gt;HiddenModeA.Parent" xml:space="preserve">
-    <value>$this</value>
-  </data>
-  <data name="&gt;&gt;HiddenModeA.ZOrder" xml:space="preserve">
-    <value>0</value>
-  </data>
-  <data name="HiddenModeB.ImeMode" type="System.Windows.Forms.ImeMode, System.Windows.Forms">
-    <value>NoControl</value>
-  </data>
-  <data name="HiddenModeB.Location" type="System.Drawing.Point, System.Drawing">
-    <value>411, 107</value>
-  </data>
-  <data name="HiddenModeB.Size" type="System.Drawing.Size, System.Drawing">
-    <value>180, 21</value>
-  </data>
-  <data name="HiddenModeB.TabIndex" type="System.Int32, mscorlib">
-    <value>56</value>
-  </data>
-  <data name="HiddenModeB.Text" xml:space="preserve">
-    <value>enable hidden mode</value>
-  </data>
-  <data name="HiddenModeB.ToolTip" xml:space="preserve">
-    <value>Enable/disable hidden mode.
-The hidden mode port is hidden as
-it is possible for port enumerators.</value>
-  </data>
-  <data name="&gt;&gt;HiddenModeB.Name" xml:space="preserve">
-    <value>HiddenModeB</value>
-  </data>
-  <data name="&gt;&gt;HiddenModeB.Type" xml:space="preserve">
-    <value>System.Windows.Forms.CheckBox, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
-  </data>
-  <data name="&gt;&gt;HiddenModeB.Parent" xml:space="preserve">
-    <value>$this</value>
-  </data>
-  <data name="&gt;&gt;HiddenModeB.ZOrder" xml:space="preserve">
-    <value>1</value>
   </data>
   <data name="pairList.Location" type="System.Drawing.Point, System.Drawing">
     <value>12, 12</value>

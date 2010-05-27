@@ -4,7 +4,7 @@
 ;
 ; Installation file for the Null-modem emulator driver.
 ;
-; Copyright (c) 2004-2007 Vyacheslav Frolov
+; Copyright (c) 2004-2010 Vyacheslav Frolov
 ;
 ;******************************************************************************
 
@@ -14,7 +14,8 @@ Provider = %VF%
 Class = CNCPorts
 ClassGUID = {df799e12-3c56-421b-b298-b6d3642bc878}
 CatalogFile = com0com.cat
-DriverVer = 12/05/2007,2.0.0.0
+DriverVer = 05/21/2010,3.0.0.0
+UninstallInfTag = {df799e12-3c56-421b-b298-b6d3642bc878}
 
 ;******************************************************************************
 ;
@@ -56,24 +57,17 @@ com0com.sys
 [Manufacturer]
 %VF% = com0com, NTx86, NTia64, NTamd64
 
-[ControlFlags]
-ExcludeFromSelect = com0com\port
-
 [com0com]
 %com0com.BusDesc% = com0com_inst, root\com0com
-%com0com.PortDesc% = com0com_inst_port, com0com\port
 
 [com0com.NTx86]
 %com0com.BusDesc% = com0com_inst, root\com0com
-%com0com.PortDesc% = com0com_inst_port, com0com\port
 
 [com0com.NTia64]
 %com0com.BusDesc% = com0com_inst, root\com0com
-%com0com.PortDesc% = com0com_inst_port, com0com\port
 
 [com0com.NTamd64]
 %com0com.BusDesc% = com0com_inst, root\com0com
-%com0com.PortDesc% = com0com_inst_port, com0com\port
 
 ;******************************************************************************
 ;
@@ -84,30 +78,19 @@ ExcludeFromSelect = com0com\port
 [com0com_inst]
 AddReg = com0com_AddReg
 CopyFiles = com0com_CopyDrivers
+CopyINF = cncport.inf, comport.inf
 
 [com0com_inst.Services]
 AddService = com0com, %SPSVCINST_ASSOCSERVICE%, com0com_Service_Inst, com0com_EventLog_Inst
 
-;******************************************************************************
-;
-; Port install section
-;
-;******************************************************************************
-
-[com0com_inst_port]
-AddReg = com0com_AddReg
-
-[com0com_inst_port.Services]
-AddService = com0com, %SPSVCINST_ASSOCSERVICE%, com0com_Service_Inst, com0com_EventLog_Inst
+[com0com_AddReg]
+HKR,,PortDriver,,com0com.sys
 
 ;******************************************************************************
 ;
 ; Common section
 ;
 ;******************************************************************************
-
-[com0com_AddReg]
-HKR,,PortDriver,,com0com.sys
 
 [com0com_Service_Inst]
 DisplayName    = %com0com.SrvDesc%
@@ -143,7 +126,6 @@ SERVICE_ERROR_NORMAL   = 1
 DiskId1 = "Installation Disk #1 (com0com - Null-modem emulator)"
 VF = "Vyacheslav Frolov"
 com0com.BusDesc = "com0com - bus for serial port pair emulator"
-com0com.PortDesc = "com0com - serial port emulator"
 com0com.SrvDesc = "com0com - emulates the serial ports interconnected via a null-modem cable"
 ClassName = "com0com - serial port emulators"
 

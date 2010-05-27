@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2006-2008 Vyacheslav Frolov
+ * Copyright (c) 2006-2010 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -33,6 +33,7 @@
 #define C0C_PREF_PORT_NAME_B        TEXT_PREF"CNCB"
 #define C0C_PREF_DEVICE_NAME_A      C0C_PREF_NT_DEVICE_NAME C0C_SERVICE TEXT_PREF"1"
 #define C0C_PREF_DEVICE_NAME_B      C0C_PREF_NT_DEVICE_NAME C0C_SERVICE TEXT_PREF"2"
+#define C0C_PORT_NAME_COMCLASS      TEXT_PREF"COM#"
 
 #define C0C_REGSTR_VAL_PORT_NUM     TEXT_PREF"PortNum"
 

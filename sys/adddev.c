@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2004-2008 Vyacheslav Frolov
+ * Copyright (c) 2004-2010 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.37  2010/05/27 11:16:46  vfrolov
+ * Added ability to put the port to the Ports class
+ *
  * Revision 1.36  2008/12/02 16:10:08  vfrolov
  * Separated tracing and debuging
  *
@@ -202,7 +205,7 @@ NTSTATUS AddFdoPort(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
   ULONG addRTTO, addRITO;
   ULONG pinCTS, pinDSR, pinDCD, pinRI;
   UNICODE_STRING ntDeviceName;
-  PWCHAR pPortName;
+  PWCHAR pPhPortName;
 
   status = STATUS_SUCCESS;
   pDevExt = NULL;
@@ -226,9 +229,9 @@ NTSTATUS AddFdoPort(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
 
   Trace00((PC0C_COMMON_EXTENSION)pPhDevExt, L"AddFdoPort for ", ntDeviceName.Buffer);
 
-  pPortName = pPhDevExt->portName;
+  pPhPortName = pPhDevExt->portName;
 
-  if (!*pPortName) {
+  if (!*pPhPortName) {
     status = STATUS_UNSUCCESSFUL;
     SysLog(pPhDevObj, status, L"AddFdoPort FAIL. The PDO has invalid port name");
     goto clean;
@@ -238,38 +241,63 @@ NTSTATUS AddFdoPort(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
     UNICODE_STRING portRegistryPath;
 
     RtlInitUnicodeString(&portRegistryPath, NULL);
-    StrAppendStr(&status, &portRegistryPath, c0cGlobal.registryPath.Buffer, c0cGlobal.registryPath.Length);
-    StrAppendStr0(&status, &portRegistryPath, L"\\Parameters\\");
-    StrAppendStr0(&status, &portRegistryPath, pPortName);
+    StrAppendPortParametersRegistryPath(&status, &portRegistryPath, pPhPortName);
 
-    if (NT_SUCCESS(status)) {
-      WCHAR portNameBuf[C0C_PORT_NAME_LEN + 1];
-      UNICODE_STRING portNameTmp;
-      RTL_QUERY_REGISTRY_TABLE queryTable[2];
+    if (!NT_SUCCESS(status)) {
+    }
+    else
+    if (pPhDevExt->pIoPortLocal->isComClass) {
+      HANDLE hKey;
 
-      RtlZeroMemory(queryTable, sizeof(queryTable));
+      status = IoOpenDeviceRegistryKey(pPhDevObj,
+                                       PLUGPLAY_REGKEY_DEVICE,
+                                       STANDARD_RIGHTS_READ,
+                                       &hKey);
 
-      portNameTmp.Length = 0;
-      portNameTmp.MaximumLength = sizeof(portNameBuf);
-      portNameTmp.Buffer = portNameBuf;
+      if (NT_SUCCESS(status)) {
+        UNICODE_STRING keyName;
+        PKEY_VALUE_FULL_INFORMATION pInfo;
+        ULONG len;
 
-      queryTable[0].Flags        = RTL_QUERY_REGISTRY_DIRECT | RTL_QUERY_REGISTRY_REQUIRED;
-      queryTable[0].Name         = L"PortName";
-      queryTable[0].EntryContext = &portNameTmp;
+        RtlInitUnicodeString(&keyName, L"PortName");
 
-      status = RtlQueryRegistryValues(
-          RTL_REGISTRY_ABSOLUTE,
-          portRegistryPath.Buffer,
-          queryTable,
-          NULL,
-          NULL);
+        len = sizeof(*pInfo) + sizeof(L"PortName") + (C0C_PORT_NAME_LEN + 1) * sizeof(WCHAR);
 
-      if (!NT_SUCCESS(status) || !portNameTmp.Length) {
+        pInfo = C0C_ALLOCATE_POOL(PagedPool, len);
+
+        if (pInfo) {
+          status = ZwQueryValueKey(hKey, &keyName, KeyValueFullInformation, pInfo, len, &len);
+
+          if (NT_SUCCESS(status) && pInfo->DataLength <= ((C0C_PORT_NAME_LEN + 1) * sizeof(WCHAR))) {
+            StrAppendStr(
+                &status,
+                &portName,
+                (PWCHAR)(((PUCHAR)pInfo) + pInfo->DataOffset),
+                (USHORT)(pInfo->DataLength - sizeof(WCHAR)));
+          }
+
+          C0C_FREE_POOL(pInfo);
+        }
+
+        ZwClose(hKey);
+      }
+
+      if (!portName.Length) {
+        Trace0((PC0C_COMMON_EXTENSION)pPhDevExt, L"WARNING: Can't get PortName from COM class device node");
         status = STATUS_SUCCESS;
-        StrAppendStr0(&status, &portName, pPortName);
+        StrAppendStr0(&status, &portName, pPhPortName);
       } else {
-        StrAppendStr(&status, &portName, portNameTmp.Buffer, portNameTmp.Length);
         Trace00((PC0C_COMMON_EXTENSION)pPhDevExt, L"PortName set to ", portName.Buffer);
+      }
+    }
+    else {
+      StrAppendParameterPortName(&status, &portName, portRegistryPath.Buffer);
+
+      if (NT_SUCCESS(status) && portName.Length) {
+        Trace00((PC0C_COMMON_EXTENSION)pPhDevExt, L"PortName set to ", portName.Buffer);
+      } else {
+        status = STATUS_SUCCESS;
+        StrAppendStr0(&status, &portName, pPhPortName);
       }
     }
 
@@ -725,14 +753,14 @@ ULONG GetPortNum(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
                                    STANDARD_RIGHTS_READ,
                                    &hKey);
 
-  if (status == STATUS_SUCCESS) {
+  if (NT_SUCCESS(status)) {
     UNICODE_STRING keyName;
     PKEY_VALUE_PARTIAL_INFORMATION pInfo;
     ULONG len;
 
     RtlInitUnicodeString(&keyName, C0C_REGSTR_VAL_PORT_NUM);
 
-    len = sizeof(KEY_VALUE_FULL_INFORMATION) + sizeof(ULONG);
+    len = sizeof(*pInfo) + sizeof(ULONG);
 
     pInfo = C0C_ALLOCATE_POOL(PagedPool, len);
 

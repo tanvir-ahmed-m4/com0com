@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2004-2008 Vyacheslav Frolov
+ * Copyright (c) 2004-2010 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.16  2010/05/27 11:16:46  vfrolov
+ * Added ability to put the port to the Ports class
+ *
  * Revision 1.15  2008/12/02 16:10:09  vfrolov
  * Separated tracing and debuging
  *
@@ -445,7 +448,7 @@ CODE2NAME codeNameTableFileInformationClass[] = {
 };
 
 CODE2NAME codeNameTableShowPort[] = {
-  TOCODE2NAME(C0C_SHOW_, SETNAME),
+  TOCODE2NAME(C0C_SHOW_, PORTNAME),
   TOCODE2NAME(C0C_SHOW_, SYMLINK),
   TOCODE2NAME(C0C_SHOW_, DEVICEMAP),
   TOCODE2NAME(C0C_SHOW_, INTERFACE),

@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2006-2009 Vyacheslav Frolov
+ * Copyright (c) 2006-2010 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.18  2010/05/27 11:16:46  vfrolov
+ * Added ability to put the port to the Ports class
+ *
  * Revision 1.17  2009/05/22 11:32:52  vfrolov
  * Added URLInfoAbout, InstallLocation, InstallSource, Language, Version
  * and EstimatedSize to the registry
@@ -262,6 +265,8 @@ Section "com0com" sec_com0com
   ; Put files there
   File "..\ReadMe.txt"
   File "..\com0com.inf"
+  File "..\cncport.inf"
+  File "..\comport.inf"
   File "..\${TARGET_CPU}\com0com.sys"
   File "..\${TARGET_CPU}\setup.dll"
   File "..\${TARGET_CPU}\setupc.exe"
@@ -305,6 +310,10 @@ Section "com0com" sec_com0com
   ${GetSize} "$INSTDIR" "/M=ReadMe.txt    /S=0B /G=0" $R0 $R1 $R2
   ${GetSize} "$INSTDIR" "/M=com0com.inf   /S=0B /G=0" $R3 $R1 $R2
   IntOp $R0 $R0 + $R3
+  ${GetSize} "$INSTDIR" "/M=cncport.inf   /S=0B /G=0" $R3 $R1 $R2
+  IntOp $R0 $R0 + $R3
+  ${GetSize} "$INSTDIR" "/M=comport.inf   /S=0B /G=0" $R3 $R1 $R2
+  IntOp $R0 $R0 + $R3
   ${GetSize} "$INSTDIR" "/M=com0com.sys   /S=0B /G=0" $R3 $R1 $R2
   IntOp $R0 $R0 + $R3
   ${GetSize} "$INSTDIR" "/M=setup.dll     /S=0B /G=0" $R3 $R1 $R2
@@ -330,6 +339,12 @@ Section "com0com" sec_com0com
   IfSilent 0 +2
   StrCpy $1 "--silent"
 
+  ExecWait "setupc.exe $1 --output $0 infclean"
+  !insertmacro MoveFileToDetails $0
+
+  ExecWait "setupc.exe $1 --output $0 preinstall"
+  !insertmacro MoveFileToDetails $0
+
   ExecWait "setupc.exe $1 --output $0 update"
   !insertmacro MoveFileToDetails $0
 
@@ -349,7 +364,7 @@ SectionEnd
 
 ;--------------------------------
 
-Section "CNCA0<->CNCB0" sec_ports
+Section "CNCA0 <-> CNCB0" sec_CNCxCNC_ports
 
   GetTempFileName $0
 
@@ -358,6 +373,21 @@ Section "CNCA0<->CNCB0" sec_ports
   StrCpy $1 "--silent"
 
   ExecWait "setupc.exe $1 --output $0 install 0 - -"
+  !insertmacro MoveFileToDetails $0
+
+SectionEnd
+
+;--------------------------------
+
+Section "COM# <-> COM#" sec_COMxCOM_ports
+
+  GetTempFileName $0
+
+  StrCpy $1 ""
+  IfSilent 0 +2
+  StrCpy $1 "--silent"
+
+  ExecWait "setupc.exe $1 --output $0 install PortName=COM# PortName=COM#"
   !insertmacro MoveFileToDetails $0
 
 SectionEnd
@@ -395,11 +425,15 @@ Function .onInit
 
   ; Disable installing a pair of linked ports if silent
 
-  IfSilent 0 +5
-    SectionGetFlags ${sec_ports} $0
+  IfSilent 0 +9
+    SectionGetFlags ${sec_CNCxCNC_ports} $0
     IntOp $1 ${SF_SELECTED} ~
     IntOp $0 $0 & $1
-    SectionSetFlags ${sec_ports} $0
+    SectionSetFlags ${sec_CNCxCNC_ports} $0
+    SectionGetFlags ${sec_COMxCOM_ports} $0
+    IntOp $1 ${SF_SELECTED} ~
+    IntOp $0 $0 & $1
+    SectionSetFlags ${sec_COMxCOM_ports} $0
 
 FunctionEnd
 ;--------------------------------
@@ -433,6 +467,8 @@ Section "Uninstall"
   ; Remove files and uninstaller
   Delete $INSTDIR\ReadMe.txt
   Delete $INSTDIR\com0com.inf
+  Delete $INSTDIR\cncport.inf
+  Delete $INSTDIR\comport.inf
   Delete $INSTDIR\com0com.sys
   Delete $INSTDIR\setup.dll
   Delete $INSTDIR\setupc.exe
@@ -452,15 +488,28 @@ SectionEnd
 ;--------------------------------
 
   ;Language strings
-  LangString DESC_sec_com0com ${LANG_ENGLISH} "Install com0com files."
-  LangString DESC_sec_shortcuts ${LANG_ENGLISH} "Add shortcuts to the Start Menu."
-  LangString DESC_sec_ports ${LANG_ENGLISH} "Install a pair of linked ports with identifiers CNCA0 and CNCB0."
+  LangString DESC_sec_com0com ${LANG_ENGLISH} "\
+    Install com0com files. \
+    "
+  LangString DESC_sec_shortcuts ${LANG_ENGLISH} "\
+    Add shortcuts to the Start Menu. \
+    "
+  LangString DESC_sec_CNCxCNC_ports ${LANG_ENGLISH} "\
+    Install a pair of linked ports by CNCPorts class installer. \
+    The CNCPorts class installer sets the port names to CNCA0 and CNCB0. \
+    "
+  LangString DESC_sec_COMxCOM_ports ${LANG_ENGLISH} "\
+    Install a pair of linked ports by Ports class installer. \
+    The Ports class installer selects the COM port number for each port and \
+    sets the port name to COM#, where # is the selected port number. \
+    "
 
   ;Assign language strings to sections
   !insertmacro MUI_FUNCTION_DESCRIPTION_BEGIN
     !insertmacro MUI_DESCRIPTION_TEXT ${sec_com0com} $(DESC_sec_com0com)
     !insertmacro MUI_DESCRIPTION_TEXT ${sec_shortcuts} $(DESC_sec_shortcuts)
-    !insertmacro MUI_DESCRIPTION_TEXT ${sec_ports} $(DESC_sec_ports)
+    !insertmacro MUI_DESCRIPTION_TEXT ${sec_CNCxCNC_ports} $(DESC_sec_CNCxCNC_ports)
+    !insertmacro MUI_DESCRIPTION_TEXT ${sec_COMxCOM_ports} $(DESC_sec_COMxCOM_ports)
   !insertmacro MUI_FUNCTION_DESCRIPTION_END
 
 ;--------------------------------

@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2008 Vyacheslav Frolov
+ * Copyright (c) 2008-2010 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.3  2010/05/27 11:16:46  vfrolov
+ * Added ability to put the port to the Ports class
+ *
  * Revision 1.2  2008/12/25 16:57:33  vfrolov
  * Added ComDbQueryNames()
  *
@@ -302,7 +305,7 @@ static BOOL AddComNames(
   return TRUE;
 }
 
-static BOOL LoadComNames(InfFile &infFile, BusyMask &comDb)
+static BOOL LoadComNames(C0C_ENUM_FILTER pFilter, BusyMask &comDb)
 {
   comDb.Clear();
 
@@ -311,7 +314,7 @@ static BOOL LoadComNames(InfFile &infFile, BusyMask &comDb)
   if (!devProperties.DevId(C0C_BUS_DEVICE_ID))
     return FALSE;
 
-  if (EnumDevices(infFile, &devProperties, NULL, AddComNames, &comDb) < 0)
+  if (EnumDevices(pFilter, &devProperties, NULL, AddComNames, &comDb) < 0)
     return FALSE;
 
   return TRUE;
@@ -417,11 +420,11 @@ BOOL ComDbGetInUse(const char *pPortName, BOOL &inUse)
   return TRUE;
 }
 ///////////////////////////////////////////////////////////////
-void ComDbSync(InfFile &infFile)
+void ComDbSync(C0C_ENUM_FILTER pFilter)
 {
   BusyMask comNames;
 
-  if (!LoadComNames(infFile, comNames))
+  if (!LoadComNames(pFilter, comNames))
     return;
 
   BusyMask comDbLocal;
