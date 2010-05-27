@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2004-2009 Vyacheslav Frolov
+ * Copyright (c) 2004-2010 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.6  2010/05/27 11:06:23  vfrolov
+ * Added StrAppendPortParametersRegistryPath() and StrAppendParameterPortName()
+ *
  * Revision 1.5  2009/09/21 08:26:12  vfrolov
  * Fixed checking for overflow
  *
@@ -237,6 +240,55 @@ VOID StrAppendDeviceProperty(
       status = STATUS_INSUFFICIENT_RESOURCES;
     }
   }
+
+  StrFreeBad(status, pDest);
+
+  *pStatus = status;
+}
+
+VOID StrAppendPortParametersRegistryPath(
+    IN OUT PNTSTATUS pStatus,
+    IN OUT PUNICODE_STRING pDest,
+    IN PWCHAR pPhPortName)
+{
+  StrAppendStr(pStatus, pDest, c0cGlobal.registryPath.Buffer, c0cGlobal.registryPath.Length);
+  StrAppendStr0(pStatus, pDest, L"\\Parameters\\");
+  StrAppendStr0(pStatus, pDest, pPhPortName);
+}
+
+VOID StrAppendParameterPortName(
+    IN OUT PNTSTATUS pStatus,
+    IN OUT PUNICODE_STRING pDest,
+    IN PWCHAR pPortParametersRegistryPath)
+{
+  NTSTATUS status;
+  WCHAR portNameBuf[C0C_PORT_NAME_LEN + 1];
+  UNICODE_STRING portNameTmp;
+  RTL_QUERY_REGISTRY_TABLE queryTable[2];
+
+  status = *pStatus;
+
+  if (!NT_SUCCESS(status))
+    return;
+
+  RtlZeroMemory(queryTable, sizeof(queryTable));
+
+  portNameTmp.Length = 0;
+  portNameTmp.MaximumLength = sizeof(portNameBuf);
+  portNameTmp.Buffer = portNameBuf;
+
+  queryTable[0].Flags        = RTL_QUERY_REGISTRY_DIRECT | RTL_QUERY_REGISTRY_REQUIRED;
+  queryTable[0].Name         = L"PortName";
+  queryTable[0].EntryContext = &portNameTmp;
+
+  status = RtlQueryRegistryValues(
+      RTL_REGISTRY_ABSOLUTE,
+      pPortParametersRegistryPath,
+      queryTable,
+      NULL,
+      NULL);
+
+  StrAppendStr(&status, pDest, portNameTmp.Buffer, portNameTmp.Length);
 
   StrFreeBad(status, pDest);
 

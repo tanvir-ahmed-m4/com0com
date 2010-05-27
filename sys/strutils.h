@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2004-2006 Vyacheslav Frolov
+ * Copyright (c) 2004-2010 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.5  2010/05/27 11:06:23  vfrolov
+ * Added StrAppendPortParametersRegistryPath() and StrAppendParameterPortName()
+ *
  * Revision 1.4  2006/11/03 13:13:26  vfrolov
  * CopyStrW() now gets size in characters (not in bytes)
  *
@@ -57,5 +60,13 @@ VOID StrAppendDeviceProperty(
     IN OUT PUNICODE_STRING pDest,
     IN PDEVICE_OBJECT pDevObj,
     IN DEVICE_REGISTRY_PROPERTY deviceProperty);
+VOID StrAppendPortParametersRegistryPath(
+    IN OUT PNTSTATUS pStatus,
+    IN OUT PUNICODE_STRING pDest,
+    IN PWCHAR pPhPortName);
+VOID StrAppendParameterPortName(
+    IN OUT PNTSTATUS pStatus,
+    IN OUT PUNICODE_STRING pDest,
+    IN PWCHAR pPortParametersRegistryPath);
 
 #endif /* _C0C_STRUTILS_H_ */
