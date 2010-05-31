@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.17  2010/05/31 07:58:14  vfrolov
+ * Added ability to invoke the system-supplied advanced settings dialog box
+ *
  * Revision 1.16  2010/05/27 11:16:46  vfrolov
  * Added ability to put the port to the Ports class
  *
@@ -147,16 +150,24 @@ void PortParameters::Init()
   addRTTO = 0;
   addRITO = 0;
 
+  classChanged = FALSE;
+  dialogRequested = FALSE;
   maskChanged = 0;
   maskExplicit = 0;
 }
 ///////////////////////////////////////////////////////////////
 BOOL PortParameters::SetPortName(const char *pNewPortName)
 {
-  if (lstrcmpi(portName, pNewPortName)) {
+  if (lstrcmpi(pNewPortName, "?") == 0) {
+    dialogRequested = TRUE;
+  }
+  else
+  if (lstrcmpi(portName, pNewPortName) != 0) {
+    classChanged = ((lstrcmpi(C0C_PORT_NAME_COMCLASS, portName) == 0) !=
+                    (lstrcmpi(C0C_PORT_NAME_COMCLASS, pNewPortName) == 0));
+    maskChanged |= m_portName;
     SNPRINTF(portName, sizeof(portName)/sizeof(portName[0]), "%s", pNewPortName);
     CharUpper(portName);
-    maskChanged |= m_portName;
   }
 
   return TRUE;
@@ -859,7 +870,7 @@ const char *PortParameters::GetHelp()
     "\n"
     "Parameters:\n"
     "  PortName=<portname>     - set port name to <portname>\n"
-    "                            (port identifier by default).\n"
+    "                            (port identifier by default)\n"
     "  EmuBR={yes|no}          - enable/disable baud rate emulation in the direction\n"
     "                            to the paired port (disabled by default)\n"
     "  EmuOverrun={yes|no}     - enable/disable buffer overrun (disabled by default)\n"
@@ -892,6 +903,8 @@ const char *PortParameters::GetHelp()
     "If <portname> above is '" C0C_PORT_NAME_COMCLASS "' then the Ports class installer will be used to\n"
     "manage port name. The Ports class installer selects the COM port number and\n"
     "sets the port name to COM<n>, where <n> is the selected port number.\n"
+    "Use 'PortName=?' to invoke the system-supplied advanced settings dialog box to\n"
+    "change the port number.\n"
     "\n"
     "Special values:\n"
     "  -                       - use driver's default value\n"

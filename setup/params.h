@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2006-2008 Vyacheslav Frolov
+ * Copyright (c) 2006-2010 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.9  2010/05/31 07:58:14  vfrolov
+ * Added ability to invoke the system-supplied advanced settings dialog box
+ *
  * Revision 1.8  2008/09/17 07:58:32  vfrolov
  * Added AddRTTO and AddRITO parameters
  *
@@ -61,6 +64,8 @@ class PortParameters {
     BOOL FillParametersStr(char *pParameters, int size, BOOL detail);
     BOOL FillPortName(char *pPortName, int size);
     BOOL Changed() const { return maskChanged != 0; }
+    BOOL ClassChanged() const { return classChanged; }
+    BOOL DialogRequested() const { return dialogRequested; }
 
     static const char *PortParameters::GetHelp();
 
@@ -77,6 +82,8 @@ class PortParameters {
     BOOL SetUnsigned(const char *pNewVal, DWORD bit);
     BOOL SetBit(const char *pVal, const Bit &bit);
 
+    BOOL classChanged;
+    BOOL dialogRequested;
     DWORD maskChanged;
     DWORD maskExplicit;
     char portName[20];

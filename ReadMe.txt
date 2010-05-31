@@ -133,6 +133,11 @@ A. Yes, it's possible. To change the names:
    In the last case the Ports class installer will be used to manage port names.
    The Ports class installer selects the COM port number and sets the port
    name to COM<n>, where <n> is the selected port number.
+   After installing the Ports class ports you can invoke the system-supplied advanced
+   settings dialog box to change the port number by this way:
+
+      command> change CNCA0 PortName=?
+      command> change CNCB0 PortName=?
 
 Q. The baud rate setting does not seem to make a difference: data is always
    transferred at the same speed. How to enable the baud rate emulation?
