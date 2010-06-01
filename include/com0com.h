@@ -24,6 +24,8 @@
 
 #define C0C_BUS_DEVICE_ID           TEXT_PREF"root\\com0com"
 #define C0C_PORT_DEVICE_ID          TEXT_PREF"com0com\\port"
+#define C0C_PORT_HW_ID_CNCCLASS     TEXT_PREF"com0com\\cncport"
+#define C0C_PORT_HW_ID_COMCLASS     TEXT_PREF"com0com\\comport"
 #define C0C_SERVICE                 TEXT_PREF"com0com"
 #define C0C_PREF_NT_DEVICE_NAME     TEXT_PREF"\\Device\\"
 

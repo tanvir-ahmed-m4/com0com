@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.49  2010/06/01 06:14:10  vfrolov
+ * Improved driver updating
+ *
  * Revision 1.48  2010/05/27 11:16:46  vfrolov
  * Added ability to put the port to the Ports class
  *
@@ -184,8 +187,8 @@
 #define C0C_SERIAL_DEVICEMAP        L"SERIALCOMM"
 #define C0C_PREF_WIN32_DEVICE_NAME  L"\\DosDevices\\"
 
-#define C0C_PORT_HARDWARE_IDS_CNCCLASS C0C_PORT_DEVICE_ID L"\0" L"com0com\\cncport" L"\0"
-#define C0C_PORT_HARDWARE_IDS_COMCLASS C0C_PORT_DEVICE_ID L"\0" L"com0com\\comport" L"\0"
+#define C0C_PORT_HARDWARE_IDS_CNCCLASS C0C_PORT_DEVICE_ID L"\0" C0C_PORT_HW_ID_CNCCLASS L"\0"
+#define C0C_PORT_HARDWARE_IDS_COMCLASS C0C_PORT_DEVICE_ID L"\0" C0C_PORT_HW_ID_COMCLASS L"\0"
 
 #define C0C_DOTYPE_FB     ((unsigned)0xC0C1)
 #define C0C_DOTYPE_PP     ((unsigned)0xC0C2)

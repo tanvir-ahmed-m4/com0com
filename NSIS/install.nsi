@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.19  2010/06/01 06:14:09  vfrolov
+ * Improved driver updating
+ *
  * Revision 1.18  2010/05/27 11:16:46  vfrolov
  * Added ability to put the port to the Ports class
  *
@@ -339,13 +342,13 @@ Section "com0com" sec_com0com
   IfSilent 0 +2
   StrCpy $1 "--silent"
 
-  ExecWait "setupc.exe $1 --output $0 infclean"
-  !insertmacro MoveFileToDetails $0
-
   ExecWait "setupc.exe $1 --output $0 preinstall"
   !insertmacro MoveFileToDetails $0
 
   ExecWait "setupc.exe $1 --output $0 update"
+  !insertmacro MoveFileToDetails $0
+
+  ExecWait "setupc.exe $1 --output $0 infclean"
   !insertmacro MoveFileToDetails $0
 
 SectionEnd
