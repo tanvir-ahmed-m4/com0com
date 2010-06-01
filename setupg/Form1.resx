@@ -139,7 +139,9 @@
     <value>Port name.
 The name is red if it's already in use by other device.
 Enter '-' to reset the name to the default.
-Enter 'COM#' to manage port by Ports class installer.</value>
+Enter 'COM#' to manage the port by Ports class installer.
+Enter '?' to invoke the system-supplied advanced
+settings dialog box for Ports class port.</value>
   </data>
   <data name="&gt;&gt;PortNameB.Name" xml:space="preserve">
     <value>PortNameB</value>
@@ -166,7 +168,9 @@ Enter 'COM#' to manage port by Ports class installer.</value>
     <value>Port name.
 The name is red if it's already in use by other device.
 Enter '-' to reset the name to the default.
-Enter 'COM#' to manage port by Ports class installer.</value>
+Enter 'COM#' to manage the port by Ports class installer.
+Enter '?' to invoke the system-supplied advanced
+settings dialog box for Ports class port.</value>
   </data>
   <data name="&gt;&gt;PortNameA.Name" xml:space="preserve">
     <value>PortNameA</value>
