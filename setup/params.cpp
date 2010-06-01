@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.18  2010/06/01 12:54:12  vfrolov
+ * Fixed bit settings
+ *
  * Revision 1.17  2010/05/31 07:58:14  vfrolov
  * Added ability to invoke the system-supplied advanced settings dialog box
  *
@@ -469,10 +472,8 @@ BOOL PortParameters::SetBit(const char *pVal, const Bit &bit)
     return FALSE;
   }
 
-  if ((maskExplicit & bit.bit) == 0) {
+  if (maskChanged & bit.bit)
     maskExplicit |= bit.bit;
-    maskChanged |= bit.bit;
-  }
 
   return TRUE;
 }
