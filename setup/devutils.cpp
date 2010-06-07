@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.14  2010/06/07 07:03:31  vfrolov
+ * Added wrapper UpdateDriver() for UpdateDriverForPlugAndPlayDevices()
+ *
  * Revision 1.13  2010/05/27 11:16:46  vfrolov
  * Added ability to put the port to the Ports class
  *
@@ -655,19 +658,90 @@ BOOL ReenumerateDeviceNode(PSP_DEVINFO_DATA pDevInfoData)
   return CM_Reenumerate_DevNode(pDevInfoData->DevInst, 0) == CR_SUCCESS;
 }
 ///////////////////////////////////////////////////////////////
+int UpdateDriver(
+    const char *pInfFilePath,
+    const char *pHardwareId,
+    DWORD flags,
+    BOOL *pRebootRequired)
+{
+  DWORD updateErr = ERROR_SUCCESS;
+
+  for (int i = 0 ; i < 10 ; i++) {
+    if (UpdateDriverForPlugAndPlayDevices(0, pHardwareId, pInfFilePath, flags, pRebootRequired))
+    {
+      updateErr = ERROR_SUCCESS;
+    } else {
+      updateErr = GetLastError();
+
+      if (updateErr == ERROR_NO_SUCH_DEVINST) {
+        updateErr = ERROR_SUCCESS;
+      }
+      else
+      if (updateErr == ERROR_SHARING_VIOLATION) {
+        Trace(".");
+        Sleep(1000);
+        continue;
+      }
+    }
+
+    if (i)
+      Trace("\n");
+
+    break;
+  }
+
+  if (updateErr != ERROR_SUCCESS) {
+    if (updateErr == ERROR_FILE_NOT_FOUND) {
+      LONG err;
+      HKEY hKey;
+
+      err = RegOpenKeyEx(HKEY_LOCAL_MACHINE, REGSTR_PATH_RUNONCE, 0, KEY_READ, &hKey);
+
+      if (err == ERROR_SUCCESS)
+        RegCloseKey(hKey);
+
+      if (err == ERROR_FILE_NOT_FOUND) {
+        int res = ShowMsg(MB_CANCELTRYCONTINUE,
+                          "Can't update driver. Possible it's because your Windows registry is corrupted and\n"
+                          "there is not the following key:\n"
+                          "\n"
+                          "HKEY_LOCAL_MACHINE\\" REGSTR_PATH_RUNONCE "\n"
+                          "\n"
+                          "Continue to add the key to the registry.\n");
+
+        if (res == IDCONTINUE) {
+          err = RegCreateKeyEx(HKEY_LOCAL_MACHINE, REGSTR_PATH_RUNONCE, 0, NULL, 0, KEY_WRITE, NULL, &hKey, NULL);
+
+          if (err == ERROR_SUCCESS) {
+            RegCloseKey(hKey);
+            return IDTRYAGAIN;
+          } else {
+            ShowLastError(MB_OK|MB_ICONSTOP, "RegCreateKeyEx()");
+            return IDCANCEL;
+          }
+        }
+
+        return res;
+      }
+    }
+
+    return ShowError(MB_CANCELTRYCONTINUE, updateErr, "UpdateDriverForPlugAndPlayDevices()");
+  }
+
+  return IDCONTINUE;
+}
+///////////////////////////////////////////////////////////////
 static int TryInstallDevice(
     const char *pInfFilePath,
     const char *pDevId,
     const char *pDevInstID,
     PDEVCALLBACK pDevCallBack,
     void *pCallBackParam,
-    BOOL update)
+    BOOL updateDriver,
+    BOOL *pRebootRequired)
 {
   GUID classGUID;
   char className[32];
-  DWORD updateErr;
-
-  updateErr = ERROR_SUCCESS;
 
   if (!SetupDiGetINFClass(pInfFilePath, &classGUID, className, sizeof(className)/sizeof(className[0]), 0)) {
     ShowLastError(MB_OK|MB_ICONSTOP, "SetupDiGetINFClass(%s)", pInfFilePath);
@@ -685,7 +759,7 @@ static int TryInstallDevice(
     return IDCANCEL;
   }
 
-  BOOL res;
+  int res = IDCONTINUE;
   SP_DEVINFO_DATA devInfoData;
 
   devInfoData.cbSize = sizeof(devInfoData);
@@ -696,10 +770,11 @@ static int TryInstallDevice(
        * root\<enumerator-specific-device-ID>
        */
 
-      res = SetupDiCreateDeviceInfo(hDevInfo, pDevId + 5, &classGUID, NULL, 0, DICD_GENERATE_ID, &devInfoData);
+      if (!SetupDiCreateDeviceInfo(hDevInfo, pDevId + 5, &classGUID, NULL, 0, DICD_GENERATE_ID, &devInfoData))
+        res = IDCANCEL;
     } else {
       SetLastError(ERROR_INVALID_DEVINST_NAME);
-      res = FALSE;
+      res = IDCANCEL;
     }
   }
   else
@@ -708,9 +783,10 @@ static int TryInstallDevice(
      * <enumerator>\<enumerator-specific-device-ID>\<instance-specific-ID>
      */
 
-    res = SetupDiCreateDeviceInfo(hDevInfo, pDevInstID, &classGUID, NULL, 0, 0, &devInfoData);
+    if (!SetupDiCreateDeviceInfo(hDevInfo, pDevInstID, &classGUID, NULL, 0, 0, &devInfoData))
+      res = IDCANCEL;
 
-    if (!res && GetLastError() == ERROR_DEVINST_ALREADY_EXISTS) {
+    if (res != IDCONTINUE && GetLastError() == ERROR_DEVINST_ALREADY_EXISTS) {
       char *pTmpDevInstID = NULL;
 
       if (SetStr(&pTmpDevInstID, pDevInstID)) {
@@ -722,7 +798,8 @@ static int TryInstallDevice(
         if (p && !lstrcmp(p, REGSTR_KEY_ROOTENUM)) {
           p = STRTOK_R(NULL, "\\", &pSave);
 
-          res = SetupDiCreateDeviceInfo(hDevInfo, p, &classGUID, NULL, 0, DICD_GENERATE_ID, &devInfoData);
+          if (SetupDiCreateDeviceInfo(hDevInfo, p, &classGUID, NULL, 0, DICD_GENERATE_ID, &devInfoData))
+            res = IDCONTINUE;
         }
 
         SetStr(&pTmpDevInstID, NULL);
@@ -735,12 +812,13 @@ static int TryInstallDevice(
      * <enumerator-specific-device-ID>
      */
 
-    res = SetupDiCreateDeviceInfo(hDevInfo, pDevInstID, &classGUID, NULL, 0, DICD_GENERATE_ID, &devInfoData);
+    if (!SetupDiCreateDeviceInfo(hDevInfo, pDevInstID, &classGUID, NULL, 0, DICD_GENERATE_ID, &devInfoData))
+      res = IDCANCEL;
   }
 
-  if (!res) {
+  if (res != IDCONTINUE) {
     ShowLastError(MB_OK|MB_ICONSTOP, "SetupDiCreateDeviceInfo()");
-    goto err;
+    goto exit1;
   }
 
   char hardwareId[MAX_DEVICE_ID_LEN + 1 + 1];
@@ -752,113 +830,49 @@ static int TryInstallDevice(
   hardwareIdLen = lstrlen(hardwareId) + 1 + 1;
   hardwareId[hardwareIdLen - 1] = 0;
 
-  res = SetupDiSetDeviceRegistryProperty(hDevInfo, &devInfoData, SPDRP_HARDWAREID,
-                                         (LPBYTE)hardwareId, hardwareIdLen * sizeof(hardwareId[0]));
-  if (!res) {
+  if (!SetupDiSetDeviceRegistryProperty(hDevInfo, &devInfoData, SPDRP_HARDWAREID,
+                                        (LPBYTE)hardwareId, hardwareIdLen * sizeof(hardwareId[0])))
+  {
+    res = IDCANCEL;
     ShowLastError(MB_OK|MB_ICONSTOP, "SetupDiSetDeviceRegistryProperty()");
-    goto err;
+    goto exit1;
   }
 
-  res = SetupDiCallClassInstaller(DIF_REGISTERDEVICE, hDevInfo, &devInfoData);
-
-  if (!res) {
+  if (!SetupDiCallClassInstaller(DIF_REGISTERDEVICE, hDevInfo, &devInfoData)) {
+    res = IDCANCEL;
     ShowLastError(MB_OK|MB_ICONSTOP, "SetupDiCallClassInstaller()");
-    goto err;
+    goto exit1;
   }
 
   if (pDevCallBack) {
     DevProperties devProperties;
 
     if (!devProperties.DevId(pDevId)) {
-      res = FALSE;
-      goto err1;
+      res = IDCANCEL;
+      goto exit2;
     }
 
-    res = pDevCallBack(hDevInfo, &devInfoData, &devProperties, NULL, pCallBackParam);
-
-    if (!res)
-      goto err1;
+    if (!pDevCallBack(hDevInfo, &devInfoData, &devProperties, NULL, pCallBackParam)) {
+      res = IDCANCEL;
+      goto exit2;
+    }
   }
 
-  int i;
+  if (updateDriver)
+    res = UpdateDriver(pInfFilePath, pDevId, 0, pRebootRequired);
 
-  for (i = 0 ; i < 10 ; i++) {
-    if (update) {
-      BOOL rebootRequired;
+exit2:
 
-      res = UpdateDriverForPlugAndPlayDevices(0, pDevId, pInfFilePath, 0, &rebootRequired);
-    } else {
-      res = TRUE;
-    }
-
-    if (res) {
-      updateErr = ERROR_SUCCESS;
-    } else {
-      updateErr = GetLastError();
-
-      if (updateErr == ERROR_SHARING_VIOLATION) {
-        Trace(".");
-        Sleep(1000);
-        continue;
-      }
-    }
-
-    if (i)
-      Trace("\n");
-
-    break;
-  }
-
-  if (updateErr != ERROR_SUCCESS) {
-err1:
-
+  if (res != IDCONTINUE) {
     if (!SetupDiCallClassInstaller(DIF_REMOVE, hDevInfo, &devInfoData))
       ShowLastError(MB_OK|MB_ICONWARNING, "SetupDiCallClassInstaller()");
   }
 
-err:
+exit1:
 
   SetupDiDestroyDeviceInfoList(hDevInfo);
 
-  if (updateErr != ERROR_SUCCESS) {
-    if (updateErr == ERROR_FILE_NOT_FOUND) {
-      LONG err;
-      HKEY hKey;
-
-      err = RegOpenKeyEx(HKEY_LOCAL_MACHINE, REGSTR_PATH_RUNONCE, 0, KEY_READ, &hKey);
-
-      if (err == ERROR_SUCCESS)
-        RegCloseKey(hKey);
-
-      if (err == ERROR_FILE_NOT_FOUND) {
-        int res2 = ShowMsg(MB_CANCELTRYCONTINUE,
-                           "Can't update driver. Possible it's because your Windows registry is corrupted and\n"
-                           "there is not the following key:\n"
-                           "\n"
-                           "HKEY_LOCAL_MACHINE\\" REGSTR_PATH_RUNONCE "\n"
-                           "\n"
-                           "Continue to add the key to the registry.\n");
-
-        if (res2 == IDCONTINUE) {
-          err = RegCreateKeyEx(HKEY_LOCAL_MACHINE, REGSTR_PATH_RUNONCE, 0, NULL, 0, KEY_WRITE, NULL, &hKey, NULL);
-
-          if (err == ERROR_SUCCESS) {
-            RegCloseKey(hKey);
-            return IDTRYAGAIN;
-          } else {
-            ShowLastError(MB_OK|MB_ICONSTOP, "RegCreateKeyEx()");
-            return IDCANCEL;
-          }
-        }
-
-        return res2;
-      }
-    }
-
-    return ShowError(MB_CANCELTRYCONTINUE, updateErr, "UpdateDriverForPlugAndPlayDevices()");
-  }
-
-  return res ? IDCONTINUE : IDCANCEL;
+  return res;
 }
 
 BOOL InstallDevice(
@@ -867,12 +881,13 @@ BOOL InstallDevice(
     const char *pDevInstID,
     PDEVCALLBACK pDevCallBack,
     void *pCallBackParam,
-    BOOL update)
+    BOOL updateDriver,
+    BOOL *pRebootRequired)
 {
   int res;
 
   do {
-    res = TryInstallDevice(pInfFilePath, pDevId, pDevInstID, pDevCallBack, pCallBackParam, update);
+    res = TryInstallDevice(pInfFilePath, pDevId, pDevInstID, pDevCallBack, pCallBackParam, updateDriver, pRebootRequired);
   } while (res == IDTRYAGAIN);
 
   return res == IDCONTINUE;

@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.9  2010/06/07 07:03:31  vfrolov
+ * Added wrapper UpdateDriver() for UpdateDriverForPlugAndPlayDevices()
+ *
  * Revision 1.8  2010/05/27 11:16:46  vfrolov
  * Added ability to put the port to the Ports class
  *
@@ -134,13 +137,20 @@ BOOL RemoveDevices(
 BOOL ReenumerateDeviceNode(
     PSP_DEVINFO_DATA pDevInfoData);
 
+int UpdateDriver(
+    const char *pInfFilePath,
+    const char *pHardwareId,
+    DWORD flags,
+    BOOL *pRebootRequired);
+
 BOOL InstallDevice(
     const char *pInfFilePath,
     const char *pDevId,
     const char *pDevInstID,
     PDEVCALLBACK pDevCallBack,
     void *pCallBackParam,
-    BOOL update);
+    BOOL updateDriver,
+    BOOL *pRebootRequired);
 ///////////////////////////////////////////////////////////////
 
 #endif /* _C0C_DEVUTILS_H_ */
