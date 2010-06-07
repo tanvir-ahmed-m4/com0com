@@ -14,7 +14,8 @@ Provider = %VF%
 Class = CNCPorts
 ClassGUID = {df799e12-3c56-421b-b298-b6d3642bc878}
 CatalogFile = com0com.cat
-DriverVer = 05/21/2010,3.0.0.0
+;           MM/DD/YYYY
+DriverVer = 06/07/2010,3.0.0.0
 UninstallInfTag = {df799e12-3c56-421b-b298-b6d3642bc878}
 
 ;******************************************************************************
@@ -84,7 +85,6 @@ CopyINF = cncport.inf, comport.inf
 AddService = com0com, %SPSVCINST_ASSOCSERVICE%, com0com_Service_Inst, com0com_EventLog_Inst
 
 [com0com_AddReg]
-HKR,,PortDriver,,com0com.sys
 
 ;******************************************************************************
 ;

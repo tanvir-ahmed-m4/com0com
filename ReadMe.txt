@@ -265,6 +265,22 @@ A. Yes, it is. You should put the port to the Ports class, for example:
 
       command> install PortName=COM# -
 
+Q. I have to somehow add a "fake" PNP device in device manager and have it
+   connected under COM3. I use PNPComSimulator (http://www.bds.dogma.net/pnp_part2.htm),
+   which can fake a PNP Serial device's response when polled by DevManager.
+   Is it possible to have the device manager look for PNP equipement via com0com?
+A. Yes, it is. The simplest way is to put the port to the Ports class, for example:
+
+   1. Launch the Setup Command Prompt shortcut.
+   2. Install the pair of ports, were one of them has name COM#, for example:
+
+      command> install 0 PortName=COM# -
+
+   After installing the Ports class port you can invoke the system-supplied advanced
+   settings dialog box to change the port name to COM3 by this way:
+
+      command> change CNCA0 PortName=?
+
 Q. Is it possible to configure the com0com to randomly corrupt the data? It
    would be nice to have this feature so that we can test our application
    robustness.
