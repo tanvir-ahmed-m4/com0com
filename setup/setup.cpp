@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.40  2010/07/12 18:14:44  vfrolov
+ * Fixed driver update duplication
+ *
  * Revision 1.39  2010/06/07 07:03:31  vfrolov
  * Added wrapper UpdateDriver() for UpdateDriverForPlugAndPlayDevices()
  *
@@ -199,16 +202,15 @@ static const InfFile::InfFileField requiredFieldsInfCOMPortInstall[] = {
 struct InfFileInstall {
   const char *pInfName;
   const char *CopyDriversSection;
-  const char *pDeviceId;
   const char *pHardwareId;
   BOOL preinstallClass;
   const InfFile::InfFileField *pRequiredFields;
 };
 
 static const InfFileInstall infFileInstallList[] = {
-  { C0C_INF_NAME,          C0C_COPY_DRIVERS_SECTION,  C0C_BUS_DEVICE_ID,   C0C_BUS_DEVICE_ID,        TRUE,  requiredFieldsInfBusInstall },
-  { C0C_INF_NAME_CNCPORT,  NULL,                      C0C_PORT_DEVICE_ID,  C0C_PORT_HW_ID_CNCCLASS,  FALSE, requiredFieldsInfCNCPortInstall },
-  { C0C_INF_NAME_COMPORT,  NULL,                      C0C_PORT_DEVICE_ID,  C0C_PORT_HW_ID_COMCLASS,  FALSE, requiredFieldsInfCOMPortInstall },
+  { C0C_INF_NAME,          C0C_COPY_DRIVERS_SECTION,  C0C_BUS_DEVICE_ID,        TRUE,  requiredFieldsInfBusInstall },
+  { C0C_INF_NAME_CNCPORT,  NULL,                      C0C_PORT_HW_ID_CNCCLASS,  FALSE, requiredFieldsInfCNCPortInstall },
+  { C0C_INF_NAME_COMPORT,  NULL,                      C0C_PORT_HW_ID_COMCLASS,  FALSE, requiredFieldsInfCOMPortInstall },
   { NULL },
 };
 ///////////////////////////////////////////////////////////////
@@ -703,7 +705,6 @@ err:
 }
 ///////////////////////////////////////////////////////////////
 int Reload(
-    const char *pDeviceId,
     const char *pHardwareId,
     const char *pInfFilePath,
     BOOL *pRebootRequired)
@@ -712,7 +713,7 @@ int Reload(
   BOOL rebootRequired = FALSE;
 
   DevProperties devProperties;
-  if (!devProperties.DevId(pDeviceId))
+  if (!devProperties.DevId(pHardwareId))
     return 1;
 
   if (!DisableDevices(EnumFilter, &devProperties, &rebootRequired, &stack)) {
@@ -759,7 +760,7 @@ int Update(const InfFileInstall *pInfFileInstallList)
   {
     InfFile infFile(pInfFileInstall->pInfName, pInfFileInstall->pInfName);
 
-    if (Reload(pInfFileInstall->pDeviceId, pInfFileInstall->pHardwareId, infFile.Path(), &rebootRequired) != 0)
+    if (Reload(pInfFileInstall->pHardwareId, infFile.Path(), &rebootRequired) != 0)
       res = 1;
   }
 
@@ -1674,7 +1675,7 @@ int Main(int argc, const char* argv[])
   else
   if (argc == 2 && !lstrcmpi(argv[1], "reload")) {
     SetTitle(C0C_SETUP_TITLE " (RELOAD)");
-    return Reload(C0C_BUS_DEVICE_ID, NULL, NULL, NULL);
+    return Reload(C0C_BUS_DEVICE_ID, NULL, NULL);
   }
 
   for (

@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.15  2010/07/12 18:14:44  vfrolov
+ * Fixed driver update duplication
+ *
  * Revision 1.14  2010/06/07 07:03:31  vfrolov
  * Added wrapper UpdateDriver() for UpdateDriverForPlugAndPlayDevices()
  *
@@ -166,24 +169,33 @@ static int EnumDevices(
 
     if (!SetupDiGetDeviceRegistryProperty(hDevInfo, &devInfoData, SPDRP_HARDWAREID, NULL, (PBYTE)hardwareId, sizeof(hardwareId), NULL)) {
       memset(hardwareId, 0, sizeof(hardwareId));
-      SNPRINTF(hardwareId, sizeof(hardwareId)/sizeof(hardwareId[0]), "UNKNOWN HARDWAREID");
+      SNPRINTF(hardwareId, sizeof(hardwareId)/sizeof(hardwareId[0]), "UNKNOWN HARDWAREID" "\0");
     }
 
     if (!pFilter(hardwareId))
       continue;
 
-    DevParams devParams(pEnumParams);
+    const char *pHardwareId = hardwareId;
 
-    if (!devParams.devProperties.DevId(hardwareId)) {
-      res = IDCANCEL;
-      break;
+    if (pEnumParams->pDevProperties && pEnumParams->pDevProperties->DevId()) {
+      while (lstrcmpi(pHardwareId, pEnumParams->pDevProperties->DevId()) != 0) {
+        pHardwareId = pHardwareId + lstrlen(pHardwareId) + 1;
+
+        if (!*pHardwareId) {
+          pHardwareId = NULL;
+          break;
+        }
+      }
+
+      if (!pHardwareId)
+        continue;
     }
 
-    if (pEnumParams->pDevProperties &&
-        pEnumParams->pDevProperties->DevId() && (!devParams.devProperties.DevId() ||
-        lstrcmpi(devParams.devProperties.DevId(), pEnumParams->pDevProperties->DevId())))
-    {
-      continue;
+    DevParams devParams(pEnumParams);
+
+    if (!devParams.devProperties.DevId(pHardwareId)) {
+      res = IDCANCEL;
+      break;
     }
 
     char location[40];
