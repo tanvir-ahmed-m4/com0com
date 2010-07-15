@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.16  2010/07/15 18:11:09  vfrolov
+ * Fixed --wait option for Ports class
+ *
  * Revision 1.15  2010/07/12 18:14:44  vfrolov
  * Fixed driver update duplication
  *
@@ -903,5 +906,60 @@ BOOL InstallDevice(
   } while (res == IDTRYAGAIN);
 
   return res == IDCONTINUE;
+}
+///////////////////////////////////////////////////////////////
+int WaitNoPendingInstallEvents(int timeLimit)
+{
+  typedef DWORD  (WINAPI *PWAITNOPENDINGINSTALLEVENTS)(IN DWORD);
+  static PWAITNOPENDINGINSTALLEVENTS pWaitNoPendingInstallEvents = NULL;
+
+  if(!pWaitNoPendingInstallEvents) {
+    HMODULE hModule = GetModuleHandle("setupapi.dll");
+
+    if (!hModule)
+      return 0;
+
+    pWaitNoPendingInstallEvents =
+        (PWAITNOPENDINGINSTALLEVENTS)GetProcAddress(hModule, "CMP_WaitNoPendingInstallEvents");
+  }
+
+  if (!pWaitNoPendingInstallEvents)
+    return 0;
+
+  DWORD startTime = GetTickCount();
+
+  Trace("Wating for no pending device installation activities ");
+
+  for (BOOL count = 0 ;;) {
+    DWORD res = pWaitNoPendingInstallEvents(0);
+
+    if (res == WAIT_OBJECT_0) {
+      if (++count < 5) {
+        Sleep(100);
+        continue;
+      }
+
+      Trace(". OK\n");
+      break;
+    }
+
+    count = 0;
+
+    if (res != WAIT_TIMEOUT) {
+      Trace(". FAIL\n");
+      break;
+    }
+
+    Trace(".");
+
+    if (GetTickCount() - startTime >= DWORD(timeLimit * 1000)) {
+      Trace(" timeout\n");
+      return -1;
+    }
+
+    Sleep(1000);
+  }
+
+  return int((GetTickCount() - startTime) / 1000);
 }
 ///////////////////////////////////////////////////////////////

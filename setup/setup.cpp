@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.41  2010/07/15 18:11:10  vfrolov
+ * Fixed --wait option for Ports class
+ *
  * Revision 1.40  2010/07/12 18:14:44  vfrolov
  * Fixed driver update duplication
  *
@@ -380,12 +383,15 @@ static int SleepTillPortNotFound(
     const char *pPortName,
     int timeLimit)
 {
+  if (lstrcmpi(C0C_PORT_NAME_COMCLASS, pPortName) == 0)
+    return 0;
+
   DWORD startTime = GetTickCount();
   char path[40];
 
   SNPRINTF(path, sizeof(path)/sizeof(path[0]), "\\\\.\\%s", pPortName);
 
-  Trace("Wating %s ", path);
+  Trace("Wating for %s ", path);
 
   for (;;) {
     HANDLE handle = CreateFile(path, GENERIC_READ|GENERIC_WRITE, 0, NULL,
@@ -409,7 +415,7 @@ static int SleepTillPortNotFound(
     Sleep(1000);
   }
 
-  Trace(" OK\n");
+  Trace(". OK\n");
 
   return int((GetTickCount() - startTime) / 1000);
 }
@@ -975,17 +981,22 @@ int Install(const char *pInfFilePath, const char *pParametersA, const char *pPar
 
   ComDbSync(EnumFilter);
 
-  if (!no_update && timeout > 0) {
-    for (int j = 0, timeLimit = timeout ; j < 2 ; j++) {
-      int timeElapsed = SleepTillPortNotFound(portName[j], timeLimit);
+  if (timeout > 0) {
+    int timeLimit = timeout;
+    int timeElapsed = WaitNoPendingInstallEvents(timeLimit);
 
-      if (timeElapsed < 0)
-        break;
+    if (!no_update) {
+      for (int j = 0 ; j < 2 ; j++) {
+        if (timeElapsed < 0)
+          break;
 
-      timeLimit -= timeElapsed;
+        timeLimit -= timeElapsed;
 
-      if (timeLimit < 0)
-        timeLimit = 0;
+        if (timeLimit < 0)
+          timeLimit = 0;
+
+        timeElapsed = SleepTillPortNotFound(portName[j], timeLimit);
+      }
     }
   }
 
