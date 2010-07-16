@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.9  2010/07/16 07:47:13  vfrolov
+ * Added using SetupUninstallOEMInf() if it exists in setupapi.dll
+ *
  * Revision 1.8  2010/05/27 11:16:46  vfrolov
  * Added ability to put the port to the Ports class
  *
@@ -438,7 +441,6 @@ BOOL InfFile::InstallOEMInf() const
   return TRUE;
 }
 ///////////////////////////////////////////////////////////////
-#ifndef HAVE_SetupUninstallOEMInf
 static BOOL UninstallFile(const char *pPath)
 {
   int res;
@@ -447,7 +449,7 @@ static BOOL UninstallFile(const char *pPath)
     res = IDCONTINUE;
 
     if (DeleteFile(pPath)) {
-      Trace("Deleted File %s\n", pPath);
+      Trace("Deleted %s\n", pPath);
     }
     else
     if (GetLastError() == ERROR_FILE_NOT_FOUND) {
@@ -463,7 +465,6 @@ static BOOL UninstallFile(const char *pPath)
 
   return TRUE;
 }
-#endif /* HAVE_SetupUninstallOEMInf */
 
 static BOOL UninstallInf(const char *pPath)
 {
@@ -478,19 +479,32 @@ static BOOL UninstallInf(const char *pPath)
     char infPathDest[MAX_PATH + 1];
 
     if (SNPRINTF(infPathDest, sizeof(infPathDest)/sizeof(infPathDest[0]), "%s", pPath) > 0) {
-#ifdef HAVE_SetupUninstallOEMInf
-      char *pInfNameDest, *p;
+      typedef BOOL (WINAPI *PSETUPUNINSTALLOEMINFA)(IN PCSTR, IN DWORD, IN PVOID);
+      static PSETUPUNINSTALLOEMINFA pSetupUninstallOEMInf = NULL;
 
-      for (pInfNameDest = p = infPathDest ; *p ; p++)
-        if (*p == '\\')
-          pInfNameDest = p + 1;
+      if(!pSetupUninstallOEMInf) {
+        HMODULE hModule = GetModuleHandle("setupapi.dll");
 
-      if (SetupUninstallOEMInf(pInfNameDest, 0, NULL)) {
-        Trace("Deleted %s\n", pInfNameDest);
-      } else {
-        res = ShowLastError(MB_CANCELTRYCONTINUE, "SetupUninstallOEMInf(%s)", pInfNameDest);
+        if (hModule) {
+          pSetupUninstallOEMInf =
+              (PSETUPUNINSTALLOEMINFA)GetProcAddress(hModule, "SetupUninstallOEMInfA");
+        }
       }
-#else /* HAVE_SetupUninstallOEMInf */
+
+      if (pSetupUninstallOEMInf) {
+        char *pInfNameDest, *p;
+
+        for (pInfNameDest = p = infPathDest ; *p ; p++)
+          if (*p == '\\')
+            pInfNameDest = p + 1;
+
+        if (pSetupUninstallOEMInf(pInfNameDest, 0, NULL)) {
+          Trace("Uninstalled %s\n", pInfNameDest);
+        } else {
+          res = ShowLastError(MB_CANCELTRYCONTINUE, "SetupUninstallOEMInf(%s)", pInfNameDest);
+        }
+      }
+      else
       if (UninstallFile(infPathDest)) {
         int infPathDestLen = lstrlen(infPathDest);
 
@@ -507,7 +521,6 @@ static BOOL UninstallInf(const char *pPath)
       } else {
         res = IDCANCEL;
       }
-#endif /* HAVE_SetupUninstallOEMInf */
     } else {
       Trace("Can't uninstall %s\n", pPath);
       res = IDCANCEL;
