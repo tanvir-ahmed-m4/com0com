@@ -305,20 +305,20 @@ Q. In my application, users could be installing up to 250 com port pairs.
    becomes unacceptable for a user to be expected to wait for the installation.
 A. It's because the installing of each next port pair requires to update driver
    for all installed pairs. You can speed up installing of multiple com port
-   pairs by using install commands with --no-update option and finish them by
-   update command, for example:
+   pairs by using install commands with --no-update option and then use
+   install command w/o --no-update option, for example:
 
       command> --no-update install - -
       command> --no-update install - -
       ...
       command> --no-update install - -
-      command> update
+      command> install
 
-   Another example:
+   The example of the batch program:
 
-      > cd /D "%ProgramFiles%\com0com"
-      > FOR /L %i IN (0,1,249) DO setupc --no-update install - -
-      > setupc update
+      cd /D "%ProgramFiles%\com0com"
+      FOR /L %%i IN (0,1,249) DO setupc --no-update install - -
+      setupc install
 
 Q. I am using the 64-bit version of com0com and I am having trouble. I'd like
    to debug this, but I can not find any free serial port monitor software,
