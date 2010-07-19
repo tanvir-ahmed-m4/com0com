@@ -19,6 +19,10 @@
  *
  *
  * $Log$
+ * Revision 1.42  2010/07/19 11:23:54  vfrolov
+ * Added install command w/o prms to update driver
+ * Added ability to use --wait option with any command
+ *
  * Revision 1.41  2010/07/15 18:11:10  vfrolov
  * Fixed --wait option for Ports class
  *
@@ -575,14 +579,14 @@ static BOOL ChangeDevice(
   return TRUE;
 }
 
-int Change(const char *pPhPortName, const char *pParameters)
+BOOL Change(const char *pPhPortName, const char *pParameters)
 {
   BOOL rebootRequired = FALSE;
   ChangeDeviceParams params(pPhPortName, pParameters);
 
   DevProperties devProperties;
   if (!devProperties.DevId(C0C_BUS_DEVICE_ID))
-    return 1;
+    return FALSE;
 
   EnumDevices(EnumFilter, &devProperties, &rebootRequired, ChangeDevice, &params);
 
@@ -592,7 +596,7 @@ int Change(const char *pPhPortName, const char *pParameters)
   if (rebootRequired)
     PromptReboot();
 
-  return 0;
+  return TRUE;
 }
 ///////////////////////////////////////////////////////////////
 struct RemoveDeviceParams {
@@ -624,7 +628,7 @@ static BOOL RemoveDevice(
   return TRUE;
 }
 
-int Remove(int num)
+BOOL Remove(int num)
 {
   int res;
   BOOL rebootRequired = FALSE;
@@ -634,7 +638,7 @@ int Remove(int num)
 
     DevProperties devProperties;
     if (!devProperties.DevId(C0C_BUS_DEVICE_ID))
-      return 1;
+      return FALSE;
 
     EnumDevices(EnumFilter, &devProperties, &rebootRequired, RemoveDevice, &removeDeviceParams);
 
@@ -652,9 +656,10 @@ int Remove(int num)
       DevProperties devProperties;
 
       if (!devProperties.DevId(C0C_PORT_DEVICE_ID))
-        return 1;
+        return FALSE;
+
       if (!devProperties.Location(phPortName))
-        return 1;
+        return FALSE;
 
       RemoveDevices(EnumFilter, &devProperties, NULL);
     }
@@ -665,13 +670,10 @@ int Remove(int num)
   if (rebootRequired)
     PromptReboot();
 
-  if (res != IDCONTINUE)
-    return 1;
-
-  return 0;
+  return (res == IDCONTINUE);
 }
 ///////////////////////////////////////////////////////////////
-int Preinstall(const InfFileInstall *pInfFileInstallList)
+BOOL Preinstall(const InfFileInstall *pInfFileInstallList)
 {
   for (
       const InfFileInstall *pInfFileInstall = pInfFileInstallList ;
@@ -701,16 +703,16 @@ int Preinstall(const InfFileInstall *pInfFileInstallList)
       goto err;
   }
 
-  return 0;
+  return TRUE;
 
 err:
 
   Trace("\nPreinstall not completed!\n");
 
-  return  1;
+  return FALSE;
 }
 ///////////////////////////////////////////////////////////////
-int Reload(
+BOOL Reload(
     const char *pHardwareId,
     const char *pInfFilePath,
     BOOL *pRebootRequired)
@@ -720,11 +722,11 @@ int Reload(
 
   DevProperties devProperties;
   if (!devProperties.DevId(pHardwareId))
-    return 1;
+    return FALSE;
 
   if (!DisableDevices(EnumFilter, &devProperties, &rebootRequired, &stack)) {
     CleanDevPropertiesStack(stack, TRUE, &rebootRequired);
-    return 1;
+    return FALSE;
   }
 
   if (pHardwareId && pInfFilePath && !no_update) {
@@ -736,7 +738,7 @@ int Reload(
 
     if (res != IDCONTINUE) {
       CleanDevPropertiesStack(stack, TRUE, &rebootRequired);
-      return 1;
+      return FALSE;
     }
   }
 
@@ -751,12 +753,12 @@ int Reload(
       PromptReboot();
   }
 
-  return 0;
+  return TRUE;
 }
 ///////////////////////////////////////////////////////////////
-int Update(const InfFileInstall *pInfFileInstallList)
+BOOL Update(const InfFileInstall *pInfFileInstallList)
 {
-  int res = 0;
+  BOOL ok = TRUE;
   BOOL rebootRequired = FALSE;
 
   for (
@@ -766,11 +768,11 @@ int Update(const InfFileInstall *pInfFileInstallList)
   {
     InfFile infFile(pInfFileInstall->pInfName, pInfFileInstall->pInfName);
 
-    if (Reload(pInfFileInstall->pHardwareId, infFile.Path(), &rebootRequired) != 0)
-      res = 1;
+    if (!Reload(pInfFileInstall->pHardwareId, infFile.Path(), &rebootRequired))
+      ok = FALSE;
   }
 
-  if (res != 0) {
+  if (!ok) {
     Trace("\nUpdate not completed!\n");
   }
   else
@@ -778,42 +780,66 @@ int Update(const InfFileInstall *pInfFileInstallList)
     PromptReboot();
   }
 
-  return  res;
+  return ok;
 }
 ///////////////////////////////////////////////////////////////
-int Disable()
+BOOL Disable()
 {
   BOOL rebootRequired = FALSE;
 
   DevProperties devProperties;
   if (!devProperties.DevId(C0C_BUS_DEVICE_ID))
-    return 1;
+    return FALSE;
 
   if (!DisableDevices(EnumFilter, &devProperties, &rebootRequired, NULL))
-    return 1;
+    return FALSE;
 
   if (rebootRequired)
     PromptReboot();
 
-  return 0;
+  return TRUE;
 }
 ///////////////////////////////////////////////////////////////
-int Enable()
+BOOL Enable()
 {
   BOOL rebootRequired = FALSE;
 
   DevProperties devProperties;
   if (!devProperties.DevId(C0C_BUS_DEVICE_ID))
-    return 1;
+    return FALSE;
 
   if (!EnableDevices(EnumFilter, &devProperties, &rebootRequired)) {
-    return 1;
+    return FALSE;
   }
 
   if (rebootRequired)
     PromptReboot();
 
-  return  0;
+  return TRUE;
+}
+///////////////////////////////////////////////////////////////
+BOOL Install(const char *pInfFilePath)
+{
+  if (no_update)
+    return TRUE;
+
+  BOOL rebootRequired = FALSE;
+
+  int res;
+
+  do {
+    res = UpdateDriver(pInfFilePath, C0C_BUS_DEVICE_ID, 0, &rebootRequired);
+  } while (res == IDTRYAGAIN);
+
+  if (res != IDCONTINUE)
+    return FALSE;
+
+  ComDbSync(EnumFilter);
+
+  if (rebootRequired)
+    PromptReboot();
+
+  return TRUE;
 }
 ///////////////////////////////////////////////////////////////
 static BOOL InstallDeviceCallBack(
@@ -894,7 +920,7 @@ static int AllocPortNum(int num)
   return busyMask.IsFreeNum(num) ? num : busyMask.GetFirstFreeNum();
 }
 
-int Install(const char *pInfFilePath, const char *pParametersA, const char *pParametersB, int num)
+BOOL Install(const char *pInfFilePath, const char *pParametersA, const char *pParametersB, int num)
 {
   int i;
   int res;
@@ -982,34 +1008,38 @@ int Install(const char *pInfFilePath, const char *pParametersA, const char *pPar
   ComDbSync(EnumFilter);
 
   if (timeout > 0) {
-    int timeLimit = timeout;
-    int timeElapsed = WaitNoPendingInstallEvents(timeLimit);
+    int timeElapsed = WaitNoPendingInstallEvents(timeout);
 
     if (!no_update) {
       for (int j = 0 ; j < 2 ; j++) {
         if (timeElapsed < 0)
           break;
 
-        timeLimit -= timeElapsed;
+        timeout -= timeElapsed;
 
-        if (timeLimit < 0)
-          timeLimit = 0;
+        if (timeout < 0)
+          timeout = 0;
 
-        timeElapsed = SleepTillPortNotFound(portName[j], timeLimit);
+        timeElapsed = SleepTillPortNotFound(portName[j], timeout);
       }
     }
+
+    if (timeElapsed < 0 || timeout < timeElapsed)
+      timeout = 0;
+    else
+      timeout -= timeElapsed;
   }
 
-  return  0;
+  return TRUE;
 
 err:
 
   Trace("\nInstall not completed!\n");
 
-  return  1;
+  return FALSE;
 }
 ///////////////////////////////////////////////////////////////
-int Uninstall(
+BOOL Uninstall(
     const InfFileInstall *pInfFileInstallList,
     const InfFile::InfFileUninstall *pInfFileUninstallList)
 {
@@ -1236,20 +1266,20 @@ int Uninstall(
   if (!InfFile::UninstallAllInfFiles(pInfFileUninstallList, NULL))
     goto err;
 
-  return 0;
+  return TRUE;
 
 err:
 
   Trace("\nUninstall not completed!\n");
 
-  return  1;
+  return FALSE;
 }
 ///////////////////////////////////////////////////////////////
-int InfClean(
+BOOL InfClean(
     const InfFileInstall *pInfFileInstallList,
     const InfFile::InfFileUninstall *pInfFileUninstallList)
 {
-  int res = 0;
+  BOOL ok = TRUE;
   InfFile **pInfFiles = NULL;
   const char **ppOemPathExcludeList = NULL;
   int numInfFiles = 0;
@@ -1275,7 +1305,7 @@ int InfClean(
 
     if (!pNewInfFiles) {
       ShowError(MB_OK|MB_ICONSTOP, ERROR_NOT_ENOUGH_MEMORY, "LocalAlloc(%lu)", (numInfFiles + 1) * sizeof(InfFile *));
-      res = 1;
+      ok = FALSE;
       goto end;
     }
 
@@ -1288,7 +1318,7 @@ int InfClean(
 
     if (!ppOemPathExcludeList) {
       ShowError(MB_OK|MB_ICONSTOP, ERROR_NOT_ENOUGH_MEMORY, "LocalAlloc(%lu)", (numInfFiles + 1) * sizeof(const char *));
-      res = 1;
+      ok = FALSE;
       goto end;
     }
 
@@ -1298,7 +1328,7 @@ int InfClean(
 
 
   if (!InfFile::UninstallAllInfFiles(pInfFileUninstallList, ppOemPathExcludeList)) {
-    res = 1;
+    ok = FALSE;
     goto end;
   }
 
@@ -1315,13 +1345,13 @@ end:
     LocalFree((HLOCAL)pInfFiles);
   }
 
-  if (res != 0)
+  if (!ok)
     Trace("\nCleaning not completed!\n");
 
-  return res;
+  return ok;
 }
 ///////////////////////////////////////////////////////////////
-int ShowBusyNames(const char *pPattern)
+BOOL ShowBusyNames(const char *pPattern)
 {
   char *pPatternUp;
   SIZE_T sizePattern;
@@ -1332,7 +1362,7 @@ int ShowBusyNames(const char *pPattern)
 
   if (!pPatternUp) {
     ShowError(MB_OK|MB_ICONSTOP, ERROR_NOT_ENOUGH_MEMORY, "LocalAlloc(%lu)", (unsigned long)sizePattern);
-    return 1;
+    return FALSE;
   }
 
   lstrcpy(pPatternUp, pPattern);
@@ -1363,7 +1393,7 @@ int ShowBusyNames(const char *pPattern)
             LocalFree(pNames);
 
           LocalFree(pPatternUp);
-          return 1;
+          return FALSE;
         }
 
         break;
@@ -1392,7 +1422,7 @@ int ShowBusyNames(const char *pPattern)
             LocalFree(pNames);
 
           LocalFree(pPatternUp);
-          return 1;
+          return FALSE;
         }
 
         break;
@@ -1444,7 +1474,7 @@ int ShowBusyNames(const char *pPattern)
               LocalFree(pNames);
 
             LocalFree(pPatternUp);
-            return 1;
+            return FALSE;
           }
 
           break;
@@ -1470,10 +1500,10 @@ int ShowBusyNames(const char *pPattern)
 
   LocalFree(pPatternUp);
 
-  return 0;
+  return TRUE;
 }
 ///////////////////////////////////////////////////////////////
-int Help(const char *pProgName)
+void Help(const char *pProgName)
 {
   SetTitle(C0C_SETUP_TITLE " (HELP)");
 
@@ -1493,7 +1523,8 @@ int Help(const char *pProgName)
     "  --detail-prms                - show detailed parameters\n"
     "  --silent                     - suppress dialogs if possible\n"
     "  --no-update                  - do not update driver while install command\n"
-    "                                 execution (update command expected later)\n"
+    "                                 execution (the other install command w/o this\n"
+    "                                 option expected later)\n"
     );
   ConsoleWrite(
     "\n"
@@ -1503,6 +1534,8 @@ int Help(const char *pProgName)
                                       C0C_PREF_PORT_NAME_B "<n>\n"
     "  install <prmsA> <prmsB>        (by default <n> is the first not used number),\n"
     "                                 set their parameters to <prmsA> and <prmsB>\n"
+    "  install                      - can be used to update driver after execution\n"
+    "                                 of install commands with --no-update option\n"
     "  remove <n>                   - remove a pair of linked ports with\n"
     "                                 identifiers " C0C_PREF_PORT_NAME_A "<n> and "
                                       C0C_PREF_PORT_NAME_B "<n>\n"
@@ -1571,16 +1604,27 @@ int Help(const char *pProgName)
     , pProgName, (pProgName && *pProgName) ? " " : "");
   ConsoleWrite(
     "\n");
+}
+///////////////////////////////////////////////////////////////
+static int Complete(BOOL ok)
+{
+  if (ok) {
+    if (timeout > 0)
+      WaitNoPendingInstallEvents(timeout);
+
+    return 0;
+  }
 
   return 1;
 }
-///////////////////////////////////////////////////////////////
+
 int Main(int argc, const char* argv[])
 {
   if (!SetOutputFile(NULL))
     return 1;
 
   Silent(FALSE);
+  timeout = 0;
   detailPrms = FALSE;
   no_update = FALSE;
 
@@ -1634,31 +1678,31 @@ int Main(int argc, const char* argv[])
   }
 
   if (argc == 1) {
-    return 0;
+    return Complete(TRUE);
   }
   else
   if (argc == 2 && !lstrcmpi(argv[1], "help")) {
     Help(argv[0]);
-    return 0;
+    return Complete(TRUE);
   }
   else
   if (argc == 2 && !lstrcmpi(argv[1], "quit")) {
-    return 0;
+    return Complete(TRUE);
   }
   else
   if (argc == 3 && !lstrcmpi(argv[1], "busynames")) {
     SetTitle(C0C_SETUP_TITLE " (BUSY NAMES)");
-    return ShowBusyNames(argv[2]);
+    return Complete(ShowBusyNames(argv[2]));
   }
   else
   if (argc == 2 && !lstrcmpi(argv[1], "list")) {
     SetTitle(C0C_SETUP_TITLE " (LIST)");
-    return Change(NULL, NULL);
+    return Complete(Change(NULL, NULL));
   }
   else
   if (argc == 4 && !lstrcmpi(argv[1], "change")) {
     SetTitle(C0C_SETUP_TITLE " (CHANGE)");
-    return Change(argv[2], argv[3]);
+    return Complete(Change(argv[2], argv[3]));
   }
   else
   if (argc == 3 && !lstrcmpi(argv[1], "remove")) {
@@ -1667,26 +1711,26 @@ int Main(int argc, const char* argv[])
     int num;
 
     if (StrToInt(argv[2], &num) && num >= 0)
-      return Remove(num);
+      return Complete(Remove(num));
   }
   else
   if (argc == 3 && !lstrcmpi(argv[1], "disable")) {
     SetTitle(C0C_SETUP_TITLE " (DISABLE)");
 
     if (!lstrcmpi(argv[2], "all"))
-      return Disable();
+      return Complete(Disable());
   }
   else
   if (argc == 3 && !lstrcmpi(argv[1], "enable")) {
     SetTitle(C0C_SETUP_TITLE " (ENABLE)");
 
     if (!lstrcmpi(argv[2], "all"))
-      return Enable();
+      return Complete(Enable());
   }
   else
   if (argc == 2 && !lstrcmpi(argv[1], "reload")) {
     SetTitle(C0C_SETUP_TITLE " (RELOAD)");
-    return Reload(C0C_BUS_DEVICE_ID, NULL, NULL);
+    return Complete(Reload(C0C_BUS_DEVICE_ID, NULL, NULL));
   }
 
   for (
@@ -1701,22 +1745,22 @@ int Main(int argc, const char* argv[])
 
   if (argc == 2 && !lstrcmpi(argv[1], "preinstall")) {
     SetTitle(C0C_SETUP_TITLE " (PREINSTALL)");
-    return Preinstall(infFileInstallList);
+    return Complete(Preinstall(infFileInstallList));
   }
   else
   if (argc == 2 && !lstrcmpi(argv[1], "uninstall")) {
     SetTitle(C0C_SETUP_TITLE " (UNINSTALL)");
-    return Uninstall(infFileInstallList, infFileUnnstallList);
+    return Complete(Uninstall(infFileInstallList, infFileUnnstallList));
   }
   else
   if (argc == 2 && !lstrcmpi(argv[1], "infclean")) {
     SetTitle(C0C_SETUP_TITLE " (INF CLEAN)");
-    return InfClean(infFileInstallList, infFileUnnstallList);
+    return Complete(InfClean(infFileInstallList, infFileUnnstallList));
   }
   else
   if (argc == 2 && !lstrcmpi(argv[1], "update")) {
     SetTitle(C0C_SETUP_TITLE " (UPDATE)");
-    return Update(infFileInstallList);
+    return Complete(Update(infFileInstallList));
   }
 
   InfFile infFile(C0C_INF_NAME, C0C_INF_NAME);
@@ -1726,9 +1770,14 @@ int Main(int argc, const char* argv[])
   if (!pPath)
     return 1;
 
+  if (argc == 2 && !lstrcmpi(argv[1], "install")) {
+    SetTitle(C0C_SETUP_TITLE " (INSTALL)");
+    return Complete(Install(pPath));
+  }
+  else
   if (argc == 4 && !lstrcmpi(argv[1], "install")) {
     SetTitle(C0C_SETUP_TITLE " (INSTALL)");
-    return Install(pPath, argv[2], argv[3], -1);
+    return Complete(Install(pPath, argv[2], argv[3], -1));
   }
   else
   if (argc == 5 && !lstrcmpi(argv[1], "install")) {
@@ -1737,7 +1786,7 @@ int Main(int argc, const char* argv[])
     int num;
 
     if (StrToInt(argv[2], &num) && num >= 0)
-      return Install(pPath, argv[3], argv[4], num);
+      return Complete(Install(pPath, argv[3], argv[4], num));
   }
 
   ConsoleWrite("Invalid command\n");
