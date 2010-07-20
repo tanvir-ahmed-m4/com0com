@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.11  2010/07/20 07:00:16  vfrolov
+ * Fixed memory leak
+ *
  * Revision 1.10  2010/05/27 11:16:46  vfrolov
  * Added ability to put the port to the Ports class
  *
@@ -120,14 +123,16 @@ NTSTATUS FdoBusPnp(
 
         if (pPhDevExt) {
           if (!pDevExt->childs[i].ioPort.pDevExt) {
-            UNICODE_STRING portRegistryPath;
             UNICODE_STRING portName;
+            UNICODE_STRING portRegistryPath;
 
             RtlInitUnicodeString(&portRegistryPath, NULL);
             StrAppendPortParametersRegistryPath(&status, &portRegistryPath, pPhDevExt->portName);
 
             RtlInitUnicodeString(&portName, NULL);
             StrAppendParameterPortName(&status, &portName, portRegistryPath.Buffer);
+
+            StrFree(&portRegistryPath);
 
             if (NT_SUCCESS(status) && portName.Length &&
                 _wcsicmp(C0C_PORT_NAME_COMCLASS, portName.Buffer) == 0)
@@ -138,6 +143,8 @@ NTSTATUS FdoBusPnp(
               pDevExt->childs[i].ioPort.isComClass = FALSE;
               Trace0((PC0C_COMMON_EXTENSION)pPhDevExt, L"Port class set to CNC");
             }
+
+            StrFree(&portName);
 
             status = STATUS_SUCCESS;
           }
@@ -150,7 +157,7 @@ NTSTATUS FdoBusPnp(
       pRelations->Count = countRelations;
 
       if (pRelationsPrev)
-        C0C_FREE_POOL(pRelationsPrev);
+        ExFreePool(pRelationsPrev);
 
       pIrp->IoStatus.Information = (ULONG_PTR)pRelations;
       pIrp->IoStatus.Status = STATUS_SUCCESS;
