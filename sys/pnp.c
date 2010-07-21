@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.12  2010/07/21 07:39:01  vfrolov
+ * Added handling of IRPs that all PnP drivers must handle
+ *
  * Revision 1.11  2010/07/20 07:00:16  vfrolov
  * Fixed memory leak
  *
@@ -166,6 +169,16 @@ NTSTATUS FdoBusPnp(
   case IRP_MN_REMOVE_DEVICE:
     RemoveFdoBus(pDevExt);
     pDevExt = NULL;
+    pIrp->IoStatus.Status = STATUS_SUCCESS;
+    break;
+  case IRP_MN_START_DEVICE:
+  case IRP_MN_STOP_DEVICE:
+  case IRP_MN_QUERY_STOP_DEVICE:
+  case IRP_MN_CANCEL_STOP_DEVICE:
+  case IRP_MN_QUERY_REMOVE_DEVICE:
+  case IRP_MN_CANCEL_REMOVE_DEVICE:
+  case IRP_MN_SURPRISE_REMOVAL:
+    pIrp->IoStatus.Status = STATUS_SUCCESS;
     break;
   }
 
@@ -398,10 +411,20 @@ NTSTATUS FdoPortPnp(
   case IRP_MN_QUERY_REMOVE_DEVICE:
     if (pDevExt->openCount)
       status = STATUS_DEVICE_BUSY;
+    else
+      pIrp->IoStatus.Status = STATUS_SUCCESS;
     break;
   case IRP_MN_REMOVE_DEVICE:
     RemoveFdoPort(pDevExt);
     pDevExt = NULL;
+    pIrp->IoStatus.Status = STATUS_SUCCESS;
+    break;
+  case IRP_MN_START_DEVICE:
+  case IRP_MN_STOP_DEVICE:
+  case IRP_MN_QUERY_STOP_DEVICE:
+  case IRP_MN_CANCEL_STOP_DEVICE:
+  case IRP_MN_SURPRISE_REMOVAL:
+    pIrp->IoStatus.Status = STATUS_SUCCESS;
     break;
   }
 
