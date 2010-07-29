@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.13  2010/07/29 12:10:04  vfrolov
+ * Added handling of IRPs that must be handled
+ *
  * Revision 1.12  2010/07/21 07:39:01  vfrolov
  * Added handling of IRPs that all PnP drivers must handle
  *
@@ -249,6 +252,9 @@ NTSTATUS PdoPortQueryCaps(
 
   pCaps->UniqueID = TRUE;
 
+  pCaps->Address = pCaps->UINumber =
+    (pDevExt->pIoPortLocal == &pDevExt->pBusExt->childs[0].ioPort ? 0 : 1);
+
   return STATUS_SUCCESS;
 }
 
@@ -316,7 +322,7 @@ NTSTATUS PdoPortPnp(
     IN PC0C_PDOPORT_EXTENSION pDevExt,
     IN PIRP                   pIrp)
 {
-  NTSTATUS status;
+  NTSTATUS status = pIrp->IoStatus.Status;
   PIO_STACK_LOCATION pIrpStack = IoGetCurrentIrpStackLocation(pIrp);
 
   switch (pIrpStack->MinorFunction) {
@@ -334,16 +340,38 @@ NTSTATUS PdoPortPnp(
     break;
   case IRP_MN_QUERY_DEVICE_RELATIONS:
     switch (pIrpStack->Parameters.QueryDeviceRelations.Type) {
-    case RemovalRelations:
+    case TargetDeviceRelation: {
+      PDEVICE_RELATIONS pRelations;
+
+      HALT_UNLESS(pIrp->IoStatus.Information == 0);
+
+      if (pIrp->IoStatus.Information != 0)
+        break;
+
+      pRelations = (PDEVICE_RELATIONS)C0C_ALLOCATE_POOL(PagedPool, sizeof(DEVICE_RELATIONS));
+
+      if (!pRelations) {
+        status = STATUS_INSUFFICIENT_RESOURCES;
+        break;
+      }
+
+      pRelations->Count = 1;
+      pRelations->Objects[0] = pDevExt->pDevObj;
+      ObReferenceObject(pDevExt->pDevObj);
+      pIrp->IoStatus.Information = (ULONG_PTR)pRelations;
       status = STATUS_SUCCESS;
       break;
+    }
+    case RemovalRelations:
     case BusRelations:
     case EjectionRelations:
     case PowerRelations:
-    case TargetDeviceRelation:
     default:
-      status = pIrp->IoStatus.Status;
+      break;
     }
+    break;
+  case IRP_MN_DEVICE_USAGE_NOTIFICATION:
+    status = STATUS_UNSUCCESSFUL;
     break;
   case IRP_MN_REMOVE_DEVICE:
   case IRP_MN_START_DEVICE:
@@ -357,7 +385,7 @@ NTSTATUS PdoPortPnp(
     status = STATUS_SUCCESS;
     break;
   default:
-    status = pIrp->IoStatus.Status;
+    break;
   }
 
   TraceIrp("PNP", pIrp, &status, TRACE_FLAG_RESULTS);
