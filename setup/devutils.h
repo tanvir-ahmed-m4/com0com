@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.11  2010/07/29 12:18:43  vfrolov
+ * Fixed waiting stuff
+ *
  * Revision 1.10  2010/07/15 18:11:10  vfrolov
  * Fixed --wait option for Ports class
  *
@@ -155,7 +158,7 @@ BOOL InstallDevice(
     BOOL updateDriver,
     BOOL *pRebootRequired);
 
-int WaitNoPendingInstallEvents(
+BOOL WaitNoPendingInstallEvents(
     int timeLimit);
 ///////////////////////////////////////////////////////////////
 

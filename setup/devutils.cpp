@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.17  2010/07/29 12:18:43  vfrolov
+ * Fixed waiting stuff
+ *
  * Revision 1.16  2010/07/15 18:11:09  vfrolov
  * Fixed --wait option for Ports class
  *
@@ -498,7 +501,8 @@ BOOL DisableDevices(
   if (res != IDCONTINUE)
     return FALSE;
 
-  Sleep(1000);
+  if (!WaitNoPendingInstallEvents(10))
+    Sleep(1000);
 
   return TRUE;
 }
@@ -908,7 +912,7 @@ BOOL InstallDevice(
   return res == IDCONTINUE;
 }
 ///////////////////////////////////////////////////////////////
-int WaitNoPendingInstallEvents(int timeLimit)
+BOOL WaitNoPendingInstallEvents(int timeLimit)
 {
   typedef DWORD  (WINAPI *PWAITNOPENDINGINSTALLEVENTS)(IN DWORD);
   static PWAITNOPENDINGINSTALLEVENTS pWaitNoPendingInstallEvents = NULL;
@@ -917,18 +921,20 @@ int WaitNoPendingInstallEvents(int timeLimit)
     HMODULE hModule = GetModuleHandle("setupapi.dll");
 
     if (!hModule)
-      return 0;
+      return FALSE;
 
     pWaitNoPendingInstallEvents =
         (PWAITNOPENDINGINSTALLEVENTS)GetProcAddress(hModule, "CMP_WaitNoPendingInstallEvents");
+
+    if (!pWaitNoPendingInstallEvents)
+      return FALSE;
   }
 
-  if (!pWaitNoPendingInstallEvents)
-    return 0;
+  if (int(DWORD(timeLimit * 1000)/1000) != timeLimit)
+    timeLimit = -1;
 
+  BOOL inTrace = FALSE;
   DWORD startTime = GetTickCount();
-
-  Trace("Wating for no pending device installation activities ");
 
   for (BOOL count = 0 ;;) {
     DWORD res = pWaitNoPendingInstallEvents(0);
@@ -939,27 +945,40 @@ int WaitNoPendingInstallEvents(int timeLimit)
         continue;
       }
 
-      Trace(". OK\n");
+      if (inTrace)
+        Trace(" OK\n");
+      SetLastError(ERROR_SUCCESS);
       break;
     }
 
     count = 0;
 
     if (res != WAIT_TIMEOUT) {
-      Trace(". FAIL\n");
+      ShowLastError(MB_OK|MB_ICONWARNING, "CMP_WaitNoPendingInstallEvents()");
+      if (inTrace)
+        Trace(" FAIL\n");
+      return FALSE;
+    }
+
+    DWORD timeElapsed = GetTickCount() - startTime;
+
+    if (timeLimit != -1 && timeElapsed >= DWORD(timeLimit * 1000)) {
+      if (inTrace)
+        Trace(" timeout\n");
+      SetLastError(ERROR_TIMEOUT);
       break;
     }
 
-    Trace(".");
-
-    if (GetTickCount() - startTime >= DWORD(timeLimit * 1000)) {
-      Trace(" timeout\n");
-      return -1;
+    if (!inTrace) {
+      Trace("Wating for no pending device installation activities ");
+      inTrace = TRUE;
     }
 
     Sleep(1000);
+
+    Trace(".");
   }
 
-  return int((GetTickCount() - startTime) / 1000);
+  return TRUE;
 }
 ///////////////////////////////////////////////////////////////
