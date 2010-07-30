@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2006-2009 Vyacheslav Frolov
+ * Copyright (c) 2006-2010 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.9  2010/07/30 09:19:29  vfrolov
+ * Added STRDUP()
+ *
  * Revision 1.8  2009/11/09 11:16:43  vfrolov
  * Added restoring last error
  *
@@ -283,17 +286,10 @@ BOOL SetOutputFile(const char *pFile)
   }
 
   if (pFile) {
-    DWORD size = (lstrlen(pFile) + 1)*sizeof(*pFile);
+    pOutputFile = STRDUP(pFile);
 
-    pOutputFile = (char *)LocalAlloc(LPTR, size);
-
-    if (pOutputFile) {
-      lstrcpy(pOutputFile, pFile);
-    } else {
-      SetLastError(ERROR_NOT_ENOUGH_MEMORY);
-      ShowLastError(MB_OK|MB_ICONSTOP, "LocalAlloc(%lu)", (unsigned long)size);
+    if (!pOutputFile)
       return FALSE;
-    }
   }
 
   return TRUE;

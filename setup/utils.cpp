@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2006-2008 Vyacheslav Frolov
+ * Copyright (c) 2006-2010 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.9  2010/07/30 09:15:04  vfrolov
+ * Added STRDUP()
+ *
  * Revision 1.8  2008/12/25 16:56:25  vfrolov
  * Added MatchPattern()
  *
@@ -48,6 +51,7 @@
 
 #include "precomp.h"
 #include "utils.h"
+#include "msg.h"
 
 ///////////////////////////////////////////////////////////////
 int VSNPRINTF(char *pBuf, int size, const char *pFmt, va_list va)
@@ -186,6 +190,24 @@ BOOL MatchPattern(const char *pPattern, const char *pStr)
         pPattern++;
     }
   }
+}
+///////////////////////////////////////////////////////////////
+char *STRDUP(const char *pSrcStr, BOOL showErrors)
+{
+  char *pDstStr;
+  int len = lstrlen(pSrcStr) + 1;
+
+  pDstStr = (char *)LocalAlloc(LPTR, len*sizeof(pDstStr[0]));
+
+  if (pDstStr != NULL) {
+    SNPRINTF(pDstStr, len, "%s", pSrcStr);
+  } else {
+    SetLastError(ERROR_NOT_ENOUGH_MEMORY);
+    if (showErrors)
+      ShowLastError(MB_OK|MB_ICONSTOP, "LocalAlloc(%lu)", (unsigned long)(len*sizeof(pDstStr[0])));
+  }
+
+  return pDstStr;
 }
 ///////////////////////////////////////////////////////////////
 void BusyMask::Clear()
