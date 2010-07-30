@@ -19,6 +19,11 @@
  *
  *
  * $Log$
+ * Revision 1.10  2010/07/30 09:27:18  vfrolov
+ * Added STRDUP()
+ * Fixed updating the source location information by OemPath() and InstallOEMInf()
+ * Optimazed UninstallAllInfFiles() to look omly OEM files
+ *
  * Revision 1.9  2010/07/16 07:47:13  vfrolov
  * Added using SetupUninstallOEMInf() if it exists in setupapi.dll
  *
@@ -218,18 +223,8 @@ InfFile::InfFile(const char *pInfName, const char *pNearPath)
 {
   char path[MAX_PATH + 1];
 
-  if (GetFilePath(pInfName, pNearPath, path, sizeof(path)/sizeof(path[0]))) {
-    int len = lstrlen(path);
-
-    pPath = (char *)LocalAlloc(LPTR, (len + 1)*sizeof(path[0]));
-
-    if (pPath) {
-      lstrcpy(pPath, path);
-    } else {
-      SetLastError(ERROR_NOT_ENOUGH_MEMORY);
-      ShowLastError(MB_OK|MB_ICONSTOP, "LocalAlloc(%lu)", (unsigned long)(sizeof(path)/sizeof(path[0])));
-    }
-  }
+  if (GetFilePath(pInfName, pNearPath, path, sizeof(path)/sizeof(path[0])))
+    pPath = STRDUP(path);
 }
 ///////////////////////////////////////////////////////////////
 InfFile::~InfFile()
@@ -302,20 +297,11 @@ const char *InfFile::OemPath(BOOL showErrors) const
   if (!pOemPath) {
     char path[MAX_PATH + 1];
 
-    if (SetupCopyOEMInf(pPath, NULL, SPOST_NONE, SP_COPY_REPLACEONLY, path,
-        sizeof(path)/sizeof(path[0]), NULL, NULL))
+    if (SetupCopyOEMInf(pPath, NULL, SPOST_NONE, SP_COPY_REPLACEONLY|SP_COPY_NOOVERWRITE,
+          path, sizeof(path)/sizeof(path[0]), NULL, NULL) ||
+        GetLastError() == ERROR_FILE_EXISTS)
     {
-      int len = lstrlen(path) + 1;
-
-      pOemPath = (char *)LocalAlloc(LPTR, len*sizeof(pOemPath[0]));
-
-      if (pOemPath != NULL) {
-        SNPRINTF(pOemPath, len, "%s", path);
-      } else {
-        SetLastError(ERROR_NOT_ENOUGH_MEMORY);
-        if (showErrors)
-          ShowLastError(MB_OK|MB_ICONSTOP, "LocalAlloc(%lu)", (unsigned long)(len*sizeof(pOemPath[0])));
-      }
+      pOemPath = STRDUP(path, showErrors);
     }
   }
 
@@ -429,14 +415,17 @@ BOOL InfFile::InstallOEMInf() const
   if (!pPath)
     return FALSE;
 
-  if (!OemPath()) {
-    if (!SetupCopyOEMInf(pPath, NULL, SPOST_PATH, 0, NULL, 0, NULL, NULL)) {
-      ShowLastError(MB_OK|MB_ICONSTOP, "SetupCopyOEMInf(%s)", pPath);
-      return FALSE;
-    }
+  BOOL wasInstalled = (OemPath() != NULL);
 
-    Trace("Installed %s to %s\n", pPath, OemPath());
+  if (!SetupCopyOEMInf(pPath, NULL, SPOST_PATH, 0, NULL, 0, NULL, NULL)) {
+    ShowLastError(MB_OK|MB_ICONSTOP, "SetupCopyOEMInf(%s)", pPath);
+    return FALSE;
   }
+
+  if (!wasInstalled)
+    Trace("Installed %s to %s\n", pPath, OemPath());
+  else
+    Trace("Re-installed %s to %s\n", pPath, OemPath());
 
   return TRUE;
 }
@@ -591,8 +580,7 @@ BOOL InfFile::UninstallAllInfFiles(
   if (!SetupGetInfFileList(NULL, INF_STYLE_WIN4, NULL, 0, &size)) {
     DWORD err = GetLastError();
 
-    Trace("\n");
-
+    Trace(" FAIL\n");
     ShowError(MB_OK|MB_ICONSTOP, err, "SetupGetInfFileList()");
     return FALSE;
   }
@@ -606,15 +594,13 @@ BOOL InfFile::UninstallAllInfFiles(
     if (!SetupGetInfFileList(NULL, INF_STYLE_WIN4, pList, size, NULL)) {
       DWORD err = GetLastError();
 
-      Trace("\n");
-
+      Trace(" FAIL\n");
       ShowError(MB_OK|MB_ICONSTOP, err, "SetupGetInfFileList(%lu)", (unsigned long)size);
       LocalFree(pList);
       return FALSE;
     }
   } else {
-    Trace("\n");
-
+    Trace(" FAIL\n");
     SetLastError(ERROR_NOT_ENOUGH_MEMORY);
     ShowLastError(MB_OK|MB_ICONSTOP, "LocalAlloc(%lu)", (unsigned long)size);
     return FALSE;
@@ -629,8 +615,8 @@ BOOL InfFile::UninstallAllInfFiles(
   if (!size || size >= sizeof(windir)/sizeof(windir[0])) {
     DWORD err = !size ? GetLastError() : ERROR_BUFFER_OVERFLOW;
 
+    Trace(" FAIL\n");
     ShowError(MB_OK|MB_ICONSTOP, err, "GetEnvironmentVariable(windir)");
-
     LocalFree(pList);
     return FALSE;
   }
@@ -661,7 +647,11 @@ BOOL InfFile::UninstallAllInfFiles(
 
     char infPath[MAX_PATH + 1];
 
-    if (SNPRINTF(infPath, sizeof(infPath)/sizeof(infPath[0]), "%s\\inf\\%s", windir, p) > 0) {
+    if ((p[0] == 'O' || p[0] == 'o') &&
+        (p[1] == 'E' || p[1] == 'e') &&
+        (p[2] == 'M' || p[2] == 'm') &&
+        SNPRINTF(infPath, sizeof(infPath)/sizeof(infPath[0]), "%s\\inf\\%s", windir, p) > 0)
+    {
       InfFile infFile(infPath, NULL);
       BOOL doUninstall;
 
