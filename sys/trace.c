@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.36  2010/08/04 13:12:04  vfrolov
+ * Fixed null string tracing
+ *
  * Revision 1.35  2010/05/27 11:02:11  vfrolov
  * Added multiline tracing for IRP_MN_QUERY_ID
  *
@@ -362,7 +365,10 @@ PCHAR AnsiStrCopyStr(
   SIZE_T len, size;
   PCHAR pStrTmp;
 
-  pStrTmp = (pStr != NULL ? pStr : "(null)");
+  if (pStr == NULL)
+    pStr = "(null)";
+
+  pStrTmp = pStr;
 
   while (*(pStrTmp++))
     ;
@@ -392,7 +398,10 @@ PCHAR AnsiStrCopyStrW(
   SIZE_T len, size;
   PWCHAR pStrTmp;
 
-  pStrTmp = (pStr != NULL ? pStr : L"(null)" L"\0");
+  if (pStr == NULL)
+    pStr = L"(null)" L"\0";
+
+  pStrTmp = pStr;
 
   if (multiStr) {
     do {
