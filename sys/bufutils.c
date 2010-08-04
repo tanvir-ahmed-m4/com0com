@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2004-2008 Vyacheslav Frolov
+ * Copyright (c) 2004-2010 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.18  2010/08/04 10:38:55  vfrolov
+ * Minimized PREfast noise
+ *
  * Revision 1.17  2008/10/30 07:54:37  vfrolov
  * Improved BREAK emulation
  *
@@ -348,7 +351,9 @@ VOID CopyCharsWithEscape(
               SIZE_T done =
 #endif /* DBG */
               AddRawData(&pBuf->insertData, buf + len, length);
+#if DBG
               HALT_UNLESS2(done == length, done, length);
+#endif /* DBG */
             }
           }
         }
@@ -365,7 +370,9 @@ VOID CopyCharsWithEscape(
                 SIZE_T done =
 #endif /* DBG */
                 AddRawData(&pBuf->insertData, &errorChar, sizeof(errorChar));
+#if DBG
                 HALT_UNLESS1(done == sizeof(errorChar), done);
+#endif /* DBG */
               }
             } else {
               *pReadBuf++ = errorChar;
@@ -386,7 +393,9 @@ VOID CopyCharsWithEscape(
               SIZE_T done =
 #endif /* DBG */
               AddRawData(&pBuf->insertData, &errorChar, sizeof(errorChar));
+#if DBG
               HALT_UNLESS1(done == sizeof(errorChar), done);
+#endif /* DBG */
             }
           } else {
             *pReadBuf++ = errorChar;
@@ -422,7 +431,9 @@ VOID CopyCharsWithEscape(
               SIZE_T done =
 #endif /* DBG */
               AddRawData(&pBuf->insertData, &curChar, sizeof(curChar));
+#if DBG
               HALT_UNLESS1(done == sizeof(curChar), done);
+#endif /* DBG */
             }
           } else {
             *pReadBuf++ = curChar;
@@ -449,7 +460,9 @@ VOID CopyCharsWithEscape(
                 SIZE_T done =
 #endif /* DBG */
                 AddRawData(&pBuf->insertData, &curChar, sizeof(curChar));
+#if DBG
                 HALT_UNLESS1(done == sizeof(curChar), done);
+#endif /* DBG */
               }
             } else {
               *pReadBuf++ = curChar;
@@ -669,7 +682,7 @@ SIZE_T WriteRawData(PC0C_RAW_DATA pRawData, PNTSTATUS pStatus, PVOID pReadBuf, S
   return length;
 }
 
-VOID InitBufferBase(PC0C_BUFFER pBuf, PUCHAR pBase, SIZE_T size)
+VOID InitBufferBase(PC0C_BUFFER pBuf, __drv_aliasesMem PUCHAR pBase, SIZE_T size)
 {
   pBuf->pBase = pBase;
   pBuf->pEnd = pBuf->pBase + size;
@@ -726,7 +739,7 @@ VOID PurgeBuffer(PC0C_BUFFER pBuf)
   pBuf->insertData.size = 0;
 }
 
-VOID InitBuffer(PC0C_BUFFER pBuf, PUCHAR pBase, SIZE_T size)
+VOID InitBuffer(PC0C_BUFFER pBuf, __drv_aliasesMem PUCHAR pBase, SIZE_T size)
 {
   RtlZeroMemory(pBuf, sizeof(*pBuf));
   InitBufferBase(pBuf, pBase, size);

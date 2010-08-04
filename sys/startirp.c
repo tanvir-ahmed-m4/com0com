@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2004-2009 Vyacheslav Frolov
+ * Copyright (c) 2004-2010 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.20  2010/08/04 10:38:56  vfrolov
+ * Minimized PREfast noise
+ *
  * Revision 1.19  2009/09/21 08:49:56  vfrolov
  * Added missing removing from queue
  * (Thanks Kirill Bagrinovsky)
@@ -147,6 +150,7 @@ VOID ShiftQueue(PC0C_IRP_QUEUE pQueue)
   }
 }
 
+DRIVER_CANCEL CancelRoutine;
 VOID CancelRoutine(IN PDEVICE_OBJECT pDevObj, IN PIRP pIrp)
 {
   LIST_ENTRY queueToComplete;

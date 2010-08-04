@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2004-2008 Vyacheslav Frolov
+ * Copyright (c) 2004-2010 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.12  2010/08/04 10:38:56  vfrolov
+ * Minimized PREfast noise
+ *
  * Revision 1.11  2008/09/17 07:58:32  vfrolov
  * Added AddRTTO and AddRITO parameters
  *
@@ -240,62 +243,82 @@ VOID SetXoffCounterTimeout(
   }
 }
 
+KDEFERRED_ROUTINE TimeoutReadTotal;
 VOID TimeoutReadTotal(
     IN PKDPC pDpc,
     IN PVOID deferredContext,
     IN PVOID systemArgument1,
     IN PVOID systemArgument2)
 {
-  PC0C_IO_PORT pIoPort = (PC0C_IO_PORT)deferredContext;
+  PC0C_IO_PORT pIoPort;
 
   UNREFERENCED_PARAMETER(pDpc);
   UNREFERENCED_PARAMETER(systemArgument1);
   UNREFERENCED_PARAMETER(systemArgument2);
 
+  HALT_UNLESS(deferredContext != NULL);
+
+  pIoPort = (PC0C_IO_PORT)deferredContext;
+
   TimeoutRoutine(pIoPort, &pIoPort->irpQueues[C0C_QUEUE_READ]);
 }
 
+KDEFERRED_ROUTINE TimeoutReadInterval;
 VOID TimeoutReadInterval(
     IN PKDPC pDpc,
     IN PVOID deferredContext,
     IN PVOID systemArgument1,
     IN PVOID systemArgument2)
 {
-  PC0C_IO_PORT pIoPort = (PC0C_IO_PORT)deferredContext;
+  PC0C_IO_PORT pIoPort;
 
   UNREFERENCED_PARAMETER(pDpc);
   UNREFERENCED_PARAMETER(systemArgument1);
   UNREFERENCED_PARAMETER(systemArgument2);
 
+  HALT_UNLESS(deferredContext != NULL);
+
+  pIoPort = (PC0C_IO_PORT)deferredContext;
+
   TimeoutRoutine(pIoPort, &pIoPort->irpQueues[C0C_QUEUE_READ]);
 }
 
+KDEFERRED_ROUTINE TimeoutWriteTotal;
 VOID TimeoutWriteTotal(
     IN PKDPC pDpc,
     IN PVOID deferredContext,
     IN PVOID systemArgument1,
     IN PVOID systemArgument2)
 {
-  PC0C_IO_PORT pIoPort = (PC0C_IO_PORT)deferredContext;
+  PC0C_IO_PORT pIoPort;
 
   UNREFERENCED_PARAMETER(pDpc);
   UNREFERENCED_PARAMETER(systemArgument1);
   UNREFERENCED_PARAMETER(systemArgument2);
 
+  HALT_UNLESS(deferredContext != NULL);
+
+  pIoPort = (PC0C_IO_PORT)deferredContext;
+
   TimeoutRoutine(pIoPort, &pIoPort->irpQueues[C0C_QUEUE_WRITE]);
 }
 
+KDEFERRED_ROUTINE TimeoutClose;
 VOID TimeoutClose(
     IN PKDPC pDpc,
     IN PVOID deferredContext,
     IN PVOID systemArgument1,
     IN PVOID systemArgument2)
 {
-  PC0C_IO_PORT pIoPort = (PC0C_IO_PORT)deferredContext;
+  PC0C_IO_PORT pIoPort;
 
   UNREFERENCED_PARAMETER(pDpc);
   UNREFERENCED_PARAMETER(systemArgument1);
   UNREFERENCED_PARAMETER(systemArgument2);
+
+  HALT_UNLESS(deferredContext != NULL);
+
+  pIoPort = (PC0C_IO_PORT)deferredContext;
 
   TimeoutRoutine(pIoPort, &pIoPort->irpQueues[C0C_QUEUE_CLOSE]);
 }

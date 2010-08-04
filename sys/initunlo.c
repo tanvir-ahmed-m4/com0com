@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2004-2005 Vyacheslav Frolov
+ * Copyright (c) 2004-2010 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.7  2010/08/04 10:38:55  vfrolov
+ * Minimized PREfast noise
+ *
  * Revision 1.6  2006/08/23 13:13:53  vfrolov
  * Moved c0cSystemControlDispatch() to wmi.c
  *
@@ -45,6 +48,7 @@
 
 C0C_GLOBAL c0cGlobal;
 
+DRIVER_INITIALIZE DriverEntry;
 NTSTATUS DriverEntry(IN PDRIVER_OBJECT pDrvObj, IN PUNICODE_STRING pRegistryPath)
 {
   NTSTATUS status;

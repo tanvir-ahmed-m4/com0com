@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2004-2008 Vyacheslav Frolov
+ * Copyright (c) 2004-2010 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.43  2010/08/04 10:38:55  vfrolov
+ * Minimized PREfast noise
+ *
  * Revision 1.42  2008/12/15 11:00:00  vfrolov
  * Fixed break char delay
  *
@@ -838,7 +841,10 @@ VOID StartXoffCounter(PC0C_IO_PORT pIoPortWrite, PLIST_ENTRY pQueueToComplete)
   PC0C_IRP_QUEUE pQueue;
 
   pQueue = &pIoPortWrite->irpQueues[C0C_QUEUE_WRITE];
+
+#if DBG
   HALT_UNLESS(!pQueue->started);
+#endif /* DBG */
 
   pIrpXoffCounter = pQueue->pCurrent;
   HALT_UNLESS(pIrpXoffCounter);

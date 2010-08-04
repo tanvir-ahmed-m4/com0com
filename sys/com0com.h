@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.50  2010/08/04 10:38:55  vfrolov
+ * Minimized PREfast noise
+ *
  * Revision 1.49  2010/06/01 06:14:10  vfrolov
  * Improved driver updating
  *
@@ -424,27 +427,23 @@ typedef struct _C0C_GLOBAL {
 
 extern C0C_GLOBAL c0cGlobal;
 
-VOID c0cUnload(IN PDRIVER_OBJECT pDrvObj);
+DRIVER_UNLOAD c0cUnload;
+DRIVER_ADD_DEVICE c0cAddDevice;
 
-#define DeclareMajorFunction(mfunc) \
-  NTSTATUS mfunc(IN PDEVICE_OBJECT, IN PIRP)
+__drv_dispatchType(IRP_MJ_CREATE)                  DRIVER_DISPATCH c0cOpen;
+__drv_dispatchType(IRP_MJ_CLOSE)                   DRIVER_DISPATCH c0cClose;
+__drv_dispatchType(IRP_MJ_CLEANUP)                 DRIVER_DISPATCH c0cCleanup;
+__drv_dispatchType(IRP_MJ_FLUSH_BUFFERS)
+__drv_dispatchType(IRP_MJ_WRITE)                   DRIVER_DISPATCH c0cWrite;
+__drv_dispatchType(IRP_MJ_READ)                    DRIVER_DISPATCH c0cRead;
+__drv_dispatchType(IRP_MJ_DEVICE_CONTROL)          DRIVER_DISPATCH c0cIoControl;
+__drv_dispatchType(IRP_MJ_INTERNAL_DEVICE_CONTROL) DRIVER_DISPATCH c0cInternalIoControl;
+__drv_dispatchType(IRP_MJ_QUERY_INFORMATION)
+__drv_dispatchType(IRP_MJ_SET_INFORMATION)         DRIVER_DISPATCH c0cFileInformation;
+__drv_dispatchType(IRP_MJ_SYSTEM_CONTROL)          DRIVER_DISPATCH c0cSystemControlDispatch;
+__drv_dispatchType(IRP_MJ_PNP)                     DRIVER_DISPATCH c0cPnpDispatch;
+__drv_dispatchType(IRP_MJ_POWER)                   DRIVER_DISPATCH c0cPowerDispatch;
 
-DeclareMajorFunction(c0cOpen);
-DeclareMajorFunction(c0cClose);
-DeclareMajorFunction(c0cWrite);
-DeclareMajorFunction(c0cRead);
-DeclareMajorFunction(c0cIoControl);
-DeclareMajorFunction(c0cInternalIoControl);
-DeclareMajorFunction(c0cCleanup);
-DeclareMajorFunction(c0cFileInformation);
-DeclareMajorFunction(c0cSystemControlDispatch);
-
-DeclareMajorFunction(c0cPnpDispatch);
-DeclareMajorFunction(c0cPowerDispatch);
-
-#undef DeclareMajorFunction
-
-NTSTATUS c0cAddDevice(IN PDRIVER_OBJECT  pDrvObj, IN PDEVICE_OBJECT pPhDevObj);
 VOID RemoveFdoPort(IN PC0C_FDOPORT_EXTENSION pDevExt);
 VOID RemoveFdoBus(IN PC0C_FDOBUS_EXTENSION pDevExt);
 

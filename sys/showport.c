@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.5  2010/08/04 10:38:56  vfrolov
+ * Minimized PREfast noise
+ *
  * Revision 1.4  2010/05/27 11:16:46  vfrolov
  * Added ability to put the port to the Ports class
  *
@@ -40,11 +43,6 @@
  * FILE_ID used by HALT_UNLESS to put it on BSOD
  */
 #define FILE_ID 0xD
-
-#ifndef NTDDI_VERSION
-/* ZwDeleteValueKey is missing in old DDKs */
-NTSYSAPI NTSTATUS NTAPI ZwDeleteValueKey(IN HANDLE KeyHandle, IN PUNICODE_STRING ValueName);
-#endif
 
 BOOLEAN HidePortName(IN PC0C_FDOPORT_EXTENSION pDevExt)
 {

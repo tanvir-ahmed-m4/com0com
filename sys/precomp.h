@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2004-2008 Vyacheslav Frolov
+ * Copyright (c) 2004-2010 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.4  2010/08/04 10:38:56  vfrolov
+ * Minimized PREfast noise
+ *
  * Revision 1.3  2008/12/02 16:10:09  vfrolov
  * Separated tracing and debuging
  *
@@ -40,6 +43,44 @@
 #include <ntddser.h>
 
 #pragma warning(pop)
+
+#ifndef NTDDI_VERSION
+
+/* Declare stuff missing in old DDKs */
+
+#define __drv_dispatchType(type)
+#define __drv_aliasesMem
+
+typedef NTSTATUS DRIVER_INITIALIZE(
+    IN PDRIVER_OBJECT pDrvObj,
+    IN PUNICODE_STRING pRegistryPath);
+
+typedef VOID DRIVER_UNLOAD(
+    IN PDRIVER_OBJECT pDrvObj);
+
+typedef NTSTATUS DRIVER_ADD_DEVICE(
+    IN PDRIVER_OBJECT pDrvObj,
+    IN PDEVICE_OBJECT pPhDevObj);
+
+typedef NTSTATUS DRIVER_DISPATCH(
+    IN PDEVICE_OBJECT,
+    IN PIRP);
+
+typedef VOID DRIVER_CANCEL(
+    IN PDEVICE_OBJECT pDevObj,
+    IN PIRP pIrp);
+
+typedef VOID KDEFERRED_ROUTINE(
+    IN PKDPC pDpc,
+    IN PVOID deferredContext,
+    IN PVOID systemArgument1,
+    IN PVOID systemArgument2);
+
+NTSYSAPI NTSTATUS NTAPI ZwDeleteValueKey(
+    IN HANDLE KeyHandle,
+    IN PUNICODE_STRING ValueName);
+
+#endif /* NTDDI_VERSION */
 
 #define ENABLE_TRACING 1
 

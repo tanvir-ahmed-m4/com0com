@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2005-2008 Vyacheslav Frolov
+ * Copyright (c) 2005-2010 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.9  2010/08/04 10:38:55  vfrolov
+ * Minimized PREfast noise
+ *
  * Revision 1.8  2008/10/30 07:54:37  vfrolov
  * Improved BREAK emulation
  *
@@ -83,7 +86,7 @@ NTSTATUS WriteRawDataToBuffer(PC0C_RAW_DATA pRawData, PC0C_BUFFER pBuf);
 SIZE_T WriteRawData(PC0C_RAW_DATA pRawData, PNTSTATUS pStatus, PVOID pReadBuf, SIZE_T readLength);
 BOOLEAN SetNewBufferBase(PC0C_BUFFER pBuf, PUCHAR pBase, SIZE_T size);
 VOID PurgeBuffer(PC0C_BUFFER pBuf);
-VOID InitBuffer(PC0C_BUFFER pBuf, PUCHAR pBase, SIZE_T size);
+VOID InitBuffer(PC0C_BUFFER pBuf, __drv_aliasesMem PUCHAR pBase, SIZE_T size);
 VOID FreeBuffer(PC0C_BUFFER pBuf);
 VOID SetBufferLimit(PC0C_BUFFER pBuf, SIZE_T limit);
 SIZE_T ReadFromTxBuffer(
