@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.51  2010/08/09 06:02:40  vfrolov
+ * Eliminated accessing undocumented structure members
+ *
  * Revision 1.50  2010/08/04 10:38:55  vfrolov
  * Minimized PREfast noise
  *
@@ -415,12 +418,15 @@ typedef struct _C0C_CHILD {
 typedef struct _C0C_FDOBUS_EXTENSION {
   FDO_EXTENSION
 
+  LIST_ENTRY              listEntry;
   KSPIN_LOCK              ioLock;
   C0C_CHILD               childs[2];
   ULONG                   portNum;
 } C0C_FDOBUS_EXTENSION, *PC0C_FDOBUS_EXTENSION;
 
 typedef struct _C0C_GLOBAL {
+  LIST_ENTRY listFdoBus;
+  KSPIN_LOCK listFdoBusLock;
   PDRIVER_OBJECT pDrvObj;
   UNICODE_STRING registryPath;
 } C0C_GLOBAL;

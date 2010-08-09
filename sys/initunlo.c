@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.8  2010/08/09 06:02:40  vfrolov
+ * Eliminated accessing undocumented structure members
+ *
  * Revision 1.7  2010/08/04 10:38:55  vfrolov
  * Minimized PREfast noise
  *
@@ -52,6 +55,9 @@ DRIVER_INITIALIZE DriverEntry;
 NTSTATUS DriverEntry(IN PDRIVER_OBJECT pDrvObj, IN PUNICODE_STRING pRegistryPath)
 {
   NTSTATUS status;
+
+  KeInitializeSpinLock(&c0cGlobal.listFdoBusLock);
+  InitializeListHead(&c0cGlobal.listFdoBus);
 
   c0cGlobal.pDrvObj = pDrvObj;
 
