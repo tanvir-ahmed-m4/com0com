@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.37  2010/08/09 05:51:16  vfrolov
+ * Fixed BSOD on tracing broken IRP_MN_QUERY_DEVICE_RELATIONS
+ *
  * Revision 1.36  2010/08/04 13:12:04  vfrolov
  * Fixed null string tracing
  *
@@ -1633,7 +1636,7 @@ VOID InternalTraceIrp(
           pDestStr = AnsiStrCopyCode(pDestStr, &size,
               pIrpStack->Parameters.QueryId.IdType,
               codeNameTableBusQuery, "BusQuery", 10);
-          if (flags & TRACE_FLAG_RESULTS && pIrp->IoStatus.Information) {
+          if ((flags & TRACE_FLAG_RESULTS) && inform) {
             BOOLEAN multiStr;
 
             pDestStr = AnsiStrCopyStr(pDestStr, &size, " Information: '");
@@ -1647,7 +1650,7 @@ VOID InternalTraceIrp(
                 multiStr = FALSE;
             }
             pDestStr = AnsiStrCopyStrW(pDestStr, &size,
-                (PWCHAR)pIrp->IoStatus.Information,
+                (PWCHAR)inform,
                 multiStr);
 
             pDestStr = AnsiStrCopyStr(pDestStr, &size, "'");
@@ -1658,10 +1661,10 @@ VOID InternalTraceIrp(
           pDestStr = AnsiStrCopyCode(pDestStr, &size,
               pIrpStack->Parameters.QueryDeviceText.DeviceTextType,
               codeNameTableDeviceText, "DeviceText", 10);
-          if (flags & TRACE_FLAG_RESULTS && pIrp->IoStatus.Information) {
+          if ((flags & TRACE_FLAG_RESULTS) && inform) {
             pDestStr = AnsiStrFormat(pDestStr, &size,
                 " Information: \"%S\"",
-                (PWCHAR)pIrp->IoStatus.Information);
+                (PWCHAR)inform);
           }
           break;
         case IRP_MN_QUERY_DEVICE_RELATIONS:
@@ -1669,10 +1672,15 @@ VOID InternalTraceIrp(
           pDestStr = AnsiStrCopyCode(pDestStr, &size,
               pIrpStack->Parameters.QueryDeviceRelations.Type,
               codeNameTableRelations, "Relations", 10);
-          if (flags & TRACE_FLAG_RESULTS) {
-            if (pIrp->IoStatus.Information)
-              pDestStr = AnsiStrFormat(pDestStr, &size, " Count=%u",
-                  (unsigned)((PDEVICE_RELATIONS)pIrp->IoStatus.Information)->Count);
+          if ((flags & TRACE_FLAG_RESULTS) && inform) {
+            switch (pIrpStack->Parameters.QueryDeviceRelations.Type) {
+              case BusRelations:
+              case EjectionRelations:
+              case PowerRelations:
+              case RemovalRelations:
+              case TargetDeviceRelation:
+                pDestStr = AnsiStrFormat(pDestStr, &size, " Count=%u", (unsigned)((PDEVICE_RELATIONS)inform)->Count);
+            }
           }
           break;
         case IRP_MN_QUERY_INTERFACE:
