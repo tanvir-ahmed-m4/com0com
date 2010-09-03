@@ -7,25 +7,29 @@ PREREQUISITES
 
 You will need the following to build com0com from source code:
 
-1.  Microsoft Windows Driver Development Kit (DDK).
-    When the DDK is installed, it defines the Start menu shortcuts for
-    several different build environments. To open a DDK build environment
+1.  Microsoft Windows Driver Development Kit (DDK) or Windows Driver Kit (WDK).
+    When the DDK/WDK is installed, it defines the Start menu shortcuts for
+    several different build environments. To open a DDK/WDK build environment
     window choose one of the environment shortcuts.
 
-2.  Microsoft Windows Platform Software Development Kit (SDK).
-    It's required for creating a certificate and signing com0com.sys file
-    if you build driver for x64-based versions of
-    Windows Vista/Windows Server 2008/Windows 7.
-    When the SDK is installed, it defines the Start menu shortcuts for
-    several different build environments. To open a SDK build environment
-    window choose one of the environment shortcuts.
+    NOTE: Microsoft removed Windows 2000 from its list of supported platforms
+    for the new WDKs. So for Windows 2000 you'll need one of the previous
+    releases of the DDK/WDK:
 
-3.  Microsoft Visual C++ 2005 Express Edition (MSVC).
+    6001.18002 - WDK for Windows Server 2008.
+                 This WDK provides a Windows 2000 build environment for the
+                 development of drivers targeting Windows 2000.
+                 (6.1.6001.18002.081017-1400_wdksp-WDK18002SP_EN_DVD.iso).
+    1830       - DDK for Windows Server 2003 SP1.
+                 This DDK can be installed to Windows 2000.
+                 (1830_usa_ddk.iso).
+
+2.  Microsoft Visual C++ 2005 Express Edition (MSVC).
     It's required for building the GUI-based setup utility.
     When the MSVC is installed, it defines the Start menu shortcut for
     build environment. To open a MSVC build environment window choose it.
 
-4.  Nullsoft Scriptable Install System (http://nsis.sourceforge.net/).
+3.  Nullsoft Scriptable Install System (http://nsis.sourceforge.net/).
     It's required for building the installer.
 
 
@@ -34,7 +38,7 @@ BUILDING
 
 1.  Build the driver.
 
-    For example execute in the DDK build environment window:
+    For example execute in the DDK/WDK build environment window:
 
       cd C:\com0com
       build -wcZ -M 1
@@ -47,7 +51,7 @@ BUILDING
     Windows Vista/Windows Server 2008/Windows 7 then create
     a test certificate and sign com0com.sys file.
 
-    For example execute in the SDK build environment window:
+    For example execute in the WDK build environment window:
 
       mkdir C:\com0com\cert
       cd C:\com0com\cert
