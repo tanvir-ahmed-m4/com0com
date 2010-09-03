@@ -208,9 +208,8 @@ A. It's because there is not signed com0com.cat catalog file. It can be created 
       certmgr -add com0com.cer -s -r localMachine root
       certmgr -add com0com.cer -s -r localMachine trustedpublisher
 
-   The inf2cat tool can be installed with the Winqual Submission Tool.
-   The makecert, pvk2pfx, signtool and certmgr tools can be installed with the
-   Platform Software Development Kit (SDK).
+   The inf2cat, makecert, pvk2pfx, signtool and certmgr tools are included in the
+   Windows Driver Kit (WDK).
 
 Q. How to monitor and get the paired port settings (baud rate, byte size, parity
    and stop bits)?
