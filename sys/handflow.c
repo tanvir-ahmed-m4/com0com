@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.13  2010/12/27 14:14:06  vfrolov
+ * Added cleaning SERIAL_TX_WAITING_FOR_XON on opening port
+ *
  * Revision 1.12  2008/10/30 07:54:37  vfrolov
  * Improved BREAK emulation
  *
@@ -95,6 +98,9 @@ NTSTATUS SetHandFlow(
   }
 
   // Set local side
+  if (!pHandFlow)
+    pIoPort->writeHolding &= ~SERIAL_TX_WAITING_FOR_XON;
+
   if (pHandFlow &&
       ((pIoPort->handFlow.FlowReplace & SERIAL_AUTO_TRANSMIT) != 0) &&
       ((pHandFlow->FlowReplace & SERIAL_AUTO_TRANSMIT) == 0))
