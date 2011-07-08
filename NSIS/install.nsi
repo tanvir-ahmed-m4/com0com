@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2006-2010 Vyacheslav Frolov
+ * Copyright (c) 2006-2011 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.20  2011/07/08 10:19:19  vfrolov
+ * Added ability to set selections for setup.exe by setting environment variables
+ *
  * Revision 1.19  2010/06/01 06:14:09  vfrolov
  * Improved driver updating
  *
@@ -191,6 +194,31 @@ FunctionEnd
 
   Pop $3
   Pop $2
+  Pop $1
+  Pop $0
+
+!macroend
+
+;--------------------------------
+
+!macro EnvToSel section env
+
+  Push $0
+  Push $1
+
+  ReadEnvStr $0 ${env}
+  StrCpy $0 $0 1
+  ${Select} $0
+    ${Case2} "Y" "y"
+      SectionGetFlags ${section} $0
+      IntOp $0 $0 | ${SF_SELECTED}
+      SectionSetFlags ${section} $0
+    ${Case2} "N" "n"
+      SectionGetFlags ${section} $0
+      IntOp $1 ${SF_SELECTED} ~
+      IntOp $0 $0 & $1
+      SectionSetFlags ${section} $0
+  ${EndSelect}
   Pop $1
   Pop $0
 
@@ -426,7 +454,7 @@ Function .onInit
     Abort
   ${EndIf}
 
-  ; Disable installing a pair of linked ports if silent
+  ; Disable installing ports if silent
 
   IfSilent 0 +9
     SectionGetFlags ${sec_CNCxCNC_ports} $0
@@ -438,7 +466,14 @@ Function .onInit
     IntOp $0 $0 & $1
     SectionSetFlags ${sec_COMxCOM_ports} $0
 
+  ; Set selections from enviroment
+
+  !insertmacro EnvToSel ${sec_shortcuts}     "CNC_INSTALL_START_MENU_SHORTCUTS"
+  !insertmacro EnvToSel ${sec_CNCxCNC_ports} "CNC_INSTALL_CNCA0_CNCB0_PORTS"
+  !insertmacro EnvToSel ${sec_COMxCOM_ports} "CNC_INSTALL_COMX_COMX_PORTS"
+
 FunctionEnd
+
 ;--------------------------------
 
 Function .onInstSuccess

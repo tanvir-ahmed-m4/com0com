@@ -114,7 +114,22 @@ A. Yes, it's possible with /S option, for example:
 
      setup.exe /S /D=C:\Program Files\com0com
 
-   NOTE: Silent installation of com0com will not install any port pairs.
+   NOTE: Silent installation of com0com will not install any port pairs by
+         default {it can be overriden by setting CNC_INSTALL_CNCA0_CNCB0_PORTS
+         and/or CNC_INSTALL_COMX_COMX_PORTS environment variables).
+
+Q. What are the other setup.exe command line options?
+A. The command line options of setup.exe and uninstall.exe listed in
+   NSIS Users Manual, section 3.2 Installer Usage:
+
+     http://nsis.sourceforge.net/Docs/Chapter3.html#3.2
+
+   Additionally the following environment variables can be used to change
+   behaviour of setup.exe
+
+     CNC_INSTALL_START_MENU_SHORTCUTS={YES|NO} - select/unselect "Start Menu Shortcuts"
+     CNC_INSTALL_CNCA0_CNCB0_PORTS={YES|NO}    - select/unselect "CNCA0 <-> CNCB0"
+     CNC_INSTALL_COMX_COMX_PORTS={YES|NO}      - select/unselect "COM# <-> COM#"
 
 Q. Is it possible to change the names CNCA0 and CNCB0 to COM2 and COM3?
 A. Yes, it's possible. To change the names:
