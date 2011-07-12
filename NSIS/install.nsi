@@ -19,6 +19,10 @@
  *
  *
  * $Log$
+ * Revision 1.21  2011/07/12 18:10:11  vfrolov
+ * Added launching setupg.exe rather then setupc.exe if .NET is OK
+ * Disabled installing ports by default while update
+ *
  * Revision 1.20  2011/07/08 10:19:19  vfrolov
  * Added ability to set selections for setup.exe by setting environment variables
  *
@@ -165,6 +169,33 @@ FunctionEnd
 
 ;--------------------------------
 
+Function LaunchSetup
+  IfSilent 0 +2
+    return
+
+  Push $0
+  Push $1
+  Push $2
+
+  Call GetDotNETVersion
+  Pop $0
+
+  StrCpy $1 "2.0"
+
+  ${VersionCompare} $0 $1 $2
+  ${If} $2 == 2
+    Exec "setupc.exe"
+  ${Else}
+    Exec "setupg.exe"
+  ${EndIf}
+
+  Pop $2
+  Pop $1
+  Pop $0
+FunctionEnd
+
+;--------------------------------
+
 !macro MoveFileToDetails file
 
   Push $0
@@ -251,8 +282,9 @@ ShowUninstDetails show
   !define MUI_WELCOMEPAGE_TITLE_3LINES
   !define MUI_FINISHPAGE_TITLE_3LINES
 
-  !define MUI_FINISHPAGE_RUN setupc.exe
-  !define MUI_FINISHPAGE_RUN_TEXT "Launch Setup Command Prompt"
+  !define MUI_FINISHPAGE_RUN
+  !define MUI_FINISHPAGE_RUN_TEXT "Launch Setup"
+  !define MUI_FINISHPAGE_RUN_FUNCTION LaunchSetup
   !define MUI_FINISHPAGE_RUN_NOTCHECKED
 
   !define MUI_FINISHPAGE_SHOWREADME ReadMe.txt
@@ -454,9 +486,16 @@ Function .onInit
     Abort
   ${EndIf}
 
-  ; Disable installing ports if silent
+  ; Disable installing ports by default if update or silent install
 
-  IfSilent 0 +9
+  ClearErrors
+  ReadRegStr $0 HKLM SOFTWARE\com0com "Install_Dir"
+  IfErrors 0 disable_ports_begin
+
+  IfSilent disable_ports_begin 0
+  Goto disable_ports_end
+
+  disable_ports_begin:
     SectionGetFlags ${sec_CNCxCNC_ports} $0
     IntOp $1 ${SF_SELECTED} ~
     IntOp $0 $0 & $1
@@ -465,6 +504,7 @@ Function .onInit
     IntOp $1 ${SF_SELECTED} ~
     IntOp $0 $0 & $1
     SectionSetFlags ${sec_COMxCOM_ports} $0
+  disable_ports_end:
 
   ; Set selections from enviroment
 
