@@ -69,7 +69,17 @@ BUILDING
 
     It will create the C:\com0com\setupg\Release\setupg.exe file.
 
-4.  Build the installer.
+4.  If you build driver for Windows Vista/Windows Server 2008/Windows 7 then
+    embed requireAdministrator.manifest to the executables.
+
+    For example execute in the MSVC build environment window:
+
+      mt.exe -manifest C:\com0com\requireAdministrator.manifest -updateresource:"C:\com0com\setupg\Release\setupg.exe";#1
+      mt.exe -manifest C:\com0com\requireAdministrator.manifest -outputresource:"C:\com0com\<CPU>\setupc.exe";#1
+
+    where <CPU> is i386, ia64 or amd64
+
+5.  Build the installer.
 
     For example execute in the DDK build environment window:
 

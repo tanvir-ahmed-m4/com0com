@@ -34,10 +34,6 @@ The homepage for com0com project is http://com0com.sourceforge.net/.
 INSTALLING
 ==========
 
-NOTE (Windows Vista/Windows Server 2008/Windows 7):
-  Before installing/uninstalling the com0com driver or adding/removing/changing
-  ports the User Account Control (UAC) should be turned off (require reboot).
-
 NOTE (x64-based Windows Vista/Windows Server 2008/Windows 7):
   The com0com.sys is a test-signed kernel-mode driver that will not load by
   default. To enable test signing, enter command:
@@ -47,7 +43,7 @@ NOTE (x64-based Windows Vista/Windows Server 2008/Windows 7):
   and reboot the computer.
 
 NOTE:
-  Turning off UAC or enabling test signing will impair computer security.
+  Enabling test signing will impair computer security.
 
 Simply run the installer (setup.exe). An installation wizard will guide
 you through the required steps.
