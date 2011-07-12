@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2004-2010 Vyacheslav Frolov
+ * Copyright (c) 2004-2011 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.19  2011/07/12 18:16:46  vfrolov
+ * Discarded WDM garbage
+ *
  * Revision 1.18  2010/08/10 16:45:58  vfrolov
  * Added STATUS_WAIT_1..3
  *
@@ -408,14 +411,11 @@ CODE2NAME codeNameTableHoldReasons[] = {
 };
 
 CODE2NAME codeNameTableFileInformationClass[] = {
-#ifndef _WDMDDK_
   TOCODE2NAME1(FileDirectoryInformation),
   TOCODE2NAME1(FileFullDirectoryInformation),
   TOCODE2NAME1(FileBothDirectoryInformation),
-#endif
   TOCODE2NAME1(FileBasicInformation),
   TOCODE2NAME1(FileStandardInformation),
-#ifndef _WDMDDK_
   TOCODE2NAME1(FileInternalInformation),
   TOCODE2NAME1(FileEaInformation),
   TOCODE2NAME1(FileAccessInformation),
@@ -424,17 +424,13 @@ CODE2NAME codeNameTableFileInformationClass[] = {
   TOCODE2NAME1(FileLinkInformation),
   TOCODE2NAME1(FileNamesInformation),
   TOCODE2NAME1(FileDispositionInformation),
-#endif
   TOCODE2NAME1(FilePositionInformation),
-#ifndef _WDMDDK_
   TOCODE2NAME1(FileFullEaInformation),
   TOCODE2NAME1(FileModeInformation),
   TOCODE2NAME1(FileAlignmentInformation),
   TOCODE2NAME1(FileAllInformation),
   TOCODE2NAME1(FileAllocationInformation),
-#endif
   TOCODE2NAME1(FileEndOfFileInformation),
-#ifndef _WDMDDK_
   TOCODE2NAME1(FileAlternateNameInformation),
   TOCODE2NAME1(FileStreamInformation),
   TOCODE2NAME1(FilePipeInformation),
@@ -452,7 +448,6 @@ CODE2NAME codeNameTableFileInformationClass[] = {
   TOCODE2NAME1(FileAttributeTagInformation),
   TOCODE2NAME1(FileTrackingInformation),
   TOCODE2NAME1(FileMaximumInformation),
-#endif
   {0, NULL}
 };
 
