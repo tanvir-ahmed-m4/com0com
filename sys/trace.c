@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2004-2010 Vyacheslav Frolov
+ * Copyright (c) 2004-2011 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,10 @@
  *
  *
  * $Log$
+ * Revision 1.38  2011/07/12 18:22:02  vfrolov
+ * Discarded WDM garbage (fixed timestamp localization)
+ * Added IOCTL_SERIAL_SET_FIFO_CONTROL value tracing
+ *
  * Revision 1.37  2010/08/09 05:51:16  vfrolov
  * Fixed BSOD on tracing broken IRP_MN_QUERY_DEVICE_RELATIONS
  *
@@ -943,21 +947,12 @@ PCHAR AnsiStrCopyPerfStats(
 VOID GetTimeFields(PTIME_FIELDS pTimeFields)
 {
   LARGE_INTEGER systemTime;
+  LARGE_INTEGER localTime;
 
   KeQuerySystemTime(&systemTime);
+  ExSystemTimeToLocalTime(&systemTime, &localTime);
 
-#ifndef _WDMDDK_
-  {
-    LARGE_INTEGER localTime;
-    ExSystemTimeToLocalTime(&systemTime, &localTime);
-    systemTime = localTime;
-  }
-#else
-  #define LOCAL_TIME_SHIFT (3*60*60)
-  systemTime.QuadPart += (LONGLONG)(10000)*1000*LOCAL_TIME_SHIFT;
-#endif
-
-  RtlTimeToTimeFields(&systemTime, pTimeFields);
+  RtlTimeToTimeFields(&localTime, pTimeFields);
 }
 
 PCHAR AnsiStrCopyTimeFields(
@@ -1507,6 +1502,10 @@ VOID InternalTraceIrp(
               pDestStr = AnsiStrCopyDump(pDestStr, &size, ((PUCHAR)pSysBuf) + sizeof(ULONG), inform - sizeof(ULONG));
             }
           }
+          break;
+        case IOCTL_SERIAL_SET_FIFO_CONTROL:
+          if ((flags & TRACE_FLAG_PARAMS) && inLength >= sizeof(ULONG))
+            pDestStr = AnsiStrFormat(pDestStr, &size, " 0x%lX", (long)*((PULONG)pSysBuf));
           break;
         case IOCTL_SERIAL_SET_WAIT_MASK:
           if ((flags & TRACE_FLAG_PARAMS) && inLength >= sizeof(ULONG)) {
