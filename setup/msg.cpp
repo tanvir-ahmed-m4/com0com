@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2006-2010 Vyacheslav Frolov
+ * Copyright (c) 2006-2011 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.10  2011/07/13 17:42:46  vfrolov
+ * Added tracing of dialogs
+ *
  * Revision 1.9  2010/07/30 09:19:29  vfrolov
  * Added STRDUP()
  *
@@ -138,13 +141,45 @@ static void TraceDefault(LPCSTR pText)
 
 static void (* pTrace)(LPCSTR pText) = TraceDefault;
 ///////////////////////////////////////////////////////////////
+static int ShowMsg(LPCSTR pText, UINT type)
+{
+  Trace("\nDIALOG: {\n%s} ... ", pText);
+
+#define TRACECASE(p, s) case p##s: Trace(#s); break;
+
+  int res = pShowMsg(pText, type);
+
+  switch(res) {
+    TRACECASE(ID, OK)
+    TRACECASE(ID, CANCEL)
+    TRACECASE(ID, ABORT)
+    TRACECASE(ID, RETRY)
+    TRACECASE(ID, IGNORE)
+    TRACECASE(ID, YES)
+    TRACECASE(ID, NO)
+    TRACECASE(ID, CLOSE)
+    TRACECASE(ID, HELP)
+    TRACECASE(ID, TRYAGAIN)
+    TRACECASE(ID, CONTINUE)
+    case 0:
+      Trace("error");
+      break;
+    default:
+      Trace("%d", res);
+  }
+
+  Trace("\n");
+
+  return res;
+}
+///////////////////////////////////////////////////////////////
 static int ShowMsgVA(UINT type, const char *pFmt, va_list va)
 {
   char buf[1024];
 
   VSNPRINTF(buf, sizeof(buf)/sizeof(buf[0]), pFmt, va);
 
-  return pShowMsg(buf, type);
+  return ShowMsg(buf, type);
 }
 ///////////////////////////////////////////////////////////////
 static int ShowErrorVA(UINT type, DWORD err, const char *pFmt, va_list va)
@@ -166,11 +201,14 @@ static int ShowErrorVA(UINT type, DWORD err, const char *pFmt, va_list va)
 
   int len = lstrlen(buf);
 
-  SNPRINTF(buf + len, sizeof(buf)/sizeof(buf[0]) - len, "\nERROR: 0x%08lX - %s\n", (unsigned long)err, pMsgBuf);
+  if ((err & 0xFFFF0000) == 0)
+    SNPRINTF(buf + len, sizeof(buf)/sizeof(buf[0]) - len, "\nERROR: %lu - %s\n", (unsigned long)err, pMsgBuf);
+  else
+    SNPRINTF(buf + len, sizeof(buf)/sizeof(buf[0]) - len, "\nERROR: 0x%08lX - %s\n", (unsigned long)err, pMsgBuf);
 
   LocalFree(pMsgBuf);
 
-  return pShowMsg(buf, type);
+  return ShowMsg(buf, type);
 }
 ///////////////////////////////////////////////////////////////
 int ShowMsg(UINT type, const char *pFmt, ...)
