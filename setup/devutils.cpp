@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2006-2010 Vyacheslav Frolov
+ * Copyright (c) 2006-2011 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.18  2011/07/13 17:39:55  vfrolov
+ * Fixed result treatment of UpdateDriverForPlugAndPlayDevices()
+ *
  * Revision 1.17  2010/07/29 12:18:43  vfrolov
  * Fixed waiting stuff
  *
@@ -681,6 +684,7 @@ int UpdateDriver(
     const char *pInfFilePath,
     const char *pHardwareId,
     DWORD flags,
+    BOOL mandatory,
     BOOL *pRebootRequired)
 {
   DWORD updateErr = ERROR_SUCCESS;
@@ -692,14 +696,20 @@ int UpdateDriver(
     } else {
       updateErr = GetLastError();
 
-      if (updateErr == ERROR_NO_SUCH_DEVINST) {
-        updateErr = ERROR_SUCCESS;
-      }
-      else
       if (updateErr == ERROR_SHARING_VIOLATION) {
         Trace(".");
         Sleep(1000);
         continue;
+      }
+      else
+      if (!mandatory) {
+        if (updateErr == ERROR_NO_SUCH_DEVINST) {
+          updateErr = ERROR_SUCCESS;
+        }
+        else
+        if (updateErr == ERROR_NO_MORE_ITEMS && (flags & INSTALLFLAG_FORCE) == 0) {
+          updateErr = ERROR_SUCCESS;
+        }
       }
     }
 
@@ -744,7 +754,9 @@ int UpdateDriver(
       }
     }
 
-    return ShowError(MB_CANCELTRYCONTINUE, updateErr, "UpdateDriverForPlugAndPlayDevices()");
+    return ShowError(MB_CANCELTRYCONTINUE, updateErr,
+                     "UpdateDriverForPlugAndPlayDevices(\"%s\", \"%s\", 0x%lX)",
+                     pHardwareId, pInfFilePath, (long)flags);
   }
 
   return IDCONTINUE;
@@ -878,7 +890,7 @@ static int TryInstallDevice(
   }
 
   if (updateDriver)
-    res = UpdateDriver(pInfFilePath, pDevId, 0, pRebootRequired);
+    res = UpdateDriver(pInfFilePath, pDevId, 0, TRUE, pRebootRequired);
 
 exit2:
 
@@ -970,7 +982,11 @@ BOOL WaitNoPendingInstallEvents(int timeLimit)
     }
 
     if (!inTrace) {
-      Trace("Wating for no pending device installation activities ");
+      if (timeLimit != -1)
+        Trace("Wating for no pending device installation activities (%u secs) ", (unsigned)timeLimit);
+      else
+        Trace("Wating for no pending device installation activities (perpetually) ");
+
       inTrace = TRUE;
     }
 

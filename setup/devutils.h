@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2006-2010 Vyacheslav Frolov
+ * Copyright (c) 2006-2011 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.12  2011/07/13 17:39:56  vfrolov
+ * Fixed result treatment of UpdateDriverForPlugAndPlayDevices()
+ *
  * Revision 1.11  2010/07/29 12:18:43  vfrolov
  * Fixed waiting stuff
  *
@@ -147,6 +150,7 @@ int UpdateDriver(
     const char *pInfFilePath,
     const char *pHardwareId,
     DWORD flags,
+    BOOL mandatory,
     BOOL *pRebootRequired);
 
 BOOL InstallDevice(
