@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.23  2011/07/14 15:02:41  vfrolov
+ * Added packaging com0com.cat (if file exists)
+ *
  * Revision 1.22  2011/07/14 12:12:28  vfrolov
  * Fixed mistaken execution of executables located in installer's folder
  *
@@ -330,10 +333,13 @@ Section "com0com" sec_com0com
 
   ; Put files there
   File "..\ReadMe.txt"
+
   File "..\com0com.inf"
   File "..\cncport.inf"
   File "..\comport.inf"
   File "..\${TARGET_CPU}\com0com.sys"
+  File /nonfatal "..\${TARGET_CPU}\com0com.cat"
+
   File "..\${TARGET_CPU}\setup.dll"
   File "..\${TARGET_CPU}\setupc.exe"
   File "..\setupg\Release\setupg.exe"
@@ -381,6 +387,8 @@ Section "com0com" sec_com0com
   ${GetSize} "$INSTDIR" "/M=comport.inf   /S=0B /G=0" $R3 $R1 $R2
   IntOp $R0 $R0 + $R3
   ${GetSize} "$INSTDIR" "/M=com0com.sys   /S=0B /G=0" $R3 $R1 $R2
+  IntOp $R0 $R0 + $R3
+  ${GetSize} "$INSTDIR" "/M=com0com.cat   /S=0B /G=0" $R3 $R1 $R2
   IntOp $R0 $R0 + $R3
   ${GetSize} "$INSTDIR" "/M=setup.dll     /S=0B /G=0" $R3 $R1 $R2
   IntOp $R0 $R0 + $R3
@@ -551,6 +559,7 @@ Section "Uninstall"
   Delete $INSTDIR\cncport.inf
   Delete $INSTDIR\comport.inf
   Delete $INSTDIR\com0com.sys
+  Delete $INSTDIR\com0com.cat
   Delete $INSTDIR\setup.dll
   Delete $INSTDIR\setupc.exe
   Delete $INSTDIR\setupg.exe
