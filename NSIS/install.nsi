@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.22  2011/07/14 12:12:28  vfrolov
+ * Fixed mistaken execution of executables located in installer's folder
+ *
  * Revision 1.21  2011/07/12 18:10:11  vfrolov
  * Added launching setupg.exe rather then setupc.exe if .NET is OK
  * Disabled installing ports by default while update
@@ -184,9 +187,9 @@ Function LaunchSetup
 
   ${VersionCompare} $0 $1 $2
   ${If} $2 == 2
-    Exec "setupc.exe"
+    Exec '"$INSTDIR\setupc.exe"'
   ${Else}
-    Exec "setupg.exe"
+    Exec '"$INSTDIR\setupg.exe"'
   ${EndIf}
 
   Pop $2
@@ -402,13 +405,13 @@ Section "com0com" sec_com0com
   IfSilent 0 +2
   StrCpy $1 "--silent"
 
-  ExecWait "setupc.exe $1 --output $0 preinstall"
+  ExecWait '"$INSTDIR\setupc.exe" $1 --output "$0" preinstall'
   !insertmacro MoveFileToDetails $0
 
-  ExecWait "setupc.exe $1 --output $0 update"
+  ExecWait '"$INSTDIR\setupc.exe" $1 --output "$0" update'
   !insertmacro MoveFileToDetails $0
 
-  ExecWait "setupc.exe $1 --output $0 infclean"
+  ExecWait '"$INSTDIR\setupc.exe" $1 --output "$0" infclean'
   !insertmacro MoveFileToDetails $0
 
 SectionEnd
@@ -435,7 +438,7 @@ Section "CNCA0 <-> CNCB0" sec_CNCxCNC_ports
   IfSilent 0 +2
   StrCpy $1 "--silent"
 
-  ExecWait "setupc.exe $1 --output $0 install 0 - -"
+  ExecWait '"$INSTDIR\setupc.exe" $1 --output "$0" install 0 - -'
   !insertmacro MoveFileToDetails $0
 
 SectionEnd
@@ -450,7 +453,7 @@ Section "COM# <-> COM#" sec_COMxCOM_ports
   IfSilent 0 +2
   StrCpy $1 "--silent"
 
-  ExecWait "setupc.exe $1 --output $0 install PortName=COM# PortName=COM#"
+  ExecWait '"$INSTDIR\setupc.exe" $1 --output "$0" install PortName=COM# PortName=COM#'
   !insertmacro MoveFileToDetails $0
 
 SectionEnd
@@ -535,7 +538,7 @@ Section "Uninstall"
   IfSilent 0 +2
   StrCpy $1 "--silent"
 
-  ExecWait "setupc.exe $1 --output $0 uninstall"
+  ExecWait '"$INSTDIR\setupc.exe" $1 --output "$0" uninstall'
   !insertmacro MoveFileToDetails $0
 
   ; Remove registry keys
