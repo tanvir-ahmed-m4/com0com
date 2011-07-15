@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.11  2011/07/15 16:09:05  vfrolov
+ * Disabled MessageBox() for silent mode and added default processing
+ *
  * Revision 1.10  2011/07/13 17:42:46  vfrolov
  * Added tracing of dialogs
  *
@@ -66,7 +69,7 @@ static BOOL silent = FALSE;
 ///////////////////////////////////////////////////////////////
 static int ShowMsgDefault(LPCSTR pText, UINT type)
 {
-  return MessageBox(NULL, pText, title, type|MB_SETFOREGROUND);
+  return Silent() ? 0 : MessageBox(NULL, pText, title, type|MB_SETFOREGROUND);
 }
 
 static int (* pShowMsg)(LPCSTR pText, UINT type) = ShowMsgDefault;
@@ -162,7 +165,7 @@ static int ShowMsg(LPCSTR pText, UINT type)
     TRACECASE(ID, TRYAGAIN)
     TRACECASE(ID, CONTINUE)
     case 0:
-      Trace("error");
+      Trace("ERROR");
       break;
     default:
       Trace("%d", res);

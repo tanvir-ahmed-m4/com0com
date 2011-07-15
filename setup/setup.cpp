@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.46  2011/07/15 16:09:05  vfrolov
+ * Disabled MessageBox() for silent mode and added default processing
+ *
  * Revision 1.45  2011/07/13 17:39:56  vfrolov
  * Fixed result treatment of UpdateDriverForPlugAndPlayDevices()
  *
@@ -294,7 +297,7 @@ static BOOL IsValidPortNum(int num)
   {
     int res = ShowMsg(MB_OKCANCEL|MB_ICONWARNING, "The port number %d is too big.\n", num);
 
-    if (res == IDCANCEL)
+    if (res == IDCANCEL || res == 0)
       return FALSE;
   }
 
@@ -312,7 +315,7 @@ static BOOL IsValidPortName(
                   "is too big (greater then %d).\n",
                   pPortName, C0C_PORT_NAME_LEN);
 
-    if (res == IDCANCEL)
+    if (res == IDCANCEL || res == 0)
       return FALSE;
   }
 
@@ -912,7 +915,7 @@ static BOOL AddDeviceToBusyMask(
 
   if (i >= 0) {
     if (!((BusyMask *)pParam)->AddNum(i)) {
-      if (ShowLastError(MB_OKCANCEL|MB_ICONWARNING, "AddDeviceToBusyMask(%d)", i) == IDCANCEL)
+      if (ShowLastError(MB_OKCANCEL|MB_ICONWARNING, "AddDeviceToBusyMask(%d)", i) != IDOK)
         return FALSE;
     }
   }
@@ -1011,7 +1014,7 @@ BOOL Install(const char *pInfFilePath, const char *pParametersA, const char *pPa
       lstrcmpi(portName[0], C0C_PORT_NAME_COMCLASS) != 0 &&
       ShowMsg(MB_OKCANCEL|MB_ICONWARNING,
               "The same port name %s is used for both ports.\n",
-              portName[0]) == IDCANCEL)
+              portName[0]) != IDOK)
   {
     goto err;
   }
@@ -1392,7 +1395,7 @@ BOOL ShowBusyNames(const char *pPattern)
           pBuf = NULL;
         }
 
-        if (ShowError(MB_OKCANCEL, ERROR_NOT_ENOUGH_MEMORY, "LocalAlloc(%lu)", (unsigned long)size) == IDCANCEL) {
+        if (ShowError(MB_OKCANCEL, ERROR_NOT_ENOUGH_MEMORY, "LocalAlloc(%lu)", (unsigned long)size) != IDOK) {
           if (pNames)
             LocalFree(pNames);
 
@@ -1420,7 +1423,7 @@ BOOL ShowBusyNames(const char *pPattern)
           break;
 
         if (ShowLastError(MB_OKCANCEL,
-            i != 0 ? "QueryDosDevice()" : "ComDbNames()") == IDCANCEL)
+            i != 0 ? "QueryDosDevice()" : "ComDbNames()") != IDOK)
         {
           if (pNames)
             LocalFree(pNames);
@@ -1473,7 +1476,7 @@ BOOL ShowBusyNames(const char *pPattern)
           pNamesNew = (char *)LocalReAlloc(pNames, sizeNamesNew, LMEM_ZEROINIT|LMEM_MOVEABLE);
 
         if (!pNamesNew) {
-          if (ShowError(MB_OKCANCEL, ERROR_NOT_ENOUGH_MEMORY, "LocalAlloc(%lu)", (unsigned long)sizeNamesNew) == IDCANCEL) {
+          if (ShowError(MB_OKCANCEL, ERROR_NOT_ENOUGH_MEMORY, "LocalAlloc(%lu)", (unsigned long)sizeNamesNew) != IDOK) {
             if (pNames)
               LocalFree(pNames);
 

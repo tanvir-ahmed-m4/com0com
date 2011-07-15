@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.19  2011/07/15 16:09:05  vfrolov
+ * Disabled MessageBox() for silent mode and added default processing
+ *
  * Revision 1.18  2011/07/13 17:39:55  vfrolov
  * Fixed result treatment of UpdateDriverForPlugAndPlayDevices()
  *
@@ -424,17 +427,16 @@ int DisableDevice(
 
       int res;
 
-      if (!Silent()) {
-        res = ShowMsg(MB_CANCELTRYCONTINUE,
+      res = ShowMsg(MB_CANCELTRYCONTINUE,
                         "Can't stop device %s %s %s.\n"
                         "Close application that use this device and Try Again.\n"
                         "Or Continue and then reboot system.\n",
                         pDevProperties->Location(),
                         pDevProperties->DevId(),
                         pDevProperties->PhObjName());
-      } else {
+
+      if (res == 0)
         res = IDCONTINUE;
-      }
 
       if (res != IDCONTINUE) {
         if (!ChangeState(hDevInfo, pDevInfoData, DICS_ENABLE))
@@ -568,17 +570,16 @@ static int RestartDevice(HDEVINFO hDevInfo, PSP_DEVINFO_DATA pDevInfoData, PDevP
     if (pDevParams->pEnumParams->pRebootRequired && !*pDevParams->pEnumParams->pRebootRequired) {
       int res;
 
-      if (!Silent()) {
-        res = ShowMsg(MB_CANCELTRYCONTINUE,
+      res = ShowMsg(MB_CANCELTRYCONTINUE,
                         "Can't reastart device %s %s %s.\n"
                         "Close application that use this device and Try Again.\n"
                         "Or Continue and then reboot system.\n",
                         pDevParams->devProperties.Location(),
                         pDevParams->devProperties.DevId(),
                         pDevParams->devProperties.PhObjName());
-      } else {
+
+      if (res == 0)
         res = IDCONTINUE;
-      }
 
       if (res != IDCONTINUE) {
         if (!ChangeState(hDevInfo, pDevInfoData, DICS_ENABLE))
@@ -737,6 +738,9 @@ int UpdateDriver(
                           "HKEY_LOCAL_MACHINE\\" REGSTR_PATH_RUNONCE "\n"
                           "\n"
                           "Continue to add the key to the registry.\n");
+
+        if (res == 0)
+          return IDCANCEL;
 
         if (res == IDCONTINUE) {
           err = RegCreateKeyEx(HKEY_LOCAL_MACHINE, REGSTR_PATH_RUNONCE, 0, NULL, 0, KEY_WRITE, NULL, &hKey, NULL);

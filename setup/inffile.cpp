@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2006-2010 Vyacheslav Frolov
+ * Copyright (c) 2006-2011 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.11  2011/07/15 16:09:05  vfrolov
+ * Disabled MessageBox() for silent mode and added default processing
+ *
  * Revision 1.10  2010/07/30 09:27:18  vfrolov
  * Added STRDUP()
  * Fixed updating the source location information by OemPath() and InstallOEMInf()
@@ -137,11 +140,11 @@ static BOOL Open(const char *pInfPath, HINF *phInf, BOOL showErrors)
       if (!showErrors)
         break;
 
-      res = ShowLastError(MB_CANCELTRYCONTINUE,
+      res = ShowLastError(MB_RETRYCANCEL,
                           "SetupOpenInfFile(%s) on line %u",
                           pInfPath, errLine);
     }
-  } while (res == IDTRYAGAIN);
+  } while (res == IDRETRY);
 
   return *phInf != INVALID_HANDLE_VALUE;
 }
@@ -667,8 +670,7 @@ BOOL InfFile::UninstallAllInfFiles(
       if (TestUninstall(infFile, pInfFileUninstallList, TRUE)) {
         int res;
 
-        if (!Silent()) {
-          res = ShowMsg(MB_YESNO,
+        res = ShowMsg(MB_YESNO,
             "The file %s possible should be deleted too.\n"
             "\n"
             "%s:\n"
@@ -686,22 +688,9 @@ BOOL InfFile::UninstallAllInfFiles(
             infFile.Provider(FALSE),
             infFile.DriverVer(FALSE),
             infFile.UninstallInfTag(FALSE));
-        } else {
-          Trace("\nThe file %s possible should be deleted too:\n"
-                "  ClassGUID = %s\n"
-                "  Class = %s\n"
-                "  Provider = %s\n"
-                "  DriverVer = %s\n"
-                "  UninstallInfTag = %s\n",
-                infFile.Path(),
-                infFile.ClassGUID(FALSE),
-                infFile.Class(FALSE),
-                infFile.Provider(FALSE),
-                infFile.DriverVer(FALSE),
-                infFile.UninstallInfTag(FALSE));
 
+        if (res == 0)
           res = IDNO;
-        }
 
         doUninstall = (res == IDYES);
       } else {
