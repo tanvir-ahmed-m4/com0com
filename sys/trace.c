@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.39  2011/07/26 16:06:33  vfrolov
+ * Added PID tracing on IRP_MJ_CLOSE
+ *
  * Revision 1.38  2011/07/12 18:22:02  vfrolov
  * Discarded WDM garbage (fixed timestamp localization)
  * Added IOCTL_SERIAL_SET_FIFO_CONTROL value tracing
@@ -1442,6 +1445,7 @@ VOID InternalTraceIrp(
 
   switch (major) {
     case IRP_MJ_CREATE:
+    case IRP_MJ_CLOSE:
       pDestStr = AnsiStrFormat(pDestStr, &size, ", PID:%lu", PtrToUlong(PsGetCurrentProcessId()));
       break;
     case IRP_MJ_WRITE:
