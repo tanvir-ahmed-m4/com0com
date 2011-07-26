@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2004-2008 Vyacheslav Frolov
+ * Copyright (c) 2004-2011 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.26  2011/07/26 16:07:42  vfrolov
+ * Fixed double closing
+ *
  * Revision 1.25  2008/12/02 16:10:09  vfrolov
  * Separated tracing and debuging
  *
@@ -120,6 +123,7 @@ NTSTATUS FdoPortOpen(IN PC0C_FDOPORT_EXTENSION pDevExt)
 
   if (InterlockedIncrement(&pDevExt->openCount) != 1) {
     InterlockedDecrement(&pDevExt->openCount);
+    Trace0((PC0C_COMMON_EXTENSION)pDevExt, L"FdoPortOpen ACCESS_DENIED (openCount > 0)");
     return STATUS_ACCESS_DENIED;
   }
 
@@ -127,6 +131,7 @@ NTSTATUS FdoPortOpen(IN PC0C_FDOPORT_EXTENSION pDevExt)
 
   if (pIoPort->plugInMode && !pIoPort->pIoPortRemote->isOpen) {
     InterlockedDecrement(&pDevExt->openCount);
+    Trace0((PC0C_COMMON_EXTENSION)pDevExt, L"FdoPortOpen ACCESS_DENIED (plugInMode && !pIoPortRemote->isOpen)");
     return STATUS_ACCESS_DENIED;
   }
 
@@ -234,7 +239,23 @@ NTSTATUS FdoPortClose(IN PC0C_FDOPORT_EXTENSION pDevExt, IN PIRP pIrp)
 
   pIoPort = pDevExt->pIoPortLocal;
 
+  KeAcquireSpinLock(pIoPort->pIoLock, &oldIrql);
+
+  if (!pIoPort->isOpen) {
+    KeReleaseSpinLock(pIoPort->pIoLock, oldIrql);
+
+    Trace0((PC0C_COMMON_EXTENSION)pDevExt, L"FdoPortClose INVALID_DEVICE_REQUEST (!isOpen)");
+
+    pIrp->IoStatus.Information = 0;
+    pIrp->IoStatus.Status = STATUS_INVALID_DEVICE_REQUEST;
+    IoCompleteRequest(pIrp, IO_NO_INCREMENT);
+
+    return STATUS_INVALID_DEVICE_REQUEST;
+  }
+
   pIoPort->isOpen = FALSE;
+
+  KeReleaseSpinLock(pIoPort->pIoLock, oldIrql);
 
   if (pIoPort->pIoPortRemote->plugInMode)
     IoInvalidateDeviceRelations(pIoPort->pIoPortRemote->pPhDevObj, BusRelations);
