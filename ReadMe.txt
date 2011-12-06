@@ -99,6 +99,11 @@ FAQs & HOWTOs
 Q. Is it possible to run com0com on Windows 9x platform?
 A. No, it is not possible. You need Windows 2000 platform or newer.
 
+Q. I get an error message when I run the installer:
+   "The 32-bit driver cannot run under 64-bit System". What to do?
+A. For 64-bit system download x64 package
+   (for example com0com-2.2.2.0-x64-fre-signed.zip).
+
 Q. Is it possible to install or uninstall com0com silently (with no user
    intervention and no user interface)?
 A. Yes, it's possible with /S option, for example:
@@ -173,6 +178,21 @@ A. Your application can hang because receive buffer overrun is disabled by
    receiving port. Also, to prevent some flow control issues you need to enable
    baud rate emulation for the sending port. So, if your application use port CNCA0
    and other paired port is CNCB0, then:
+
+   1. Launch the Setup Command Prompt shortcut.
+   2. Enter the change commands, for example:
+
+      command> change CNCB0 EmuOverrun=yes
+      command> change CNCA0 EmuBR=yes
+
+Q. When the corresponding port of a pair is not open, some characters will remain
+   in the ouput buffer of the sending port and be output upon the next connection.
+   Any clue on a possible workaround?
+A. It's a correct behavior if receive buffer overrun is disabled (by default). If
+   you need behavior where those characters should be lost (like real null modem do)
+   then enable receive buffer overrun for the receiving port. Also, to prevent some
+   flow control issues enable baud rate emulation for the sending port. So, if
+   sending port is CNCA0 and receiving port is CNCB0, then:
 
    1. Launch the Setup Command Prompt shortcut.
    2. Enter the change commands, for example:
