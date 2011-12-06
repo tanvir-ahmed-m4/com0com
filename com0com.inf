@@ -4,7 +4,7 @@
 ;
 ; Installation file for the Null-modem emulator driver.
 ;
-; Copyright (c) 2004-2010 Vyacheslav Frolov
+; Copyright (c) 2004-2011 Vyacheslav Frolov
 ;
 ;******************************************************************************
 
@@ -15,7 +15,7 @@ Class = CNCPorts
 ClassGUID = {df799e12-3c56-421b-b298-b6d3642bc878}
 CatalogFile = com0com.cat
 ;           MM/DD/YYYY
-DriverVer = 06/07/2010,3.0.0.0
+DriverVer = 12/06/2011,3.0.0.0
 UninstallInfTag = {df799e12-3c56-421b-b298-b6d3642bc878}
 
 ;******************************************************************************
@@ -79,7 +79,8 @@ com0com.sys
 [com0com_inst]
 AddReg = com0com_AddReg
 CopyFiles = com0com_CopyDrivers
-CopyINF = cncport.inf, comport.inf
+CopyINF = cncport.inf
+;CopyINF = comport.inf
 
 [com0com_inst.Services]
 AddService = com0com, %SPSVCINST_ASSOCSERVICE%, com0com_Service_Inst, com0com_EventLog_Inst
