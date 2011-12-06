@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2006-2010 Vyacheslav Frolov
+ * Copyright (c) 2006-2011 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,10 @@
  *
  *
  * $Log$
+ * Revision 1.10  2011/12/06 16:03:22  vfrolov
+ * Added cleaning high data bits for less then 8 bit data
+ * Added AllDataBits option to force 8 bit data
+ *
  * Revision 1.9  2010/05/31 07:58:14  vfrolov
  * Added ability to invoke the system-supplied advanced settings dialog box
  *
@@ -92,6 +96,7 @@ class PortParameters {
     DWORD plugInMode;
     DWORD exclusiveMode;
     DWORD hiddenMode;
+    DWORD allDataBits;
     DWORD pinCTS;
     DWORD pinDSR;
     DWORD pinDCD;

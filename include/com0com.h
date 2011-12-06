@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2006-2010 Vyacheslav Frolov
+ * Copyright (c) 2006-2011 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -62,6 +62,7 @@
 #define C0C_DEFAULT_PLUGINMODE      0x00000000
 #define C0C_DEFAULT_EXCLUSIVEMODE   0x00000000
 #define C0C_DEFAULT_HIDDENMODE      0x00000000
+#define C0C_DEFAULT_ALLDATABITS     0x00000000
 #define C0C_DEFAULT_EMUNOISE        0x00000000
 #define C0C_DEFAULT_ADDRTTO         0x00000000
 #define C0C_DEFAULT_ADDRITO         0x00000000

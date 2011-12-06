@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2006-2010 Vyacheslav Frolov
+ * Copyright (c) 2006-2011 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,10 @@
  *
  *
  * $Log$
+ * Revision 1.19  2011/12/06 16:03:22  vfrolov
+ * Added cleaning high data bits for less then 8 bit data
+ * Added AllDataBits option to force 8 bit data
+ *
  * Revision 1.18  2010/06/01 12:54:12  vfrolov
  * Fixed bit settings
  *
@@ -91,6 +95,7 @@ enum {
   m_plugInMode     = 0x00000008,
   m_exclusiveMode  = 0x00000010,
   m_hiddenMode     = 0x00000020,
+  m_allDataBits    = 0x00000040,
   m_pinCTS         = 0x00000100,
   m_pinDSR         = 0x00000200,
   m_pinDCD         = 0x00000400,
@@ -118,6 +123,7 @@ static struct Bit
   {m_plugInMode,     Bit::FLAG},
   {m_exclusiveMode,  Bit::FLAG},
   {m_hiddenMode,     Bit::FLAG},
+  {m_allDataBits,    Bit::FLAG},
   {m_pinCTS,         Bit::PIN},
   {m_pinDSR,         Bit::PIN},
   {m_pinDCD,         Bit::PIN},
@@ -143,6 +149,7 @@ void PortParameters::Init()
   plugInMode = 0;
   exclusiveMode = 0;
   hiddenMode = 0;
+  allDataBits = 0;
 
   pinCTS = 0;
   pinDSR = 0;
@@ -184,6 +191,7 @@ DWORD *PortParameters::GetDwPtr(DWORD bit)
     case m_plugInMode:     return &plugInMode;
     case m_exclusiveMode:  return &exclusiveMode;
     case m_hiddenMode:     return &hiddenMode;
+    case m_allDataBits:    return &allDataBits;
     case m_pinCTS:         return &pinCTS;
     case m_pinDSR:         return &pinDSR;
     case m_pinDCD:         return &pinDCD;
@@ -203,6 +211,7 @@ static const DWORD *GetDwPtrDefault(DWORD bit)
   static const DWORD plugInMode = C0C_DEFAULT_PLUGINMODE;
   static const DWORD exclusiveMode = C0C_DEFAULT_EXCLUSIVEMODE;
   static const DWORD hiddenMode = C0C_DEFAULT_HIDDENMODE;
+  static const DWORD allDataBits = C0C_DEFAULT_ALLDATABITS;
   static const DWORD pinCTS = C0C_DEFAULT_PIN_CTS;
   static const DWORD pinDSR = C0C_DEFAULT_PIN_DSR;
   static const DWORD pinDCD = C0C_DEFAULT_PIN_DCD;
@@ -217,6 +226,7 @@ static const DWORD *GetDwPtrDefault(DWORD bit)
     case m_plugInMode:     return &plugInMode;
     case m_exclusiveMode:  return &exclusiveMode;
     case m_hiddenMode:     return &hiddenMode;
+    case m_allDataBits:    return &allDataBits;
     case m_pinCTS:         return &pinCTS;
     case m_pinDSR:         return &pinDSR;
     case m_pinDCD:         return &pinDCD;
@@ -238,6 +248,7 @@ static const char *GetBitName(DWORD bit)
     case m_plugInMode:     return "PlugInMode";
     case m_exclusiveMode:  return "ExclusiveMode";
     case m_hiddenMode:     return "HiddenMode";
+    case m_allDataBits:    return "AllDataBits";
     case m_pinCTS:         return "cts";
     case m_pinDSR:         return "dsr";
     case m_pinDCD:         return "dcd";
@@ -891,6 +902,8 @@ const char *PortParameters::GetHelp()
     "  HiddenMode={yes|no}     - enable/disable hidden mode, the hidden mode port is\n"
     "                            hidden as it is possible for port enumerators\n"
     "                            (disabled by default)\n"
+    "  AllDataBits={yes|no}    - enable/disable all data bits transfer disregard\n"
+    "                            data bits setting (disabled by default)\n"
     "  cts=[!]<p>              - wire CTS pin to <p> (rrts by default)\n"
     "  dsr=[!]<p>              - wire DSR pin to <p> (rdtr by default)\n"
     "  dcd=[!]<p>              - wire DCD pin to <p> (rdtr by default)\n"

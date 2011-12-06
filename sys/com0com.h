@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2004-2010 Vyacheslav Frolov
+ * Copyright (c) 2004-2011 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,10 @@
  *
  *
  * $Log$
+ * Revision 1.52  2011/12/06 16:03:22  vfrolov
+ * Added cleaning high data bits for less then 8 bit data
+ * Added AllDataBits option to force 8 bit data
+ *
  * Revision 1.51  2010/08/09 06:02:40  vfrolov
  * Eliminated accessing undocumented structure members
  *
@@ -371,6 +375,7 @@ typedef struct _C0C_IO_PORT {
   BOOLEAN                 emuOverrun;
   BOOLEAN                 plugInMode;
   BOOLEAN                 exclusiveMode;
+  BOOLEAN                 allDataBits;
   BOOLEAN                 isComClass;
 } C0C_IO_PORT, *PC0C_IO_PORT;
 

@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2004-2010 Vyacheslav Frolov
+ * Copyright (c) 2004-2011 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,10 @@
  *
  *
  * $Log$
+ * Revision 1.39  2011/12/06 16:03:22  vfrolov
+ * Added cleaning high data bits for less then 8 bit data
+ * Added AllDataBits option to force 8 bit data
+ *
  * Revision 1.38  2010/08/09 06:02:40  vfrolov
  * Eliminated accessing undocumented structure members
  *
@@ -204,7 +208,7 @@ NTSTATUS AddFdoPort(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
   PDEVICE_OBJECT pNewDevObj;
   PC0C_FDOPORT_EXTENSION pDevExt;
   PC0C_PDOPORT_EXTENSION pPhDevExt;
-  ULONG emuBR, emuOverrun, plugInMode, exclusiveMode, hiddenMode;
+  ULONG emuBR, emuOverrun, plugInMode, exclusiveMode, hiddenMode, allDataBits;
   ULONG brokeCharsProbability;
   ULONG addRTTO, addRITO;
   ULONG pinCTS, pinDSR, pinDCD, pinRI;
@@ -310,6 +314,7 @@ NTSTATUS AddFdoPort(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
     plugInMode = C0C_DEFAULT_PLUGINMODE;
     exclusiveMode = C0C_DEFAULT_EXCLUSIVEMODE;
     hiddenMode = C0C_DEFAULT_HIDDENMODE;
+    allDataBits = C0C_DEFAULT_ALLDATABITS;
     pinCTS = C0C_DEFAULT_PIN_CTS;
     pinDSR = C0C_DEFAULT_PIN_DSR;
     pinDCD = C0C_DEFAULT_PIN_DCD;
@@ -319,7 +324,7 @@ NTSTATUS AddFdoPort(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
     addRITO = C0C_DEFAULT_ADDRITO;
 
     if (NT_SUCCESS(status)) {
-      RTL_QUERY_REGISTRY_TABLE queryTable[13];
+      RTL_QUERY_REGISTRY_TABLE queryTable[14];
       int i;
 
       RtlZeroMemory(queryTable, sizeof(queryTable));
@@ -354,6 +359,11 @@ NTSTATUS AddFdoPort(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
       queryTable[i].Name          = L"HiddenMode";
       queryTable[i].EntryContext  = &hiddenMode;
       queryTable[i].DefaultData   = &hiddenMode;
+
+      i++;
+      queryTable[i].Name          = L"AllDataBits";
+      queryTable[i].EntryContext  = &allDataBits;
+      queryTable[i].DefaultData   = &allDataBits;
 
       i++;
       queryTable[i].Name          = L"cts";
@@ -464,6 +474,14 @@ NTSTATUS AddFdoPort(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
   } else {
     pDevExt->pIoPortLocal->exclusiveMode = FALSE;
     Trace0((PC0C_COMMON_EXTENSION)pDevExt, L"Disabled exclusive mode");
+  }
+
+  if (allDataBits) {
+    pDevExt->pIoPortLocal->allDataBits = TRUE;
+    Trace0((PC0C_COMMON_EXTENSION)pDevExt, L"Enabled all data bits");
+  } else {
+    pDevExt->pIoPortLocal->allDataBits = FALSE;
+    Trace0((PC0C_COMMON_EXTENSION)pDevExt, L"Disabled all data bits");
   }
 
   SetHiddenMode(pDevExt, hiddenMode);
