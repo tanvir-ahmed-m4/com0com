@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.12  2011/12/08 09:32:04  vfrolov
+ * Fixed unreadable console output by changing LANG_NEUTRAL to LANG_ENGLISH
+ *
  * Revision 1.11  2011/07/15 16:09:05  vfrolov
  * Disabled MessageBox() for silent mode and added default processing
  *
@@ -197,7 +200,7 @@ static int ShowErrorVA(UINT type, DWORD err, const char *pFmt, va_list va)
       FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
       NULL,
       err,
-      MAKELANGID(LANG_NEUTRAL, SUBLANG_NEUTRAL),
+      MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US),
       (LPTSTR) &pMsgBuf,
       0,
       NULL);
