@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.24  2011/12/12 13:17:43  vfrolov
+ * Added CNC_INSTALL_SKIP_SETUP_PREINSTALL and CNC_UNINSTALL_SKIP_SETUP_UNINSTALL environment variables
+ *
  * Revision 1.23  2011/07/14 15:02:41  vfrolov
  * Added packaging com0com.cat (if file exists)
  *
@@ -407,20 +410,27 @@ Section "com0com" sec_com0com
   WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\com0com" "NoModify" 1
   WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\com0com" "NoRepair" 1
 
-  GetTempFileName $0
+  ReadEnvStr $0 "CNC_INSTALL_SKIP_SETUP_PREINSTALL"
+  StrCpy $0 $0 1
+  ${Select} $0
+    ${Case2} "Y" "y"
+      DetailPrint 'Skipped "$INSTDIR\setupc.exe" preinstall/update/infclean'
+    ${CaseElse}
+      GetTempFileName $0
 
-  StrCpy $1 ""
-  IfSilent 0 +2
-  StrCpy $1 "--silent"
+      StrCpy $1 ""
+      IfSilent 0 +2
+      StrCpy $1 "--silent"
 
-  ExecWait '"$INSTDIR\setupc.exe" $1 --output "$0" preinstall'
-  !insertmacro MoveFileToDetails $0
+      ExecWait '"$INSTDIR\setupc.exe" $1 --output "$0" preinstall'
+      !insertmacro MoveFileToDetails $0
 
-  ExecWait '"$INSTDIR\setupc.exe" $1 --output "$0" update'
-  !insertmacro MoveFileToDetails $0
+      ExecWait '"$INSTDIR\setupc.exe" $1 --output "$0" update'
+      !insertmacro MoveFileToDetails $0
 
-  ExecWait '"$INSTDIR\setupc.exe" $1 --output "$0" infclean'
-  !insertmacro MoveFileToDetails $0
+      ExecWait '"$INSTDIR\setupc.exe" $1 --output "$0" infclean'
+      !insertmacro MoveFileToDetails $0
+  ${EndSelect}
 
 SectionEnd
 
@@ -540,14 +550,21 @@ Section "Uninstall"
   ; Set output path to the installation directory.
   SetOutPath $INSTDIR
 
-  GetTempFileName $0
+  ReadEnvStr $0 "CNC_UNINSTALL_SKIP_SETUP_UNINSTALL"
+  StrCpy $0 $0 1
+  ${Select} $0
+    ${Case2} "Y" "y"
+      DetailPrint 'Skipped "$INSTDIR\setupc.exe" uninstall'
+    ${CaseElse}
+      GetTempFileName $0
 
-  StrCpy $1 ""
-  IfSilent 0 +2
-  StrCpy $1 "--silent"
+      StrCpy $1 ""
+      IfSilent 0 +2
+      StrCpy $1 "--silent"
 
-  ExecWait '"$INSTDIR\setupc.exe" $1 --output "$0" uninstall'
-  !insertmacro MoveFileToDetails $0
+      ExecWait '"$INSTDIR\setupc.exe" $1 --output "$0" uninstall'
+      !insertmacro MoveFileToDetails $0
+  ${EndSelect}
 
   ; Remove registry keys
   DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\com0com"
