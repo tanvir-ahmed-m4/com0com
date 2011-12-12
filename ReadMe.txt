@@ -125,12 +125,18 @@ A. The command line options of setup.exe and uninstall.exe listed in
 
      http://nsis.sourceforge.net/Docs/Chapter3.html#3.2
 
-   Additionally the following environment variables can be used to change
-   behaviour of setup.exe
+   Additionally the following environment variables can be used.
 
-     CNC_INSTALL_START_MENU_SHORTCUTS={YES|NO} - select/unselect "Start Menu Shortcuts"
-     CNC_INSTALL_CNCA0_CNCB0_PORTS={YES|NO}    - select/unselect "CNCA0 <-> CNCB0"
-     CNC_INSTALL_COMX_COMX_PORTS={YES|NO}      - select/unselect "COM# <-> COM#"
+   To change behaviour of setup.exe:
+
+     CNC_INSTALL_START_MENU_SHORTCUTS={YES|NO}   - select/unselect "Start Menu Shortcuts"
+     CNC_INSTALL_CNCA0_CNCB0_PORTS={YES|NO}      - select/unselect "CNCA0 <-> CNCB0"
+     CNC_INSTALL_COMX_COMX_PORTS={YES|NO}        - select/unselect "COM# <-> COM#"
+     CNC_INSTALL_SKIP_SETUP_PREINSTALL={YES|NO}  - skip preinstalling/updating driver
+
+   To change behaviour of uninstall.exe:
+
+     CNC_UNINSTALL_SKIP_SETUP_UNINSTALL={YES|NO} - skip uninstalling devices and driver
 
 Q. Is it possible to change the names CNCA0 and CNCB0 to COM2 and COM3?
 A. Yes, it's possible. To change the names:
@@ -241,6 +247,11 @@ A. It's because there is not signed com0com.cat catalog file. It can be created 
 
    The inf2cat, makecert, pvk2pfx, signtool and certmgr tools are included in the
    Windows Driver Kit (WDK).
+
+   Alternatively you can cancel Found New Hardware Wizard and install driver by
+   update command, for example:
+
+      command> update
 
 Q. How to monitor and get the paired port settings (baud rate, byte size, parity
    and stop bits)?
