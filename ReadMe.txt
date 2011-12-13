@@ -251,7 +251,18 @@ A. It's because there is not signed com0com.cat catalog file. It can be created 
    Alternatively you can cancel Found New Hardware Wizard and install driver by
    update command, for example:
 
-      command> update
+      setupc install - -
+      setupc update
+
+   Additionally you can temporary suppress Plug and Play-related UI messages, for
+   example:
+
+      reg add HKLM\Software\Policies\Microsoft\Windows\DeviceInstall\Settings /v SuppressNewHWUI /t REG_DWORD /d 1 /f
+      setupc install - -
+      setupc update
+      reg add HKLM\Software\Policies\Microsoft\Windows\DeviceInstall\Settings /v SuppressNewHWUI /t REG_DWORD /d 0 /f
+
+   See http://support.microsoft.com/kb/938596 for more info.
 
 Q. How to monitor and get the paired port settings (baud rate, byte size, parity
    and stop bits)?
