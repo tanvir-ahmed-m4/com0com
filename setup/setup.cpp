@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.48  2011/12/15 16:43:20  vfrolov
+ * Added parameters parsing result check
+ *
  * Revision 1.47  2011/12/15 15:51:48  vfrolov
  * Fixed types
  *
@@ -529,7 +532,8 @@ static bool ChangeDevice(
 
           portParameters.FillPortName(portNameOld, sizeof(portNameOld)/sizeof(portNameOld[0]));
 
-          portParameters.ParseParametersStr(pParameters);
+          if (!portParameters.ParseParametersStr(pParameters))
+            return FALSE;
 
           char phDevName[40];
 
@@ -991,7 +995,8 @@ bool Install(const char *pInfFilePath, const char *pParametersA, const char *pPa
     LONG err = portParameters.Load();
 
     if (err == ERROR_SUCCESS) {
-      portParameters.ParseParametersStr(pParameters);
+      if (!portParameters.ParseParametersStr(pParameters))
+        goto err;
 
       portParameters.FillPortName(portName[j], sizeof(portName[j])/sizeof(portName[j][0]));
 
