@@ -19,6 +19,10 @@
  *
  *
  * $Log$
+ * Revision 1.7  2011/12/15 08:47:49  vfrolov
+ * Added ability to disable tracing code compiling by environment variable
+ * (SET C_DEFINES=/DENABLE_TRACING=0)
+ *
  * Revision 1.6  2011/07/12 18:15:37  vfrolov
  * Discarded WDM garbage
  *
@@ -51,8 +55,7 @@
 
 #ifndef NTDDI_WIN7
 
-/* Declare stuff missing in old DDKs */
-
+/* Declarations missing in old DDKs */
 
 typedef VOID KDEFERRED_ROUTINE(
     IN PKDPC pDpc,
@@ -91,7 +94,9 @@ NTSYSAPI NTSTATUS NTAPI ZwDeleteValueKey(
 #endif /* NTDDI_VERSION */
 #endif /* NTDDI_WIN7 */
 
-#define ENABLE_TRACING 1
+#ifndef ENABLE_TRACING
+  #define ENABLE_TRACING 1
+#endif
 
 #include "com0com.h"
 #include "trace.h"
