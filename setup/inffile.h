@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2006-2010 Vyacheslav Frolov
+ * Copyright (c) 2006-2011 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.4  2011/12/15 15:51:48  vfrolov
+ * Fixed types
+ *
  * Revision 1.3  2010/05/27 11:16:46  vfrolov
  * Added ability to put the port to the Ports class
  *
@@ -45,29 +48,29 @@ class InfFile {
 
     struct InfFileUninstall {
       const InfFile::InfFileField *pRequiredFields;
-      BOOL queryConfirmation;
+      bool queryConfirmation;
     };
 
   public:
     InfFile(const char *pInfName, const char *pNearPath);
     ~InfFile();
 
-    BOOL Test(const InfFileField *pFields, BOOL showErrors = TRUE) const;
+    bool Test(const InfFileField *pFields, bool showErrors = TRUE) const;
 
     const char *Path() const { return pPath; }
-    const char *OemPath(BOOL showErrors = TRUE) const;
-    const char *ClassGUID(BOOL showErrors = TRUE) const;
-    const char *Class(BOOL showErrors = TRUE) const;
-    const char *Provider(BOOL showErrors = TRUE) const;
-    const char *DriverVer(BOOL showErrors = TRUE) const;
-    const char *UninstallInfTag(BOOL showErrors = TRUE) const;
+    const char *OemPath(bool showErrors = TRUE) const;
+    const char *ClassGUID(bool showErrors = TRUE) const;
+    const char *Class(bool showErrors = TRUE) const;
+    const char *Provider(bool showErrors = TRUE) const;
+    const char *DriverVer(bool showErrors = TRUE) const;
+    const char *UninstallInfTag(bool showErrors = TRUE) const;
 
-    BOOL UninstallFiles(const char *pFilesSection) const;
+    bool UninstallFiles(const char *pFilesSection) const;
 
-    BOOL InstallOEMInf() const;
-    BOOL UninstallOEMInf() const;
+    bool InstallOEMInf() const;
+    bool UninstallOEMInf() const;
 
-    static BOOL UninstallAllInfFiles(
+    static bool UninstallAllInfFiles(
         const InfFileUninstall *pInfFileUninstallList,
         const char *const *ppOemPathExcludeList);
 

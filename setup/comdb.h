@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2008-2010 Vyacheslav Frolov
+ * Copyright (c) 2008-2011 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.4  2011/12/15 15:51:48  vfrolov
+ * Fixed types
+ *
  * Revision 1.3  2010/05/27 11:16:46  vfrolov
  * Added ability to put the port to the Ports class
  *
@@ -34,10 +37,8 @@
 #define _C0C_COMDB_H_
 
 ///////////////////////////////////////////////////////////////
-typedef BOOL (* C0C_ENUM_FILTER)(const char *pHardwareId);
-///////////////////////////////////////////////////////////////
-BOOL ComDbGetInUse(const char *pPortName, BOOL &inUse);
-void ComDbSync(C0C_ENUM_FILTER pFilter);
+bool ComDbGetInUse(const char *pPortName, bool &inUse);
+void ComDbSync(PCNC_ENUM_FILTER pFilter);
 DWORD ComDbQueryNames(char *pBuf, DWORD maxChars);
 ///////////////////////////////////////////////////////////////
 

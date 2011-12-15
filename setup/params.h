@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.11  2011/12/15 15:51:48  vfrolov
+ * Fixed types
+ *
  * Revision 1.10  2011/12/06 16:03:22  vfrolov
  * Added cleaning high data bits for less then 8 bit data
  * Added AllDataBits option to force 8 bit data
@@ -64,30 +67,30 @@ class PortParameters {
     void Init();
     LONG Load();
     LONG Save();
-    BOOL ParseParametersStr(const char *pParameters);
-    BOOL FillParametersStr(char *pParameters, int size, BOOL detail);
-    BOOL FillPortName(char *pPortName, int size);
-    BOOL Changed() const { return maskChanged != 0; }
-    BOOL ClassChanged() const { return classChanged; }
-    BOOL DialogRequested() const { return dialogRequested; }
+    bool ParseParametersStr(const char *pParameters);
+    bool FillParametersStr(char *pParameters, int size, bool detail);
+    bool FillPortName(char *pPortName, int size);
+    bool Changed() const { return maskChanged != 0; }
+    bool ClassChanged() const { return classChanged; }
+    bool DialogRequested() const { return dialogRequested; }
 
     static const char *PortParameters::GetHelp();
 
   protected:
-    BOOL FillParametersKey(char *pRegKey, int size);
+    bool FillParametersKey(char *pRegKey, int size);
     DWORD *GetDwPtr(DWORD bit);
     void LoadDw(HKEY hKey, DWORD bit);
     LONG SaveDw(HKEY hKey, DWORD bit);
 
-    BOOL SetPortName(const char *pNewPortName);
-    BOOL SetFlag(const char *pNewVal, DWORD bit);
-    BOOL SetPin(const char *pNewVal, DWORD bit);
-    BOOL SetProbability(const char *pNewVal, DWORD bit);
-    BOOL SetUnsigned(const char *pNewVal, DWORD bit);
-    BOOL SetBit(const char *pVal, const Bit &bit);
+    bool SetPortName(const char *pNewPortName);
+    bool SetFlag(const char *pNewVal, DWORD bit);
+    bool SetPin(const char *pNewVal, DWORD bit);
+    bool SetProbability(const char *pNewVal, DWORD bit);
+    bool SetUnsigned(const char *pNewVal, DWORD bit);
+    bool SetBit(const char *pVal, const Bit &bit);
 
-    BOOL classChanged;
-    BOOL dialogRequested;
+    bool classChanged;
+    bool dialogRequested;
     DWORD maskChanged;
     DWORD maskExplicit;
     char portName[20];

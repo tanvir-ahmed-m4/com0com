@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2006-2010 Vyacheslav Frolov
+ * Copyright (c) 2006-2011 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.10  2011/12/15 15:51:48  vfrolov
+ * Fixed types
+ *
  * Revision 1.9  2010/07/30 09:15:04  vfrolov
  * Added STRDUP()
  *
@@ -81,7 +84,7 @@ int SNPRINTF(char *pBuf, int size, const char *pFmt, ...)
   return res1;
 }
 ///////////////////////////////////////////////////////////////
-static BOOL IsDelim(char c, const char *pDelims)
+static bool IsDelim(char c, const char *pDelims)
 {
   while (*pDelims) {
     if (c == *pDelims++)
@@ -117,9 +120,9 @@ char *STRTOK_R(char *pStr, const char *pDelims, char **ppSave)
   return pToken;
 }
 ///////////////////////////////////////////////////////////////
-BOOL StrToInt(const char *pStr, int *pNum)
+bool StrToInt(const char *pStr, int *pNum)
 {
-  BOOL res = FALSE;
+  bool res = FALSE;
   int num;
   int sign = 1;
 
@@ -160,7 +163,7 @@ BOOL StrToInt(const char *pStr, int *pNum)
   return res;
 }
 ///////////////////////////////////////////////////////////////
-BOOL MatchPattern(const char *pPattern, const char *pStr)
+bool MatchPattern(const char *pPattern, const char *pStr)
 {
   for (;;) {
     switch (*pPattern) {
@@ -192,7 +195,7 @@ BOOL MatchPattern(const char *pPattern, const char *pStr)
   }
 }
 ///////////////////////////////////////////////////////////////
-char *STRDUP(const char *pSrcStr, BOOL showErrors)
+char *STRDUP(const char *pSrcStr, bool showErrors)
 {
   char *pDstStr;
   int len = lstrlen(pSrcStr) + 1;
@@ -219,7 +222,7 @@ void BusyMask::Clear()
   }
 }
 
-BOOL BusyMask::AddNum(int num)
+bool BusyMask::AddNum(int num)
 {
   ULONG maskNum = num/(sizeof(*pBusyMask)*8);
 
@@ -260,7 +263,7 @@ void BusyMask::DelNum(int num)
   pBusyMask[maskNum] &= ~mask;
 }
 
-BOOL BusyMask::IsFreeNum(int num) const
+bool BusyMask::IsFreeNum(int num) const
 {
   ULONG maskNum = num/(sizeof(*pBusyMask)*8);
 

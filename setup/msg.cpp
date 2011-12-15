@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.13  2011/12/15 15:51:48  vfrolov
+ * Fixed types
+ *
  * Revision 1.12  2011/12/08 09:32:04  vfrolov
  * Fixed unreadable console output by changing LANG_NEUTRAL to LANG_ENGLISH
  *
@@ -67,7 +70,7 @@
 
 static char *pOutputFile = NULL;
 static char title[80] = "";
-static BOOL silent = FALSE;
+static bool silent = FALSE;
 
 ///////////////////////////////////////////////////////////////
 static int ShowMsgDefault(LPCSTR pText, UINT type)
@@ -77,7 +80,7 @@ static int ShowMsgDefault(LPCSTR pText, UINT type)
 
 static int (* pShowMsg)(LPCSTR pText, UINT type) = ShowMsgDefault;
 ///////////////////////////////////////////////////////////////
-static BOOL isConsoleOpen = FALSE;
+static bool isConsoleOpen = FALSE;
 
 static void ConsoleWriteReadDefault(LPSTR pReadBuf, DWORD lenReadBuf, LPCSTR pText)
 {
@@ -312,7 +315,7 @@ void ConsoleWrite(const char *pFmt, ...)
   SetLastError(err);
 }
 ///////////////////////////////////////////////////////////////
-BOOL IsConsoleOpen()
+bool IsConsoleOpen()
 {
   return isConsoleOpen;
 }
@@ -322,7 +325,7 @@ void SetTitle(const char *pTitle)
   SNPRINTF(title, sizeof(title)/sizeof(title[0]), "%s", pTitle);
 }
 ///////////////////////////////////////////////////////////////
-BOOL SetOutputFile(const char *pFile)
+bool SetOutputFile(const char *pFile)
 {
   if (pOutputFile) {
     LocalFree(pOutputFile);
@@ -344,12 +347,12 @@ const char *GetOutputFile()
   return pOutputFile;
 }
 ///////////////////////////////////////////////////////////////
-BOOL Silent()
+bool Silent()
 {
   return silent;
 }
 ///////////////////////////////////////////////////////////////
-void Silent(BOOL val)
+void Silent(bool val)
 {
   silent = val;
 }

@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2008-2010 Vyacheslav Frolov
+ * Copyright (c) 2008-2011 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.4  2011/12/15 15:51:48  vfrolov
+ * Fixed types
+ *
  * Revision 1.3  2010/05/27 11:16:46  vfrolov
  * Added ability to put the port to the Ports class
  *
@@ -63,7 +66,7 @@ static WORD name2num(const char *pPortName)
   return (WORD)num;
 }
 ///////////////////////////////////////////////////////////////
-static BOOL LoadComDb(BusyMask &comDb)
+static bool LoadComDb(BusyMask &comDb)
 {
   comDb.Clear();
 
@@ -128,7 +131,7 @@ static BOOL LoadComDb(BusyMask &comDb)
   return TRUE;
 }
 ///////////////////////////////////////////////////////////////
-static BOOL ClaimReleasePort(DWORD num, BOOL claim)
+static bool ClaimReleasePort(DWORD num, bool claim)
 {
   int res;
 
@@ -180,7 +183,7 @@ static BOOL ClaimReleasePort(DWORD num, BOOL claim)
   return TRUE;
 }
 ///////////////////////////////////////////////////////////////
-static BOOL LoadComDbLocal(BusyMask &comDb)
+static bool LoadComDbLocal(BusyMask &comDb)
 {
   comDb.Clear();
 
@@ -269,7 +272,8 @@ static BOOL LoadComDbLocal(BusyMask &comDb)
   return TRUE;
 }
 ///////////////////////////////////////////////////////////////
-static BOOL AddComNames(
+static CNC_DEV_CALLBACK AddComNames;
+static bool AddComNames(
     HDEVINFO hDevInfo,
     PSP_DEVINFO_DATA pDevInfoData,
     PCDevProperties /*pDevProperties*/,
@@ -305,7 +309,7 @@ static BOOL AddComNames(
   return TRUE;
 }
 
-static BOOL LoadComNames(C0C_ENUM_FILTER pFilter, BusyMask &comDb)
+static bool LoadComNames(PCNC_ENUM_FILTER pFilter, BusyMask &comDb)
 {
   comDb.Clear();
 
@@ -320,7 +324,7 @@ static BOOL LoadComNames(C0C_ENUM_FILTER pFilter, BusyMask &comDb)
   return TRUE;
 }
 ///////////////////////////////////////////////////////////////
-static BOOL SaveComDbLocal(const BusyMask &comDb)
+static bool SaveComDbLocal(const BusyMask &comDb)
 {
   int res;
 
@@ -402,7 +406,7 @@ static BOOL SaveComDbLocal(const BusyMask &comDb)
   return TRUE;
 }
 ///////////////////////////////////////////////////////////////
-BOOL ComDbGetInUse(const char *pPortName, BOOL &inUse)
+bool ComDbGetInUse(const char *pPortName, bool &inUse)
 {
   WORD num = name2num(pPortName);
 
@@ -420,7 +424,7 @@ BOOL ComDbGetInUse(const char *pPortName, BOOL &inUse)
   return TRUE;
 }
 ///////////////////////////////////////////////////////////////
-void ComDbSync(C0C_ENUM_FILTER pFilter)
+void ComDbSync(PCNC_ENUM_FILTER pFilter)
 {
   BusyMask comNames;
 

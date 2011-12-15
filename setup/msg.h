@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2006-2009 Vyacheslav Frolov
+ * Copyright (c) 2006-2011 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.6  2011/12/15 15:51:48  vfrolov
+ * Fixed types
+ *
  * Revision 1.5  2009/02/16 10:32:56  vfrolov
  * Added Silent() and PromptReboot()
  *
@@ -49,12 +52,12 @@ int ShowLastError(UINT type, const char *pFmt, ...);
 void Trace(const char *pFmt, ...);
 void ConsoleWriteRead(char *pReadBuf, int lenReadBuf, const char *pFmt, ...);
 void ConsoleWrite(const char *pFmt, ...);
-BOOL IsConsoleOpen();
+bool IsConsoleOpen();
 void SetTitle(const char *pTitle);
-BOOL SetOutputFile(const char *pFile);
+bool SetOutputFile(const char *pFile);
 const char *GetOutputFile();
-BOOL Silent();
-void Silent(BOOL val);
+bool Silent();
+void Silent(bool val);
 void PromptReboot();
 
 #endif /* _C0C_MSG_H_ */

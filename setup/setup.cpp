@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.47  2011/12/15 15:51:48  vfrolov
+ * Fixed types
+ *
  * Revision 1.46  2011/07/15 16:09:05  vfrolov
  * Disabled MessageBox() for silent mode and added default processing
  *
@@ -222,7 +225,7 @@ struct InfFileInstall {
   const char *pInfName;
   const char *pCopyDriversSection;
   const char *pHardwareId;
-  BOOL preinstallClass;
+  bool preinstallClass;
   const InfFile::InfFileField *pRequiredFields;
 };
 
@@ -266,10 +269,11 @@ static const InfFile::InfFileUninstall infFileUnnstallList[] = {
 };
 ///////////////////////////////////////////////////////////////
 static int timeout = 0;
-static BOOL detailPrms = FALSE;
-static BOOL no_update = FALSE;
+static bool detailPrms = FALSE;
+static bool no_update = FALSE;
 ///////////////////////////////////////////////////////////////
-static BOOL EnumFilter(const char *pHardwareId)
+static CNC_ENUM_FILTER EnumFilter;
+static bool EnumFilter(const char *pHardwareId)
 {
   if (!pHardwareId)
     return FALSE;
@@ -284,7 +288,7 @@ static BOOL EnumFilter(const char *pHardwareId)
   return FALSE;
 }
 ///////////////////////////////////////////////////////////////
-static BOOL IsValidPortNum(int num)
+static bool IsValidPortNum(int num)
 {
   if (num < 0)
     return FALSE;
@@ -304,7 +308,7 @@ static BOOL IsValidPortNum(int num)
   return TRUE;
 }
 ///////////////////////////////////////////////////////////////
-static BOOL IsValidPortName(
+static bool IsValidPortName(
     const char *pPortName)
 {
   int res;
@@ -343,7 +347,7 @@ static BOOL IsValidPortName(
   do {
     res = IDCONTINUE;
 
-    BOOL inUse;
+    bool inUse;
 
     if (!ComDbGetInUse(pPortName, inUse)) {
       res = IDCANCEL;
@@ -443,7 +447,7 @@ static int SleepTillPortNotFound(
 ///////////////////////////////////////////////////////////////
 static VOID CleanDevPropertiesStack(
     Stack &stack,
-    BOOL enable,
+    bool enable,
     BOOL *pRebootRequired)
 {
   for (;;) {
@@ -473,10 +477,11 @@ struct ChangeDeviceParams {
 
   const char *pPhPortName;
   const char *pParameters;
-  BOOL changed;
+  bool changed;
 };
 
-static BOOL ShowDialog(
+static CNC_DEV_CALLBACK ShowDialog;
+static bool ShowDialog(
     HDEVINFO hDevInfo,
     PSP_DEVINFO_DATA pDevInfoData,
     PCDevProperties /*pDevProperties*/,
@@ -489,7 +494,8 @@ static BOOL ShowDialog(
   return TRUE;
 }
 
-static BOOL ChangeDevice(
+static CNC_DEV_CALLBACK ChangeDevice;
+static bool ChangeDevice(
     HDEVINFO hDevInfo,
     PSP_DEVINFO_DATA pDevInfoData,
     PCDevProperties /*pDevProperties*/,
@@ -596,7 +602,7 @@ static BOOL ChangeDevice(
   return TRUE;
 }
 
-BOOL Change(const char *pPhPortName, const char *pParameters)
+bool Change(const char *pPhPortName, const char *pParameters)
 {
   BOOL rebootRequired = FALSE;
   ChangeDeviceParams params(pPhPortName, pParameters);
@@ -623,7 +629,8 @@ struct RemoveDeviceParams {
   int res;
 };
 
-static BOOL RemoveDevice(
+static CNC_DEV_CALLBACK RemoveDevice;
+static bool RemoveDevice(
     HDEVINFO hDevInfo,
     PSP_DEVINFO_DATA pDevInfoData,
     PCDevProperties pDevProperties,
@@ -645,7 +652,7 @@ static BOOL RemoveDevice(
   return TRUE;
 }
 
-BOOL Remove(int num)
+bool Remove(int num)
 {
   int res;
   BOOL rebootRequired = FALSE;
@@ -690,7 +697,7 @@ BOOL Remove(int num)
   return (res == IDCONTINUE);
 }
 ///////////////////////////////////////////////////////////////
-BOOL Preinstall(const InfFileInstall *pInfFileInstallList)
+bool Preinstall(const InfFileInstall *pInfFileInstallList)
 {
   for (
       const InfFileInstall *pInfFileInstall = pInfFileInstallList ;
@@ -729,7 +736,7 @@ err:
   return FALSE;
 }
 ///////////////////////////////////////////////////////////////
-BOOL Reload(
+bool Reload(
     const char *pHardwareId,
     const char *pInfFilePath,
     BOOL *pRebootRequired)
@@ -773,9 +780,9 @@ BOOL Reload(
   return TRUE;
 }
 ///////////////////////////////////////////////////////////////
-BOOL Update(const InfFileInstall *pInfFileInstallList)
+bool Update(const InfFileInstall *pInfFileInstallList)
 {
-  BOOL ok = TRUE;
+  bool ok = TRUE;
   BOOL rebootRequired = FALSE;
 
   for (
@@ -800,7 +807,7 @@ BOOL Update(const InfFileInstall *pInfFileInstallList)
   return ok;
 }
 ///////////////////////////////////////////////////////////////
-BOOL Disable()
+bool Disable()
 {
   BOOL rebootRequired = FALSE;
 
@@ -817,7 +824,7 @@ BOOL Disable()
   return TRUE;
 }
 ///////////////////////////////////////////////////////////////
-BOOL Enable()
+bool Enable()
 {
   BOOL rebootRequired = FALSE;
 
@@ -835,7 +842,7 @@ BOOL Enable()
   return TRUE;
 }
 ///////////////////////////////////////////////////////////////
-BOOL Install(const char *pInfFilePath)
+bool Install(const char *pInfFilePath)
 {
   if (no_update)
     return TRUE;
@@ -859,7 +866,8 @@ BOOL Install(const char *pInfFilePath)
   return TRUE;
 }
 ///////////////////////////////////////////////////////////////
-static BOOL InstallDeviceCallBack(
+static CNC_DEV_CALLBACK InstallDeviceCallBack;
+static bool InstallDeviceCallBack(
     HDEVINFO hDevInfo,
     PSP_DEVINFO_DATA pDevInfoData,
     PCDevProperties pDevProperties,
@@ -891,7 +899,7 @@ static BOOL InstallDeviceCallBack(
   return FALSE;
 }
 
-static BOOL InstallBusDevice(const char *pInfFilePath, int num)
+static bool InstallBusDevice(const char *pInfFilePath, int num)
 {
   BOOL rebootRequired = FALSE;
 
@@ -904,7 +912,8 @@ static BOOL InstallBusDevice(const char *pInfFilePath, int num)
   return TRUE;
 }
 
-static BOOL AddDeviceToBusyMask(
+static CNC_DEV_CALLBACK AddDeviceToBusyMask;
+static bool AddDeviceToBusyMask(
     HDEVINFO hDevInfo,
     PSP_DEVINFO_DATA pDevInfoData,
     PCDevProperties /*pDevProperties*/,
@@ -937,7 +946,7 @@ static int AllocPortNum(int num)
   return busyMask.IsFreeNum(num) ? num : busyMask.GetFirstFreeNum();
 }
 
-BOOL Install(const char *pInfFilePath, const char *pParametersA, const char *pParametersB, int num)
+bool Install(const char *pInfFilePath, const char *pParametersA, const char *pParametersB, int num)
 {
   int i;
   int res;
@@ -1052,7 +1061,7 @@ err:
   return FALSE;
 }
 ///////////////////////////////////////////////////////////////
-BOOL Uninstall(
+bool Uninstall(
     const InfFileInstall *pInfFileInstallList,
     const InfFile::InfFileUninstall *pInfFileUninstallList)
 {
@@ -1092,7 +1101,7 @@ BOOL Uninstall(
   }
 
   int res;
-  BOOL notDeleted;
+  bool notDeleted;
   LONG err;
 
   do {
@@ -1288,11 +1297,11 @@ err:
   return FALSE;
 }
 ///////////////////////////////////////////////////////////////
-BOOL InfClean(
+bool InfClean(
     const InfFileInstall *pInfFileInstallList,
     const InfFile::InfFileUninstall *pInfFileUninstallList)
 {
-  BOOL ok = TRUE;
+  bool ok = TRUE;
   InfFile **pInfFiles = NULL;
   const char **ppOemPathExcludeList = NULL;
   int numInfFiles = 0;
@@ -1364,7 +1373,7 @@ end:
   return ok;
 }
 ///////////////////////////////////////////////////////////////
-BOOL ShowBusyNames(const char *pPattern)
+bool ShowBusyNames(const char *pPattern)
 {
   char *pPatternUp;
 
@@ -1613,7 +1622,7 @@ void Help(const char *pProgName)
     "\n");
 }
 ///////////////////////////////////////////////////////////////
-static int Complete(BOOL ok)
+static int Complete(bool ok)
 {
   if (ok) {
     if (timeout > 0)

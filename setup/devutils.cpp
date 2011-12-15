@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.20  2011/12/15 15:51:48  vfrolov
+ * Fixed types
+ *
  * Revision 1.19  2011/07/15 16:09:05  vfrolov
  * Disabled MessageBox() for silent mode and added default processing
  *
@@ -91,15 +94,17 @@
 struct EnumParams {
   EnumParams() {
     pDevProperties = NULL;
-    pParam1 = NULL;
-    pParam2 = NULL;
+    pDevCallBack = NULL;
+    pDevCallBackParam = NULL;
+    pStack = NULL;
     count = 0;
     pRebootRequired = NULL;
   }
 
   PCDevProperties pDevProperties;
-  void *pParam1;
-  void *pParam2;
+  PCNC_DEV_CALLBACK pDevCallBack;
+  void *pDevCallBackParam;
+  Stack *pStack;
   int count;
   BOOL *pRebootRequired;
 };
@@ -155,10 +160,17 @@ const char *DevProperties::Location(const char *_pLocation)
   return SetStr(&pLocation, _pLocation);
 }
 ///////////////////////////////////////////////////////////////
+typedef int CNC_DEV_ROUTINE(
+    HDEVINFO hDevInfo,
+    PSP_DEVINFO_DATA pDevInfoData,
+    PDevParams pDevParams);
+
+typedef CNC_DEV_ROUTINE *PCNC_DEV_ROUTINE;
+
 static int EnumDevices(
-    C0C_ENUM_FILTER pFilter,
+    PCNC_ENUM_FILTER pFilter,
     DWORD flags,
-    BOOL (* pFunk)(HDEVINFO, PSP_DEVINFO_DATA, PDevParams),
+    PCNC_DEV_ROUTINE pDevRoutine,
     PEnumParams pEnumParams)
 {
   HDEVINFO hDevInfo;
@@ -242,7 +254,7 @@ static int EnumDevices(
       continue;
     }
 
-    res = pFunk(hDevInfo, &devInfoData, &devParams);
+    res = pDevRoutine(hDevInfo, &devInfoData, &devParams);
 
     if (res != IDCONTINUE)
       break;
@@ -257,7 +269,7 @@ static int EnumDevices(
   return res;
 }
 ///////////////////////////////////////////////////////////////
-static BOOL UpdateRebootRequired(HDEVINFO hDevInfo, PSP_DEVINFO_DATA pDevInfoData, BOOL *pRebootRequired)
+static bool UpdateRebootRequired(HDEVINFO hDevInfo, PSP_DEVINFO_DATA pDevInfoData, BOOL *pRebootRequired)
 {
   if (!pRebootRequired)
     return TRUE;
@@ -296,7 +308,7 @@ static BOOL UpdateRebootRequired(HDEVINFO hDevInfo, PSP_DEVINFO_DATA pDevInfoDat
   return TRUE;
 }
 ///////////////////////////////////////////////////////////////
-static BOOL ChangeState(HDEVINFO hDevInfo, PSP_DEVINFO_DATA pDevInfoData, DWORD stateChange)
+static bool ChangeState(HDEVINFO hDevInfo, PSP_DEVINFO_DATA pDevInfoData, DWORD stateChange)
 {
   SP_PROPCHANGE_PARAMS propChangeParams;
 
@@ -320,7 +332,7 @@ static BOOL ChangeState(HDEVINFO hDevInfo, PSP_DEVINFO_DATA pDevInfoData, DWORD 
   return TRUE;
 }
 ///////////////////////////////////////////////////////////////
-static BOOL IsDisabled(PSP_DEVINFO_DATA pDevInfoData)
+static bool IsDisabled(PSP_DEVINFO_DATA pDevInfoData)
 {
   ULONG status = 0;
   ULONG problem = 0;
@@ -331,7 +343,7 @@ static BOOL IsDisabled(PSP_DEVINFO_DATA pDevInfoData)
   return (status & DN_HAS_PROBLEM) != 0 && problem == CM_PROB_DISABLED;
 }
 ///////////////////////////////////////////////////////////////
-static BOOL IsEnabled(PSP_DEVINFO_DATA pDevInfoData)
+static bool IsEnabled(PSP_DEVINFO_DATA pDevInfoData)
 {
   ULONG status = 0;
   ULONG problem = 0;
@@ -342,6 +354,7 @@ static BOOL IsEnabled(PSP_DEVINFO_DATA pDevInfoData)
   return (status & (DN_HAS_PROBLEM|DN_NEED_RESTART)) == 0;
 }
 ///////////////////////////////////////////////////////////////
+static CNC_DEV_ROUTINE EnumDevice;
 static int EnumDevice(HDEVINFO hDevInfo, PSP_DEVINFO_DATA pDevInfoData, PDevParams pDevParams)
 {
   /*
@@ -353,12 +366,12 @@ static int EnumDevice(HDEVINFO hDevInfo, PSP_DEVINFO_DATA pDevInfoData, PDevPara
 
   int res = IDCONTINUE;
 
-  if (pDevParams->pEnumParams->pParam1) {
-    if (!PDEVCALLBACK(pDevParams->pEnumParams->pParam1)(hDevInfo,
+  if (pDevParams->pEnumParams->pDevCallBack) {
+    if (!pDevParams->pEnumParams->pDevCallBack(         hDevInfo,
                                                         pDevInfoData,
                                                         &pDevParams->devProperties,
                                                         pDevParams->pEnumParams->pRebootRequired,
-                                                        pDevParams->pEnumParams->pParam2))
+                                                        pDevParams->pEnumParams->pDevCallBackParam))
     {
       res = IDCANCEL;
     }
@@ -370,18 +383,18 @@ static int EnumDevice(HDEVINFO hDevInfo, PSP_DEVINFO_DATA pDevInfoData, PDevPara
 }
 
 int EnumDevices(
-    C0C_ENUM_FILTER pFilter,
+    PCNC_ENUM_FILTER pFilter,
     PCDevProperties pDevProperties,
     BOOL *pRebootRequired,
-    PDEVCALLBACK pDevCallBack,
-    void *pCallBackParam)
+    PCNC_DEV_CALLBACK pDevCallBack,
+    void *pDevCallBackParam)
 {
   EnumParams enumParams;
 
   enumParams.pDevProperties = pDevProperties;
   enumParams.pRebootRequired = pRebootRequired;
-  enumParams.pParam1 = pDevCallBack;
-  enumParams.pParam2 = pCallBackParam;
+  enumParams.pDevCallBack = pDevCallBack;
+  enumParams.pDevCallBackParam = pDevCallBackParam;
 
   if (EnumDevices(pFilter, DIGCF_PRESENT, EnumDevice, &enumParams) != IDCONTINUE)
     return -1;
@@ -471,13 +484,14 @@ int DisableDevice(
   return IDCONTINUE;
 }
 ///////////////////////////////////////////////////////////////
+static CNC_DEV_ROUTINE DisableDevice;
 static int DisableDevice(HDEVINFO hDevInfo, PSP_DEVINFO_DATA pDevInfoData, PDevParams pDevParams)
 {
   int res = DisableDevice(hDevInfo,
                           pDevInfoData,
                           &pDevParams->devProperties,
                           pDevParams->pEnumParams->pRebootRequired,
-                          (Stack *)pDevParams->pEnumParams->pParam1);
+                          pDevParams->pEnumParams->pStack);
 
   if (res == IDCONTINUE)
     pDevParams->pEnumParams->count++;
@@ -485,8 +499,8 @@ static int DisableDevice(HDEVINFO hDevInfo, PSP_DEVINFO_DATA pDevInfoData, PDevP
   return res;
 }
 
-BOOL DisableDevices(
-    C0C_ENUM_FILTER pFilter,
+bool DisableDevices(
+    PCNC_ENUM_FILTER pFilter,
     PCDevProperties pDevProperties,
     BOOL *pRebootRequired,
     Stack *pDevPropertiesStack)
@@ -497,7 +511,7 @@ BOOL DisableDevices(
 
   enumParams.pRebootRequired = pRebootRequired;
   enumParams.pDevProperties = pDevProperties;
-  enumParams.pParam1 = pDevPropertiesStack;
+  enumParams.pStack = pDevPropertiesStack;
 
   do {
     res = EnumDevices(pFilter, DIGCF_PRESENT, DisableDevice, &enumParams);
@@ -512,6 +526,7 @@ BOOL DisableDevices(
   return TRUE;
 }
 ///////////////////////////////////////////////////////////////
+static CNC_DEV_ROUTINE EnableDevice;
 static int EnableDevice(HDEVINFO hDevInfo, PSP_DEVINFO_DATA pDevInfoData, PDevParams pDevParams)
 {
   if (IsEnabled(pDevInfoData))
@@ -529,8 +544,8 @@ static int EnableDevice(HDEVINFO hDevInfo, PSP_DEVINFO_DATA pDevInfoData, PDevPa
   return IDCONTINUE;
 }
 
-BOOL EnableDevices(
-    C0C_ENUM_FILTER pFilter,
+bool EnableDevices(
+    PCNC_ENUM_FILTER pFilter,
     PCDevProperties pDevProperties,
     BOOL *pRebootRequired)
 {
@@ -551,6 +566,7 @@ BOOL EnableDevices(
   return TRUE;
 }
 ///////////////////////////////////////////////////////////////
+static CNC_DEV_ROUTINE RestartDevice;
 static int RestartDevice(HDEVINFO hDevInfo, PSP_DEVINFO_DATA pDevInfoData, PDevParams pDevParams)
 {
   if (!ChangeState(hDevInfo, pDevInfoData, DICS_PROPCHANGE))
@@ -602,8 +618,8 @@ static int RestartDevice(HDEVINFO hDevInfo, PSP_DEVINFO_DATA pDevInfoData, PDevP
   return IDCONTINUE;
 }
 
-BOOL RestartDevices(
-    C0C_ENUM_FILTER pFilter,
+bool RestartDevices(
+    PCNC_ENUM_FILTER pFilter,
     PCDevProperties pDevProperties,
     BOOL *pRebootRequired)
 {
@@ -624,7 +640,7 @@ BOOL RestartDevices(
   return TRUE;
 }
 ///////////////////////////////////////////////////////////////
-BOOL RemoveDevice(
+bool RemoveDevice(
     HDEVINFO hDevInfo,
     PSP_DEVINFO_DATA pDevInfoData,
     PCDevProperties pDevProperties,
@@ -641,6 +657,7 @@ BOOL RemoveDevice(
   return UpdateRebootRequired(hDevInfo, pDevInfoData, pRebootRequired);
 }
 ///////////////////////////////////////////////////////////////
+static CNC_DEV_ROUTINE RemoveDevice;
 static int RemoveDevice(HDEVINFO hDevInfo, PSP_DEVINFO_DATA pDevInfoData, PDevParams pDevParams)
 {
   if (!RemoveDevice(hDevInfo, pDevInfoData, &pDevParams->devProperties, pDevParams->pEnumParams->pRebootRequired))
@@ -651,8 +668,8 @@ static int RemoveDevice(HDEVINFO hDevInfo, PSP_DEVINFO_DATA pDevInfoData, PDevPa
   return IDCONTINUE;
 }
 
-BOOL RemoveDevices(
-    C0C_ENUM_FILTER pFilter,
+bool RemoveDevices(
+    PCNC_ENUM_FILTER pFilter,
     PCDevProperties pDevProperties,
     BOOL *pRebootRequired)
 {
@@ -676,7 +693,7 @@ BOOL RemoveDevices(
   return TRUE;
 }
 ///////////////////////////////////////////////////////////////
-BOOL ReenumerateDeviceNode(PSP_DEVINFO_DATA pDevInfoData)
+bool ReenumerateDeviceNode(PSP_DEVINFO_DATA pDevInfoData)
 {
   return CM_Reenumerate_DevNode(pDevInfoData->DevInst, 0) == CR_SUCCESS;
 }
@@ -685,7 +702,7 @@ int UpdateDriver(
     const char *pInfFilePath,
     const char *pHardwareId,
     DWORD flags,
-    BOOL mandatory,
+    bool mandatory,
     BOOL *pRebootRequired)
 {
   DWORD updateErr = ERROR_SUCCESS;
@@ -770,9 +787,9 @@ static int TryInstallDevice(
     const char *pInfFilePath,
     const char *pDevId,
     const char *pDevInstID,
-    PDEVCALLBACK pDevCallBack,
-    void *pCallBackParam,
-    BOOL updateDriver,
+    PCNC_DEV_CALLBACK pDevCallBack,
+    void *pDevCallBackParam,
+    bool updateDriver,
     BOOL *pRebootRequired)
 {
   GUID classGUID;
@@ -887,7 +904,7 @@ static int TryInstallDevice(
       goto exit2;
     }
 
-    if (!pDevCallBack(hDevInfo, &devInfoData, &devProperties, NULL, pCallBackParam)) {
+    if (!pDevCallBack(hDevInfo, &devInfoData, &devProperties, NULL, pDevCallBackParam)) {
       res = IDCANCEL;
       goto exit2;
     }
@@ -910,25 +927,25 @@ exit1:
   return res;
 }
 
-BOOL InstallDevice(
+bool InstallDevice(
     const char *pInfFilePath,
     const char *pDevId,
     const char *pDevInstID,
-    PDEVCALLBACK pDevCallBack,
-    void *pCallBackParam,
-    BOOL updateDriver,
+    PCNC_DEV_CALLBACK pDevCallBack,
+    void *pDevCallBackParam,
+    bool updateDriver,
     BOOL *pRebootRequired)
 {
   int res;
 
   do {
-    res = TryInstallDevice(pInfFilePath, pDevId, pDevInstID, pDevCallBack, pCallBackParam, updateDriver, pRebootRequired);
+    res = TryInstallDevice(pInfFilePath, pDevId, pDevInstID, pDevCallBack, pDevCallBackParam, updateDriver, pRebootRequired);
   } while (res == IDTRYAGAIN);
 
   return res == IDCONTINUE;
 }
 ///////////////////////////////////////////////////////////////
-BOOL WaitNoPendingInstallEvents(int timeLimit)
+bool WaitNoPendingInstallEvents(int timeLimit)
 {
   typedef DWORD  (WINAPI *PWAITNOPENDINGINSTALLEVENTS)(IN DWORD);
   static PWAITNOPENDINGINSTALLEVENTS pWaitNoPendingInstallEvents = NULL;
@@ -949,10 +966,10 @@ BOOL WaitNoPendingInstallEvents(int timeLimit)
   if (int(DWORD(timeLimit * 1000)/1000) != timeLimit)
     timeLimit = -1;
 
-  BOOL inTrace = FALSE;
+  bool inTrace = FALSE;
   DWORD startTime = GetTickCount();
 
-  for (BOOL count = 0 ;;) {
+  for (int count = 0 ;;) {
     DWORD res = pWaitNoPendingInstallEvents(0);
 
     if (res == WAIT_OBJECT_0) {
