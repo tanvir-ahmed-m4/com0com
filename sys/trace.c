@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.40  2011/12/15 06:17:12  vfrolov
+ * Removed usage undocumented PDRIVER_OBJECT->Type
+ *
  * Revision 1.39  2011/07/26 16:06:33  vfrolov
  * Added PID tracing on IRP_MJ_CLOSE
  *
@@ -226,7 +229,7 @@ VOID QueryRegistryTrace(IN PUNICODE_STRING pRegistryPath)
   StrAppendStr0(&status, &traceRegistryPath, L"\\Trace");
 
   if (!NT_SUCCESS(status)) {
-    SysLog(pDrvObj, status, L"QueryRegistryTrace FAIL");
+    SysLogDrv(pDrvObj, status, L"QueryRegistryTrace FAIL");
     return;
   }
 
@@ -270,7 +273,7 @@ VOID QueryRegistryTraceEnable(IN PUNICODE_STRING pRegistryPath)
   StrAppendStr0(&status, &traceRegistryPath, L"\\Trace\\Enable");
 
   if (!NT_SUCCESS(status)) {
-    SysLog(pDrvObj, status, L"QueryRegistryTraceEnable FAIL");
+    SysLogDrv(pDrvObj, status, L"QueryRegistryTraceEnable FAIL");
     return;
   }
 
@@ -612,7 +615,7 @@ PCHAR AnsiStrVaFormat(
   try {
     return _AnsiStrVaFormat(pDestStr, pSize, pFmt, va);
   } except (EXCEPTION_EXECUTE_HANDLER) {
-    SysLog(pDrvObj, GetExceptionCode(), L"AnsiStrVaFormat EXCEPTION");
+    SysLogDrv(pDrvObj, GetExceptionCode(), L"AnsiStrVaFormat EXCEPTION");
     *pSize = oldSize;
     return pDestStr;
   }
@@ -976,7 +979,6 @@ PCHAR AnsiStrCopyTimeFields(
 /********************************************************************/
 
 NTSTATUS TraceWrite(
-    IN PVOID pIoObject,
     IN HANDLE handle,
     IN PCHAR pStr)
 {
@@ -999,18 +1001,15 @@ NTSTATUS TraceWrite(
 
   if (!NT_SUCCESS(status)) {
     pTraceData->errorCount++;
-    SysLog(pIoObject, status, L"TraceWrite ZwWriteFile FAIL");
+    SysLogDrv(pDrvObj, status, L"TraceWrite ZwWriteFile FAIL");
   }
 
   return status;
 }
 
-VOID TraceOutput(
-    IN PC0C_COMMON_EXTENSION pDevExt,
-    IN PCHAR pStr)
+VOID TraceOutput(IN PCHAR pStr)
 {
   NTSTATUS status;
-  PVOID pIoObject;
   HANDLE handle;
   OBJECT_ATTRIBUTES objectAttributes;
   IO_STATUS_BLOCK ioStatusBlock;
@@ -1018,7 +1017,7 @@ VOID TraceOutput(
   if (pTraceData->errorCount > TRACE_ERROR_LIMIT) {
     if (pTraceData->errorCount < (TRACE_ERROR_LIMIT + 100)) {
       pTraceData->errorCount += 100;
-      SysLog(pDrvObj, STATUS_SUCCESS, L"Trace disabled");
+      SysLogDrv(pDrvObj, STATUS_SUCCESS, L"Trace disabled");
     }
     return;
   }
@@ -1056,11 +1055,6 @@ VOID TraceOutput(
 
     return;
   }
-
-  if (pDevExt)
-    pIoObject = pDevExt->pDevObj;
-  else
-    pIoObject = pDrvObj;
 
   HALT_UNLESS(TRACE_FILE_OK);
   InitializeObjectAttributes(
@@ -1116,7 +1110,7 @@ VOID TraceOutput(
         KeReleaseSpinLock(&pTraceData->irqlBuf.lock, oldIrql);
 
         if (lenBuf)
-          TraceWrite(pIoObject, handle, pBuf->buf);
+          TraceWrite(handle, pBuf->buf);
       }
 
       skipped = InterlockedExchange(&pTraceData->skippedTraces, 0);
@@ -1125,7 +1119,7 @@ VOID TraceOutput(
         SIZE_T tmp_size = size;
 
         AnsiStrFormat(pDestStr, &tmp_size, "*** skipped %lu lines ***\r\n", (long)skipped);
-        TraceWrite(pIoObject, handle, pBuf->buf);
+        TraceWrite(handle, pBuf->buf);
       }
 
       if (pStr) {
@@ -1136,7 +1130,7 @@ VOID TraceOutput(
         pDestStr = AnsiStrCopyTimeFields(pDestStr, &size, &timeFields);
         pDestStr = AnsiStrFormat(pDestStr, &size, " %s\r\n", pStr);
 
-        TraceWrite(pIoObject, handle, pBuf->buf);
+        TraceWrite(handle, pBuf->buf);
       }
 
       FreeTraceBuf(pBuf);
@@ -1146,12 +1140,12 @@ VOID TraceOutput(
 
     if (!NT_SUCCESS(status)) {
       pTraceData->errorCount++;
-      SysLog(pIoObject, status, L"TraceOutput ZwClose FAIL");
+      SysLogDrv(pDrvObj, status, L"TraceOutput ZwClose FAIL");
     }
   }
   else {
     pTraceData->errorCount++;
-    SysLog(pIoObject, status, L"TraceOutput ZwCreateFile FAIL");
+    SysLogDrv(pDrvObj, status, L"TraceOutput ZwCreateFile FAIL");
   }
 }
 /********************************************************************/
@@ -1181,7 +1175,7 @@ VOID TraceF(
   pDestStr = AnsiStrVaFormat(pDestStr, &size, pFmt, va);
   va_end(va);
 
-  TraceOutput(pDevExt, pBuf->buf);
+  TraceOutput(pBuf->buf);
   FreeTraceBuf(pBuf);
 }
 /********************************************************************/
@@ -1205,7 +1199,7 @@ VOID TraceOpen(
   pTraceData = (PTRACE_DATA)C0C_ALLOCATE_POOL(NonPagedPool, sizeof(*pTraceData));
 
   if (!pTraceData) {
-    SysLog(pDrvObj, STATUS_INSUFFICIENT_RESOURCES, L"TraceEnable C0C_ALLOCATE_POOL FAIL");
+    SysLogDrv(pDrvObj, STATUS_INSUFFICIENT_RESOURCES, L"TraceEnable C0C_ALLOCATE_POOL FAIL");
     return;
   }
 
@@ -1231,7 +1225,7 @@ VOID TraceOpen(
     StrAppendStr(&status, &msg, pTraceData->traceFileName.Buffer, pTraceData->traceFileName.Length);
 
     if (NT_SUCCESS(status))
-      SysLog(pDrvObj, status, msg.Buffer);
+      SysLogDrv(pDrvObj, status, msg.Buffer);
 
     StrFree(&msg);
 
@@ -1240,7 +1234,7 @@ VOID TraceOpen(
 
     if (pTraceData->errorCount) {
       TraceDisable();
-      SysLog(pDrvObj, STATUS_SUCCESS, L"Trace disabled");
+      SysLogDrv(pDrvObj, STATUS_SUCCESS, L"Trace disabled");
     }
   }
 }
@@ -1303,7 +1297,7 @@ VOID InternalTraceCode(
     pDestStr = AnsiStrCopyCode(pDestStr, &size, *pStatus, codeNameTableStatus, "0x", 16);
   }
 
-  TraceOutput(pDevExt, pBuf->buf);
+  TraceOutput(pBuf->buf);
   FreeTraceBuf(pBuf);
 }
 
@@ -1328,7 +1322,7 @@ VOID InternalTraceMask(
   pDestStr = AnsiStrCopyHead(pDestStr, &size, pDevExt, pHead);
   pDestStr = AnsiStrCopyMask(pDestStr, &size, pTable, mask);
 
-  TraceOutput(pDevExt, pBuf->buf);
+  TraceOutput(pBuf->buf);
   FreeTraceBuf(pBuf);
 }
 
@@ -1396,7 +1390,7 @@ VOID InternalTraceIrp(
   pDevExt = pIrpStack->DeviceObject->DeviceExtension;
 
   if (!(enableMask & TRACE_ENABLE_IRP)) {
-    TraceOutput(pDevExt, NULL);
+    TraceOutput(NULL);
     return;
   }
 
@@ -1766,7 +1760,7 @@ VOID InternalTraceIrp(
     pDestStr = AnsiStrCopyCode(pDestStr, &size, *pStatus, codeNameTableStatus, "0x", 16);
   }
 
-  TraceOutput(pDevExt, pBuf->buf);
+  TraceOutput(pBuf->buf);
   FreeTraceBuf(pBuf);
 }
 /********************************************************************/

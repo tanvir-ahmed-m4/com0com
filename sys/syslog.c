@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2004-2005 Vyacheslav Frolov
+ * Copyright (c) 2004-2011 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.2  2011/12/15 06:17:12  vfrolov
+ * Removed usage undocumented PDRIVER_OBJECT->Type
+ *
  * Revision 1.1  2005/01/26 12:18:54  vfrolov
  * Initial revision
  *
@@ -32,7 +35,8 @@
 VOID SysLog(
     IN PVOID pIoObject,
     IN NTSTATUS status,
-    IN PWCHAR pStr)
+    IN PWCHAR pStr,
+    IN NTSTATUS msgId)
 {
   PIO_ERROR_LOG_PACKET pErrorLogEntry;
   PUCHAR pInsert;
@@ -53,10 +57,7 @@ VOID SysLog(
   pInsert = (PUCHAR)&pErrorLogEntry->DumpData[0];
   RtlZeroMemory(pInsert, lenInsert);
 
-  if (((PDRIVER_OBJECT)pIoObject)->Type == IO_TYPE_DRIVER)
-    pErrorLogEntry->ErrorCode = COM0COM_LOG_DRV;
-  else
-    pErrorLogEntry->ErrorCode = COM0COM_LOG;
+  pErrorLogEntry->ErrorCode = msgId;
 
   pErrorLogEntry->SequenceNumber = 0;
   pErrorLogEntry->MajorFunctionCode = 0;
@@ -70,4 +71,20 @@ VOID SysLog(
   RtlCopyMemory(pInsert, pStr, lenStr);
 
   IoWriteErrorLogEntry(pErrorLogEntry);
+}
+
+VOID SysLogDrv(
+    IN PDRIVER_OBJECT pDrvObj,
+    IN NTSTATUS status,
+    IN PWCHAR pStr)
+{
+  SysLog(pDrvObj, status, pStr, COM0COM_LOG_DRV);
+}
+
+VOID SysLogDev(
+    IN PDEVICE_OBJECT pDevObj,
+    IN NTSTATUS status,
+    IN PWCHAR pStr)
+{
+  SysLog(pDevObj, status, pStr, COM0COM_LOG);
 }

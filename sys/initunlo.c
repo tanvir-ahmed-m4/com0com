@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2004-2010 Vyacheslav Frolov
+ * Copyright (c) 2004-2011 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.9  2011/12/15 06:17:12  vfrolov
+ * Removed usage undocumented PDRIVER_OBJECT->Type
+ *
  * Revision 1.8  2010/08/09 06:02:40  vfrolov
  * Eliminated accessing undocumented structure members
  *
@@ -67,7 +70,7 @@ NTSTATUS DriverEntry(IN PDRIVER_OBJECT pDrvObj, IN PUNICODE_STRING pRegistryPath
   StrAppendStr(&status, &c0cGlobal.registryPath, pRegistryPath->Buffer, pRegistryPath->Length);
 
   if (!NT_SUCCESS(status)) {
-    SysLog(pDrvObj, status, L"DriverEntry FAIL");
+    SysLogDrv(pDrvObj, status, L"DriverEntry FAIL");
     return status;
   }
 

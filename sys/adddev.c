@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.40  2011/12/15 06:17:12  vfrolov
+ * Removed usage undocumented PDRIVER_OBJECT->Type
+ *
  * Revision 1.39  2011/12/06 16:03:22  vfrolov
  * Added cleaning high data bits for less then 8 bit data
  * Added AllDataBits option to force 8 bit data
@@ -185,7 +188,7 @@ VOID RemoveFdoPort(IN PC0C_FDOPORT_EXTENSION pDevExt)
   }
 
   if (!HidePort(pDevExt))
-    SysLog(pDevExt->pDevObj, STATUS_UNSUCCESSFUL, L"RemoveFdoPort HidePort FAIL");
+    SysLogDev(pDevExt->pDevObj, STATUS_UNSUCCESSFUL, L"RemoveFdoPort HidePort FAIL");
 
   if (pDevExt->symbolicLinkName.Buffer)
     RtlFreeUnicodeString(&pDevExt->symbolicLinkName);
@@ -223,7 +226,7 @@ NTSTATUS AddFdoPort(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
   StrAppendDeviceProperty(&status, &ntDeviceName, pPhDevObj, DevicePropertyPhysicalDeviceObjectName);
 
   if (!NT_SUCCESS(status)) {
-    SysLog(pPhDevObj, status, L"AddFdoPort IoGetDeviceProperty FAIL");
+    SysLogDev(pPhDevObj, status, L"AddFdoPort IoGetDeviceProperty FAIL");
     goto clean;
   }
 
@@ -231,7 +234,7 @@ NTSTATUS AddFdoPort(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
 
   if (!pPhDevExt || pPhDevExt->doType != C0C_DOTYPE_PP) {
     status = STATUS_UNSUCCESSFUL;
-    SysLog(pPhDevObj, status, L"AddFdoPort FAIL. Type  of PDO is not PP");
+    SysLogDev(pPhDevObj, status, L"AddFdoPort FAIL. Type  of PDO is not PP");
     goto clean;
   }
 
@@ -241,7 +244,7 @@ NTSTATUS AddFdoPort(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
 
   if (!*pPhPortName) {
     status = STATUS_UNSUCCESSFUL;
-    SysLog(pPhDevObj, status, L"AddFdoPort FAIL. The PDO has invalid port name");
+    SysLogDev(pPhDevObj, status, L"AddFdoPort FAIL. The PDO has invalid port name");
     goto clean;
   }
 
@@ -412,7 +415,7 @@ NTSTATUS AddFdoPort(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
   }
 
   if (!NT_SUCCESS(status)) {
-    SysLog(pPhDevObj, status, L"AddFdoPort FAIL");
+    SysLogDev(pPhDevObj, status, L"AddFdoPort FAIL");
     goto clean;
   }
 
@@ -425,7 +428,7 @@ NTSTATUS AddFdoPort(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
                           &pNewDevObj);
 
   if (!NT_SUCCESS(status)) {
-    SysLog(pPhDevObj, status, L"AddFdoPort IoCreateDevice FAIL");
+    SysLogDev(pPhDevObj, status, L"AddFdoPort IoCreateDevice FAIL");
     goto clean;
   }
 
@@ -437,7 +440,7 @@ NTSTATUS AddFdoPort(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
   status = InitCommonExt((PC0C_COMMON_EXTENSION)pDevExt, pNewDevObj, C0C_DOTYPE_FP, portName.Buffer);
 
   if (!NT_SUCCESS(status)) {
-    SysLog(pPhDevObj, status, L"AddFdoPort FAIL");
+    SysLogDev(pPhDevObj, status, L"AddFdoPort FAIL");
     goto clean;
   }
 
@@ -447,7 +450,7 @@ NTSTATUS AddFdoPort(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
     if (NT_SUCCESS(AllocWriteDelay(pDevExt->pIoPortLocal)))
       Trace0((PC0C_COMMON_EXTENSION)pDevExt, L"Enabled baudrate emulation");
     else
-      SysLog(pPhDevObj, status, L"AddFdoPort AllocWriteDelay FAIL");
+      SysLogDev(pPhDevObj, status, L"AddFdoPort AllocWriteDelay FAIL");
   } else {
     Trace0((PC0C_COMMON_EXTENSION)pDevExt, L"Disabled baudrate emulation");
   }
@@ -536,7 +539,7 @@ NTSTATUS AddFdoPort(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
 
   if (!pDevExt->pLowDevObj) {
     status = STATUS_NO_SUCH_DEVICE;
-    SysLog(pPhDevObj, status, L"AddFdoPort IoAttachDeviceToDeviceStack FAIL");
+    SysLogDev(pPhDevObj, status, L"AddFdoPort IoAttachDeviceToDeviceStack FAIL");
     goto clean;
   }
 
@@ -556,7 +559,7 @@ NTSTATUS AddFdoPort(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
     StrFree(&pDevExt->win32DeviceName);
     StrFree(&pDevExt->ntDeviceName);
 
-    SysLog(pPhDevObj, status, L"AddFdoPort StrAppendStr0 FAIL");
+    SysLogDev(pPhDevObj, status, L"AddFdoPort StrAppendStr0 FAIL");
   }
 
   status = IoRegisterDeviceInterface(pPhDevObj,
@@ -565,13 +568,13 @@ NTSTATUS AddFdoPort(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
                                      &pDevExt->symbolicLinkName);
 
   if (!NT_SUCCESS(status)) {
-    SysLog(pPhDevObj, status, L"AddFdoPort IoRegisterDeviceInterface FAIL");
+    SysLogDev(pPhDevObj, status, L"AddFdoPort IoRegisterDeviceInterface FAIL");
     pDevExt->symbolicLinkName.Buffer = NULL;
   }
 
   if (!pDevExt->pIoPortLocal->plugInMode || pDevExt->pIoPortLocal->pIoPortRemote->isOpen) {
     if (!ShowPort(pDevExt))
-      SysLog(pDevExt->pDevObj, STATUS_UNSUCCESSFUL, L"AddFdoPort ShowPort FAIL");
+      SysLogDev(pDevExt->pDevObj, STATUS_UNSUCCESSFUL, L"AddFdoPort ShowPort FAIL");
   } else {
     HidePortName(pDevExt);
   }
@@ -623,7 +626,7 @@ NTSTATUS AddPdoPort(
   StrAppendNum(&status, &ntDeviceName, num, 10);
 
   if (!NT_SUCCESS(status)) {
-    SysLog(pBusExt->pDevObj, status, L"AddPdoPort FAIL");
+    SysLogDev(pBusExt->pDevObj, status, L"AddPdoPort FAIL");
     goto clean;
   }
 
@@ -636,7 +639,7 @@ NTSTATUS AddPdoPort(
                           &pNewDevObj);
 
   if (!NT_SUCCESS(status)) {
-    SysLog(pBusExt->pDevObj, status, L"AddPdoPort IoCreateDevice FAIL");
+    SysLogDev(pBusExt->pDevObj, status, L"AddPdoPort IoCreateDevice FAIL");
     goto clean;
   }
 
@@ -648,7 +651,7 @@ NTSTATUS AddPdoPort(
   status = InitCommonExt((PC0C_COMMON_EXTENSION)pDevExt, pNewDevObj, C0C_DOTYPE_PP, portName.Buffer);
 
   if (!NT_SUCCESS(status)) {
-    SysLog(pBusExt->pDevObj, status, L"AddPdoPort FAIL");
+    SysLogDev(pBusExt->pDevObj, status, L"AddPdoPort FAIL");
     goto clean;
   }
 
@@ -788,12 +791,12 @@ ULONG GetPortNum(IN PDEVICE_OBJECT pPhDevObj)
       status = ZwSetValueKey(hKey, &keyName, 0, REG_DWORD, &num, sizeof(num));
 
       if (!NT_SUCCESS(status))
-        SysLog(pPhDevObj, status, L"ZwSetValueKey(PortName) FAIL");
+        SysLogDev(pPhDevObj, status, L"ZwSetValueKey(PortName) FAIL");
     }
 
     ZwClose(hKey);
   } else {
-    SysLog(pPhDevObj, status, L"GetPortNum IoOpenDeviceRegistryKey(PLUGPLAY_REGKEY_DEVICE) FAIL");
+    SysLogDev(pPhDevObj, status, L"GetPortNum IoOpenDeviceRegistryKey(PLUGPLAY_REGKEY_DEVICE) FAIL");
 
     num = ListFdoBusGetFreeNum();
   }
@@ -822,7 +825,7 @@ NTSTATUS AddFdoBus(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
   StrAppendStr(&status, &ntDeviceName, portName.Buffer, portName.Length);
 
   if (!NT_SUCCESS(status)) {
-    SysLog(pDrvObj, status, L"AddFdoBus FAIL");
+    SysLogDrv(pDrvObj, status, L"AddFdoBus FAIL");
     goto clean;
   }
 
@@ -835,7 +838,7 @@ NTSTATUS AddFdoBus(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
                           &pNewDevObj);
 
   if (!NT_SUCCESS(status)) {
-    SysLog(pDrvObj, status, L"AddFdoBus IoCreateDevice FAIL");
+    SysLogDrv(pDrvObj, status, L"AddFdoBus IoCreateDevice FAIL");
     goto clean;
   }
 
@@ -848,7 +851,7 @@ NTSTATUS AddFdoBus(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
   status = InitCommonExt((PC0C_COMMON_EXTENSION)pDevExt, pNewDevObj, C0C_DOTYPE_FB, portName.Buffer);
 
   if (!NT_SUCCESS(status)) {
-    SysLog(pDrvObj, status, L"AddFdoBus InitCommonExt FAIL");
+    SysLogDrv(pDrvObj, status, L"AddFdoBus InitCommonExt FAIL");
     goto clean;
   }
 
@@ -856,7 +859,7 @@ NTSTATUS AddFdoBus(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
 
   if (!pDevExt->pLowDevObj) {
     status = STATUS_NO_SUCH_DEVICE;
-    SysLog(pNewDevObj, status, L"AddFdoBus IoAttachDeviceToDeviceStack FAIL");
+    SysLogDev(pNewDevObj, status, L"AddFdoBus IoAttachDeviceToDeviceStack FAIL");
     goto clean;
   }
 
@@ -889,7 +892,7 @@ NTSTATUS AddFdoBus(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
                         &pDevExt->childs[i].pDevExt);
 
     if (!NT_SUCCESS(status)) {
-      SysLog(pNewDevObj, status, L"AddFdoBus AddPdoPort FAIL");
+      SysLogDev(pNewDevObj, status, L"AddFdoBus AddPdoPort FAIL");
       pDevExt->childs[i].pDevExt = NULL;
       goto clean;
     }
@@ -921,7 +924,7 @@ NTSTATUS c0cAddDevice(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
   if (NT_SUCCESS(status))
     Trace00(NULL, L"c0cAddDevice for ", property.Buffer);
   else {
-    SysLog(pDrvObj, status, L"c0cAddDevice IoGetDeviceProperty FAIL");
+    SysLogDrv(pDrvObj, status, L"c0cAddDevice IoGetDeviceProperty FAIL");
     return status;
   }
 
@@ -937,7 +940,7 @@ NTSTATUS c0cAddDevice(IN PDRIVER_OBJECT pDrvObj, IN PDEVICE_OBJECT pPhDevObj)
   else {
     StrFree(&property);
     status = STATUS_UNSUCCESSFUL;
-    SysLog(pDrvObj, status, L"c0cAddDevice unknown HardwareID");
+    SysLogDrv(pDrvObj, status, L"c0cAddDevice unknown HardwareID");
   }
 
   return status;
