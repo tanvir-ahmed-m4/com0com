@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.27  2011/12/16 17:35:17  vfrolov
+ * Added resuming i/o after opening port (Bugs item #3460850)
+ *
  * Revision 1.26  2011/07/26 16:07:42  vfrolov
  * Fixed double closing
  *
@@ -193,6 +196,11 @@ NTSTATUS FdoPortOpen(IN PC0C_FDOPORT_EXTENSION pDevExt)
 
   SetHandFlow(pIoPort, NULL, &queueToComplete);
   SetModemControl(pIoPort, C0C_MCR_OPEN, C0C_MCR_OPEN, &queueToComplete);
+
+  ReadWrite(
+      pIoPort, FALSE,
+      pIoPort->pIoPortRemote, FALSE,
+      &queueToComplete);
 
   if (pIoPort->pIoPortRemote->pWriteDelay && pIoPort->pIoPortRemote->brokeCharsProbability > 0)
     StartWriteDelayTimer(pIoPort->pIoPortRemote->pWriteDelay);
