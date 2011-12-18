@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.25  2011/12/18 16:42:23  vfrolov
+ * Added ability to build installer with both 32-bit and 64-bit drivers
+ *
  * Revision 1.24  2011/12/12 13:17:43  vfrolov
  * Added CNC_INSTALL_SKIP_SETUP_PREINSTALL and CNC_UNINSTALL_SKIP_SETUP_UNINSTALL environment variables
  *
@@ -117,21 +120,37 @@
 
 ;--------------------------------
 
-!if "$%BUILD_DEFAULT_TARGETS%" == "-386"
-  !define TARGET_CPU i386
-!else if "$%BUILD_DEFAULT_TARGETS%" == "-IA64"
-  !define TARGET_CPU ia64
-!else if "$%BUILD_DEFAULT_TARGETS%" == "-ia64"
-  !define TARGET_CPU ia64
-!else if "$%BUILD_DEFAULT_TARGETS%" == "-AMD64"
-  !define TARGET_CPU amd64
-!else if "$%BUILD_DEFAULT_TARGETS%" == "-amd64"
-  !define TARGET_CPU amd64
+!ifndef OUTPUT_FILE
+  !ifndef ADD_TARGET_CPU_i386
+    !ifndef ADD_TARGET_CPU_amd64
+      !ifndef ADD_TARGET_CPU_ia64
+        !if "$%BUILD_DEFAULT_TARGETS%" == "-386"
+          !define OUTPUT_FILE "..\i386\setup.exe"
+          !define ADD_TARGET_CPU_i386
+        !else if "$%BUILD_DEFAULT_TARGETS%" == "-AMD64"
+          !define OUTPUT_FILE "..\amd64\setup.exe"
+          !define ADD_TARGET_CPU_amd64
+        !else if "$%BUILD_DEFAULT_TARGETS%" == "-amd64"
+          !define OUTPUT_FILE "..\amd64\setup.exe"
+          !define ADD_TARGET_CPU_amd64
+        !else if "$%BUILD_DEFAULT_TARGETS%" == "-IA64"
+          !define OUTPUT_FILE "..\ia64\setup.exe"
+          !define ADD_TARGET_CPU_ia64
+        !else if "$%BUILD_DEFAULT_TARGETS%" == "-ia64"
+          !define OUTPUT_FILE "..\ia64\setup.exe"
+          !define ADD_TARGET_CPU_ia64
+        !else
+          !define OUTPUT_FILE "..\i386\setup.exe"
+          !define ADD_TARGET_CPU_i386
+          !Warning "Using target CPU i386"
+        !endif
+      !endif
+    !endif
+  !endif
 !endif
 
-!ifndef TARGET_CPU
-  !define TARGET_CPU i386
-  !Warning "TARGET_CPU=${TARGET_CPU}"
+!ifndef OUTPUT_FILE
+  !Error "Not defined OUTPUT_FILE"
 !endif
 
 ;--------------------------------
@@ -270,7 +289,8 @@ FunctionEnd
 Name "Null-modem emulator (com0com)"
 
 ; The file to write
-OutFile "..\${TARGET_CPU}\setup.exe"
+;!Warning "Using output file '${OUTPUT_FILE}'"
+OutFile "${OUTPUT_FILE}"
 
 ; The default installation directory
 InstallDir $PROGRAMFILES\com0com
@@ -327,6 +347,37 @@ ShowUninstDetails show
 
 ;--------------------------------
 
+!macro CpuSection cpu
+
+  !ifdef ADD_TARGET_CPU_${cpu}
+
+    ;!Warning "Adding CPU ${cpu}"
+
+    Section /o "-com0com ${cpu}" sec_com0com_${cpu}
+
+      ; Set output path to the installation directory.
+      SetOutPath $INSTDIR
+
+      ; Put target cpu files there
+      File "..\${cpu}\com0com.sys"
+      File /nonfatal "..\${cpu}\com0com.cat"
+      File "..\${cpu}\setup.dll"
+      File "..\${cpu}\setupc.exe"
+
+    SectionEnd
+
+  !endif
+
+!macroend
+
+;--------------------------------
+
+!insertmacro CpuSection i386
+!insertmacro CpuSection amd64
+!insertmacro CpuSection ia64
+
+;--------------------------------
+
 Section "com0com" sec_com0com
 
   SectionIn RO
@@ -336,15 +387,9 @@ Section "com0com" sec_com0com
 
   ; Put files there
   File "..\ReadMe.txt"
-
   File "..\com0com.inf"
   File "..\cncport.inf"
   File "..\comport.inf"
-  File "..\${TARGET_CPU}\com0com.sys"
-  File /nonfatal "..\${TARGET_CPU}\com0com.cat"
-
-  File "..\${TARGET_CPU}\setup.dll"
-  File "..\${TARGET_CPU}\setupc.exe"
   File "..\setupg\Release\setupg.exe"
 
   WriteUninstaller "uninstall.exe"
@@ -364,7 +409,7 @@ Section "com0com" sec_com0com
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\com0com" "InstallSource" "$EXEDIR\"
   WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\com0com" "Language" $LANGUAGE
 
-  GetDLLVersionLocal "..\${TARGET_CPU}\com0com.sys" $R0 $R1
+  GetDLLVersion "$INSTDIR\com0com.sys" $R0 $R1
   IntOp $R2 $R0 / 0x00010000
   IntOp $R3 $R0 & 0x0000FFFF
   IntOp $R4 $R1 / 0x00010000
@@ -382,25 +427,7 @@ Section "com0com" sec_com0com
   WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\com0com" "VersionMajor" $R2
   WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\com0com" "VersionMinor" $R3
 
-  ${GetSize} "$INSTDIR" "/M=ReadMe.txt    /S=0B /G=0" $R0 $R1 $R2
-  ${GetSize} "$INSTDIR" "/M=com0com.inf   /S=0B /G=0" $R3 $R1 $R2
-  IntOp $R0 $R0 + $R3
-  ${GetSize} "$INSTDIR" "/M=cncport.inf   /S=0B /G=0" $R3 $R1 $R2
-  IntOp $R0 $R0 + $R3
-  ${GetSize} "$INSTDIR" "/M=comport.inf   /S=0B /G=0" $R3 $R1 $R2
-  IntOp $R0 $R0 + $R3
-  ${GetSize} "$INSTDIR" "/M=com0com.sys   /S=0B /G=0" $R3 $R1 $R2
-  IntOp $R0 $R0 + $R3
-  ${GetSize} "$INSTDIR" "/M=com0com.cat   /S=0B /G=0" $R3 $R1 $R2
-  IntOp $R0 $R0 + $R3
-  ${GetSize} "$INSTDIR" "/M=setup.dll     /S=0B /G=0" $R3 $R1 $R2
-  IntOp $R0 $R0 + $R3
-  ${GetSize} "$INSTDIR" "/M=setupc.exe    /S=0B /G=0" $R3 $R1 $R2
-  IntOp $R0 $R0 + $R3
-  ${GetSize} "$INSTDIR" "/M=setupg.exe    /S=0B /G=0" $R3 $R1 $R2
-  IntOp $R0 $R0 + $R3
-  ${GetSize} "$INSTDIR" "/M=uninstall.exe /S=0B /G=0" $R3 $R1 $R2
-  IntOp $R0 $R0 + $R3
+  ${GetSize} "$INSTDIR" "/S=0B" $R0 $R1 $R2
   IntOp $R0 $R0 / 1024  ; in KBytes
 
   WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\com0com" "EstimatedSize" $R0
@@ -483,16 +510,24 @@ Function .onInit
   ; Check CPU
 
   ${If} ${RunningX64}
-    !if "${TARGET_CPU}" == "i386"
+    !ifdef ADD_TARGET_CPU_amd64
+      SectionGetFlags ${sec_com0com_amd64} $0
+      IntOp $0 $0 | ${SF_SELECTED}
+      SectionSetFlags ${sec_com0com_amd64} $0
+    !else
       MessageBox MB_YESNO|MB_DEFBUTTON2|MB_ICONEXCLAMATION \
-        "The 32-bit driver cannot run under 64-bit System.$\n$\nContinue?" \
+        "This package does not include 64-bit driver required for your system.$\n$\nContinue?" \
         /SD IDNO IDYES +2
       Abort
     !endif
   ${Else}
-    !if "${TARGET_CPU}" != "i386"
+    !ifdef ADD_TARGET_CPU_i386
+      SectionGetFlags ${sec_com0com_i386} $0
+      IntOp $0 $0 | ${SF_SELECTED}
+      SectionSetFlags ${sec_com0com_i386} $0
+    !else
       MessageBox MB_YESNO|MB_DEFBUTTON2|MB_ICONEXCLAMATION \
-        "The 64-bit driver cannot run under 32-bit System.$\n$\nContinue?" \
+        "This package does not include 32-bit driver required for your system.$\n$\nContinue?" \
         /SD IDNO IDYES +2
       Abort
     !endif
