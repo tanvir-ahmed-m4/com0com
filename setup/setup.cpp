@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.49  2011/12/21 13:24:12  vfrolov
+ * Added using DeviceDesc to set FriendlyName
+ *
  * Revision 1.48  2011/12/15 16:43:20  vfrolov
  * Added parameters parsing result check
  *
@@ -371,7 +374,7 @@ static bool IsValidPortName(
   return TRUE;
 }
 ///////////////////////////////////////////////////////////////
-static VOID SetFriendlyName(
+static VOID SetFriendlyNameBus(
     HDEVINFO hDevInfo,
     PSP_DEVINFO_DATA pDevInfoData,
     int num)
@@ -392,11 +395,24 @@ static VOID SetFriendlyName(
       SNPRINTF(portName[j], sizeof(portName[j])/sizeof(portName[j][0]), "%s", phPortName);
   }
 
-  char friendlyName[80];
+  char friendlyName[120];
+  char deviceDesc[80];
+
+  if (!SetupDiGetDeviceRegistryProperty(hDevInfo,
+                                         pDevInfoData,
+                                         SPDRP_DEVICEDESC,
+                                         NULL,
+                                         (LPBYTE)deviceDesc,
+                                         sizeof(deviceDesc),
+                                         NULL))
+  {
+    SNPRINTF(deviceDesc, sizeof(deviceDesc)/sizeof(deviceDesc[0]),
+             "com0com - bus for serial port pair emulator");
+  }
 
   SNPRINTF(friendlyName, sizeof(friendlyName)/sizeof(friendlyName[0]),
-           "com0com - bus for serial port pair emulator %d (%s <-> %s)",
-           num, portName[0], portName[1]);
+           "%s %d (%s <-> %s)",
+           deviceDesc, num, portName[0], portName[1]);
 
   SetupDiSetDeviceRegistryProperty(hDevInfo, pDevInfoData, SPDRP_FRIENDLYNAME,
                                   (LPBYTE)friendlyName, (lstrlen(friendlyName) + 1) * sizeof(*friendlyName));
@@ -573,7 +589,7 @@ static bool ChangeDevice(
               portParameters.FillParametersStr(buf, sizeof(buf)/sizeof(buf[0]), detailPrms);
               Trace("change %s %s\n", phPortName, buf);
 
-              SetFriendlyName(hDevInfo, pDevInfoData, i);
+              SetFriendlyNameBus(hDevInfo, pDevInfoData, i);
 
               DevProperties devProperties;
               if (!devProperties.DevId(C0C_PORT_DEVICE_ID))
@@ -895,11 +911,30 @@ static bool InstallDeviceCallBack(
     if (res != IDCONTINUE)
       return FALSE;
 
-    SetFriendlyName(hDevInfo, pDevInfoData, num);
+    return TRUE;
+  }
+
+  return FALSE;
+}
+
+static CNC_DEV_CALLBACK SetFriendlyNameBus;
+static bool SetFriendlyNameBus(
+    HDEVINFO hDevInfo,
+    PSP_DEVINFO_DATA pDevInfoData,
+    PCDevProperties pDevProperties,
+    BOOL * /*pRebootRequired*/,
+    void *pParam)
+{
+  if (!lstrcmp(pDevProperties->DevId(), C0C_BUS_DEVICE_ID)) {
+    int num = GetPortNum(hDevInfo, pDevInfoData);
+
+    if (num == *(int *)pParam)
+      SetFriendlyNameBus(hDevInfo, pDevInfoData, num);
 
     return TRUE;
   }
 
+  // we never should be here
   return FALSE;
 }
 
@@ -909,6 +944,11 @@ static bool InstallBusDevice(const char *pInfFilePath, int num)
 
   if (!InstallDevice(pInfFilePath, C0C_BUS_DEVICE_ID, NULL, InstallDeviceCallBack, &num, !no_update, &rebootRequired))
     return FALSE;
+
+  DevProperties devProperties;
+
+  if (devProperties.DevId(C0C_BUS_DEVICE_ID))
+    EnumDevices(EnumFilter, &devProperties, &rebootRequired, SetFriendlyNameBus, &num);
 
   if (rebootRequired)
     PromptReboot();
