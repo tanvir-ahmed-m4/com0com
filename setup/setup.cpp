@@ -19,6 +19,11 @@
  *
  *
  * $Log$
+ * Revision 1.50  2011/12/23 05:37:21  vfrolov
+ * Implemented setting friendly names for ports
+ * Added options -no-update-fnames and --show-fnames
+ * Added commands updatefnames and listfnames
+ *
  * Revision 1.49  2011/12/21 13:24:12  vfrolov
  * Added using DeviceDesc to set FriendlyName
  *
@@ -277,6 +282,8 @@ static const InfFile::InfFileUninstall infFileUnnstallList[] = {
 static int timeout = 0;
 static bool detailPrms = FALSE;
 static bool no_update = FALSE;
+static bool no_update_fnames = FALSE;
+static bool show_fnames = FALSE;
 ///////////////////////////////////////////////////////////////
 static CNC_ENUM_FILTER EnumFilter;
 static bool EnumFilter(const char *pHardwareId)
@@ -374,7 +381,7 @@ static bool IsValidPortName(
   return TRUE;
 }
 ///////////////////////////////////////////////////////////////
-static VOID SetFriendlyNameBus(
+static VOID UpdateFriendlyNameBus(
     HDEVINFO hDevInfo,
     PSP_DEVINFO_DATA pDevInfoData,
     int num)
@@ -395,27 +402,182 @@ static VOID SetFriendlyNameBus(
       SNPRINTF(portName[j], sizeof(portName[j])/sizeof(portName[j][0]), "%s", phPortName);
   }
 
-  char friendlyName[120];
-  char deviceDesc[80];
+  char friendlyNameOld[120];
 
-  if (!SetupDiGetDeviceRegistryProperty(hDevInfo,
-                                         pDevInfoData,
-                                         SPDRP_DEVICEDESC,
-                                         NULL,
-                                         (LPBYTE)deviceDesc,
-                                         sizeof(deviceDesc),
-                                         NULL))
+  if (!SetupDiGetDeviceRegistryProperty(hDevInfo, pDevInfoData, SPDRP_FRIENDLYNAME, NULL,
+                                        (LPBYTE)friendlyNameOld, sizeof(friendlyNameOld), NULL))
   {
-    SNPRINTF(deviceDesc, sizeof(deviceDesc)/sizeof(deviceDesc[0]),
-             "com0com - bus for serial port pair emulator");
+    SNPRINTF(friendlyNameOld, sizeof(friendlyNameOld)/sizeof(friendlyNameOld[0]), "");
   }
 
-  SNPRINTF(friendlyName, sizeof(friendlyName)/sizeof(friendlyName[0]),
-           "%s %d (%s <-> %s)",
-           deviceDesc, num, portName[0], portName[1]);
+  if (show_fnames)
+    Trace("       " C0C_PREF_BUS_NAME "%d FriendlyName=\"%s\"\n", num, friendlyNameOld);
 
-  SetupDiSetDeviceRegistryProperty(hDevInfo, pDevInfoData, SPDRP_FRIENDLYNAME,
-                                  (LPBYTE)friendlyName, (lstrlen(friendlyName) + 1) * sizeof(*friendlyName));
+  if (!no_update_fnames) {
+    char deviceDesc[80];
+
+    if (!SetupDiGetDeviceRegistryProperty(hDevInfo, pDevInfoData, SPDRP_DEVICEDESC, NULL,
+                                          (LPBYTE)deviceDesc, sizeof(deviceDesc), NULL))
+    {
+      SNPRINTF(deviceDesc, sizeof(deviceDesc)/sizeof(deviceDesc[0]),
+               "com0com - bus for serial port pair emulator");
+    }
+
+    char friendlyName[120];
+
+    SNPRINTF(friendlyName, sizeof(friendlyName)/sizeof(friendlyName[0]),
+             "%s %d (%s <-> %s)",
+             deviceDesc, num, portName[0], portName[1]);
+
+    if (lstrcmp(friendlyName, friendlyNameOld) != 0) {
+      if (SetupDiSetDeviceRegistryProperty(hDevInfo, pDevInfoData, SPDRP_FRIENDLYNAME,
+                                      (LPBYTE)friendlyName, (lstrlen(friendlyName) + 1) * sizeof(*friendlyName)))
+      {
+        if (show_fnames)
+          Trace("update " C0C_PREF_BUS_NAME "%d FriendlyName=\"%s\"\n", num, friendlyName);
+      }
+    }
+  }
+}
+///////////////////////////////////////////////////////////////
+static VOID SetFriendlyNamePort(
+    HDEVINFO hDevInfo,
+    PSP_DEVINFO_DATA pDevInfoData,
+    const char *pPhObjName)
+{
+  //Trace("SetFriendlyNamePort pPhObjName=%s\n", pPhObjName);
+
+  char phPortName[20];
+
+  for (int j = 0 ;; j++) {
+    if (j > 1)
+      return;
+
+    const char *pPref = (j ? C0C_PREF_DEVICE_NAME_B : C0C_PREF_DEVICE_NAME_A);
+    int lenPref = lstrlen(pPref);
+
+    if (lenPref >= lstrlen(pPhObjName))
+      continue;
+
+    if (memcmp(pPhObjName, pPref, lenPref*sizeof(pPref[0])) != 0)
+      continue;
+
+    int num;
+
+    if (!StrToInt(pPhObjName + lenPref, &num) || num < 0)
+      continue;
+
+    SNPRINTF(phPortName, sizeof(phPortName)/sizeof(phPortName[0]), "%s%d",
+             j ? C0C_PREF_PORT_NAME_B : C0C_PREF_PORT_NAME_A, num);
+
+    break;
+  }
+
+  //Trace("SetFriendlyNamePort phPortName=%s\n", phPortName);
+
+  char portName[20];
+  PortParameters portParameters(C0C_SERVICE, phPortName);
+
+  if (portParameters.Load() == ERROR_SUCCESS)
+    portParameters.FillPortName(portName, sizeof(portName)/sizeof(portName[0]));
+  else
+    SNPRINTF(portName, sizeof(portName)/sizeof(portName[0]), "%s", phPortName);
+
+  //Trace("SetFriendlyNamePort portName=%s\n", portName);
+
+  char friendlyNameOld[120];
+
+  if (!SetupDiGetDeviceRegistryProperty(hDevInfo, pDevInfoData, SPDRP_FRIENDLYNAME, NULL,
+                                        (LPBYTE)friendlyNameOld, sizeof(friendlyNameOld), NULL))
+  {
+    SNPRINTF(friendlyNameOld, sizeof(friendlyNameOld)/sizeof(friendlyNameOld[0]), "");
+  }
+
+  if (show_fnames)
+    Trace("       %s FriendlyName=\"%s\"\n", phPortName, friendlyNameOld);
+
+  if (lstrcmpi(C0C_PORT_NAME_COMCLASS, portName) == 0)
+    return;
+
+  if (!no_update_fnames) {
+    char deviceDesc[80];
+
+    if (!SetupDiGetDeviceRegistryProperty(hDevInfo, pDevInfoData, SPDRP_DEVICEDESC, NULL,
+                                          (LPBYTE)deviceDesc, sizeof(deviceDesc), NULL))
+    {
+      SNPRINTF(deviceDesc, sizeof(deviceDesc)/sizeof(deviceDesc[0]),
+               "com0com - serial port emulator");
+    }
+
+    char friendlyName[120];
+
+    SNPRINTF(friendlyName, sizeof(friendlyName)/sizeof(friendlyName[0]), "%s %s (%s)", deviceDesc, phPortName, portName);
+
+    //Trace("SetFriendlyNamePort friendlyName=%s\n", friendlyName);
+
+    if (lstrcmp(friendlyName, friendlyNameOld) != 0) {
+      if (SetupDiSetDeviceRegistryProperty(hDevInfo, pDevInfoData, SPDRP_FRIENDLYNAME,
+                                      (LPBYTE)friendlyName, (lstrlen(friendlyName) + 1) * sizeof(*friendlyName)))
+      {
+        if (show_fnames)
+          Trace("update %s FriendlyName=\"%s\"\n", phPortName, friendlyName);
+      }
+    }
+  }
+}
+///////////////////////////////////////////////////////////////
+static CNC_DEV_CALLBACK UpdateFriendlyNamePort;
+static bool UpdateFriendlyNamePort(
+    HDEVINFO hDevInfo,
+    PSP_DEVINFO_DATA pDevInfoData,
+    PCDevProperties pDevProperties,
+    BOOL * /*pRebootRequired*/,
+    void * /*pParam*/)
+{
+  if (!lstrcmp(pDevProperties->DevId(), C0C_PORT_DEVICE_ID)) {
+    SetFriendlyNamePort(hDevInfo, pDevInfoData, pDevProperties->PhObjName());
+    return TRUE;
+  }
+
+  // we never should be here
+  return FALSE;
+}
+///////////////////////////////////////////////////////////////
+static CNC_DEV_CALLBACK UpdateFriendlyNamesBus;
+static bool UpdateFriendlyNamesBus(
+    HDEVINFO hDevInfo,
+    PSP_DEVINFO_DATA pDevInfoData,
+    PCDevProperties pDevProperties,
+    BOOL *pRebootRequired,
+    void *pParam)
+{
+  if (!lstrcmp(pDevProperties->DevId(), C0C_BUS_DEVICE_ID)) {
+    int num = GetPortNum(hDevInfo, pDevInfoData);
+
+    if (*(int *)pParam == num || *(int *)pParam == -1) {
+      UpdateFriendlyNameBus(hDevInfo, pDevInfoData, num);
+
+      for (int j = 0 ; j < 2 ; j++) {
+        char phDevName[40];
+
+        SNPRINTF(phDevName, sizeof(phDevName)/sizeof(phDevName[0]), "%s%d",
+                 j ? C0C_PREF_DEVICE_NAME_B : C0C_PREF_DEVICE_NAME_A, num);
+
+        DevProperties devProperties;
+        if (!devProperties.DevId(C0C_PORT_DEVICE_ID))
+          return FALSE;
+        if (!devProperties.PhObjName(phDevName))
+          return FALSE;
+
+        EnumDevices(EnumFilter, &devProperties, pRebootRequired, UpdateFriendlyNamePort, NULL);
+      }
+    }
+
+    return TRUE;
+  }
+
+  // we never should be here
+  return FALSE;
 }
 ///////////////////////////////////////////////////////////////
 /*
@@ -589,7 +751,8 @@ static bool ChangeDevice(
               portParameters.FillParametersStr(buf, sizeof(buf)/sizeof(buf[0]), detailPrms);
               Trace("change %s %s\n", phPortName, buf);
 
-              SetFriendlyNameBus(hDevInfo, pDevInfoData, i);
+              if (lstrcmpi(portName, portNameOld) != 0)
+                UpdateFriendlyNameBus(hDevInfo, pDevInfoData, i);
 
               DevProperties devProperties;
               if (!devProperties.DevId(C0C_PORT_DEVICE_ID))
@@ -603,6 +766,9 @@ static bool ChangeDevice(
                 RemoveDevices(EnumFilter, &devProperties, pRebootRequired);
                 ReenumerateDeviceNode(pDevInfoData);
               } else {
+                if (lstrcmpi(portName, portNameOld) != 0)
+                  EnumDevices(EnumFilter, &devProperties, pRebootRequired, UpdateFriendlyNamePort, NULL);
+
                 RestartDevices(EnumFilter, &devProperties, pRebootRequired);
               }
             } else {
@@ -818,10 +984,18 @@ bool Update(const InfFileInstall *pInfFileInstallList)
 
   if (!ok) {
     Trace("\nUpdate not completed!\n");
-  }
-  else
-  if (rebootRequired) {
-    PromptReboot();
+  } else {
+    DevProperties devProperties;
+
+    if (devProperties.DevId(C0C_BUS_DEVICE_ID)) {
+      int num = -1;
+
+      EnumDevices(EnumFilter, &devProperties, &rebootRequired, UpdateFriendlyNamesBus, &num);
+    }
+
+    if (rebootRequired) {
+      PromptReboot();
+    }
   }
 
   return ok;
@@ -880,8 +1054,46 @@ bool Install(const char *pInfFilePath)
 
   ComDbSync(EnumFilter);
 
+  DevProperties devProperties;
+
+  if (devProperties.DevId(C0C_BUS_DEVICE_ID)) {
+    int num = -1;
+
+    EnumDevices(EnumFilter, &devProperties, &rebootRequired, UpdateFriendlyNamesBus, &num);
+  }
+
   if (rebootRequired)
     PromptReboot();
+
+  return TRUE;
+}
+///////////////////////////////////////////////////////////////
+static bool UpdateFriendlyNames(bool update)
+{
+  bool no_update_fnames_save = no_update_fnames;
+
+  if (!update)
+    no_update_fnames = TRUE;
+
+  bool show_fnames_save = show_fnames;
+
+  show_fnames = TRUE;
+
+  BOOL rebootRequired = FALSE;
+
+  DevProperties devProperties;
+
+  if (devProperties.DevId(C0C_BUS_DEVICE_ID)) {
+    int num = -1;
+
+    EnumDevices(EnumFilter, &devProperties, &rebootRequired, UpdateFriendlyNamesBus, &num);
+  }
+
+  if (rebootRequired)
+    PromptReboot();
+
+  show_fnames = show_fnames_save;
+  no_update_fnames = no_update_fnames_save;
 
   return TRUE;
 }
@@ -917,27 +1129,6 @@ static bool InstallDeviceCallBack(
   return FALSE;
 }
 
-static CNC_DEV_CALLBACK SetFriendlyNameBus;
-static bool SetFriendlyNameBus(
-    HDEVINFO hDevInfo,
-    PSP_DEVINFO_DATA pDevInfoData,
-    PCDevProperties pDevProperties,
-    BOOL * /*pRebootRequired*/,
-    void *pParam)
-{
-  if (!lstrcmp(pDevProperties->DevId(), C0C_BUS_DEVICE_ID)) {
-    int num = GetPortNum(hDevInfo, pDevInfoData);
-
-    if (num == *(int *)pParam)
-      SetFriendlyNameBus(hDevInfo, pDevInfoData, num);
-
-    return TRUE;
-  }
-
-  // we never should be here
-  return FALSE;
-}
-
 static bool InstallBusDevice(const char *pInfFilePath, int num)
 {
   BOOL rebootRequired = FALSE;
@@ -948,7 +1139,7 @@ static bool InstallBusDevice(const char *pInfFilePath, int num)
   DevProperties devProperties;
 
   if (devProperties.DevId(C0C_BUS_DEVICE_ID))
-    EnumDevices(EnumFilter, &devProperties, &rebootRequired, SetFriendlyNameBus, &num);
+    EnumDevices(EnumFilter, &devProperties, &rebootRequired, UpdateFriendlyNamesBus, &num);
 
   if (rebootRequired)
     PromptReboot();
@@ -1586,6 +1777,8 @@ void Help(const char *pProgName)
     "  --no-update                  - do not update driver while install command\n"
     "                                 execution (the other install command w/o this\n"
     "                                 option expected later)\n"
+    "  --no-update-fnames           - do not update friendly names\n"
+    "  --show-fnames                - show friendly names activity\n"
     );
   ConsoleWrite(
     "\n"
@@ -1615,6 +1808,11 @@ void Help(const char *pProgName)
     "  infclean                     - clean old INF files\n"
     "  busynames <pattern>          - show names that already in use and match the\n"
     "                                 <pattern> (wildcards: '*' and '?')\n"
+    "  updatefnames                 - update friendly names\n"
+    "  listfnames                   - for each bus and port show its identifier and\n"
+    "                                 friendly name\n"
+    );
+  ConsoleWrite(
     "  quit                         - quit\n"
     "  help                         - print this help\n"
     );
@@ -1688,6 +1886,8 @@ int Main(int argc, const char* argv[])
   timeout = 0;
   detailPrms = FALSE;
   no_update = FALSE;
+  no_update_fnames = FALSE;
+  show_fnames = FALSE;
 
   while (argc > 1) {
     if (*argv[1] != '-')
@@ -1732,6 +1932,20 @@ int Main(int argc, const char* argv[])
       argv++;
       argc--;
     }
+    else
+    if (!strcmp(argv[1], "--no-update-fnames")) {
+      no_update_fnames = TRUE;
+      argv[1] = argv[0];
+      argv++;
+      argc--;
+    }
+    else
+    if (!strcmp(argv[1], "--show-fnames")) {
+      show_fnames = TRUE;
+      argv[1] = argv[0];
+      argv++;
+      argc--;
+    }
     else {
       ConsoleWrite("Invalid option %s\n", argv[1]);
       return 1;
@@ -1759,6 +1973,16 @@ int Main(int argc, const char* argv[])
   if (argc == 2 && !lstrcmpi(argv[1], "list")) {
     SetTitle(C0C_SETUP_TITLE " (LIST)");
     return Complete(Change(NULL, NULL));
+  }
+  else
+  if (argc == 2 && !lstrcmpi(argv[1], "updatefnames")) {
+    SetTitle(C0C_SETUP_TITLE " (UPDATE FRIENDLY NAMES)");
+    return Complete(UpdateFriendlyNames(TRUE));
+  }
+  else
+  if (argc == 2 && !lstrcmpi(argv[1], "listfnames")) {
+    SetTitle(C0C_SETUP_TITLE " (LIST FRIENDLY NAMES)");
+    return Complete(UpdateFriendlyNames(FALSE));
   }
   else
   if (argc == 4 && !lstrcmpi(argv[1], "change")) {
