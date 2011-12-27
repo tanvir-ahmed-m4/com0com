@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.12  2011/12/27 11:38:13  vfrolov
+ * Superseded incorrect PortParameters::ClassChanged()
+ *
  * Revision 1.11  2011/12/15 15:51:48  vfrolov
  * Fixed types
  *
@@ -71,7 +74,6 @@ class PortParameters {
     bool FillParametersStr(char *pParameters, int size, bool detail);
     bool FillPortName(char *pPortName, int size);
     bool Changed() const { return maskChanged != 0; }
-    bool ClassChanged() const { return classChanged; }
     bool DialogRequested() const { return dialogRequested; }
 
     static const char *PortParameters::GetHelp();
@@ -89,7 +91,6 @@ class PortParameters {
     bool SetUnsigned(const char *pNewVal, DWORD bit);
     bool SetBit(const char *pVal, const Bit &bit);
 
-    bool classChanged;
     bool dialogRequested;
     DWORD maskChanged;
     DWORD maskExplicit;

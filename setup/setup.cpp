@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.51  2011/12/27 11:38:13  vfrolov
+ * Superseded incorrect PortParameters::ClassChanged()
+ *
  * Revision 1.50  2011/12/23 05:37:21  vfrolov
  * Implemented setting friendly names for ports
  * Added options -no-update-fnames and --show-fnames
@@ -285,6 +288,11 @@ static bool no_update = FALSE;
 static bool no_update_fnames = FALSE;
 static bool show_fnames = FALSE;
 ///////////////////////////////////////////////////////////////
+bool IsComClass(const char *pPortName)
+{
+  return lstrcmpi(pPortName, C0C_PORT_NAME_COMCLASS) == 0;
+}
+///////////////////////////////////////////////////////////////
 static CNC_ENUM_FILTER EnumFilter;
 static bool EnumFilter(const char *pHardwareId)
 {
@@ -496,7 +504,7 @@ static VOID SetFriendlyNamePort(
   if (show_fnames)
     Trace("       %s FriendlyName=\"%s\"\n", phPortName, friendlyNameOld);
 
-  if (lstrcmpi(C0C_PORT_NAME_COMCLASS, portName) == 0)
+  if (IsComClass(portName))
     return;
 
   if (!no_update_fnames) {
@@ -579,52 +587,6 @@ static bool UpdateFriendlyNamesBus(
   // we never should be here
   return FALSE;
 }
-///////////////////////////////////////////////////////////////
-/*
-static int SleepTillPortNotFound(
-    const char *pPortName,
-    int timeLimit)
-{
-  if (lstrcmpi(C0C_PORT_NAME_COMCLASS, pPortName) == 0)
-    return 0;
-
-  if (int(DWORD(timeLimit * 1000)/1000) != timeLimit)
-    timeLimit = -1;
-
-  DWORD startTime = GetTickCount();
-  char path[40];
-
-  SNPRINTF(path, sizeof(path)/sizeof(path[0]), "\\\\.\\%s", pPortName);
-
-  Trace("Wating for %s ", path);
-
-  for (;;) {
-    HANDLE handle = CreateFile(path, GENERIC_READ|GENERIC_WRITE, 0, NULL,
-                               OPEN_EXISTING, 0, NULL);
-
-    if (handle == INVALID_HANDLE_VALUE) {
-      if (GetLastError() != ERROR_FILE_NOT_FOUND)
-        break;
-    } else {
-      CloseHandle(handle);
-      break;
-    }
-
-    Trace(".");
-
-    if (timeLimit != -1 && GetTickCount() - startTime >= DWORD(timeLimit * 1000)) {
-      Trace(" timeout\n");
-      return -1;
-    }
-
-    Sleep(1000);
-  }
-
-  Trace(". OK\n");
-
-  return int((GetTickCount() - startTime) / 1000);
-}
-*/
 ///////////////////////////////////////////////////////////////
 static VOID CleanDevPropertiesStack(
     Stack &stack,
@@ -723,8 +685,8 @@ static bool ChangeDevice(
           portParameters.FillPortName(portName, sizeof(portName)/sizeof(portName[0]));
 
           if (!Silent() && portParameters.DialogRequested()) {
-            if (lstrcmpi(C0C_PORT_NAME_COMCLASS, portName) == 0) {
-              if (!portParameters.ClassChanged()) {
+            if (IsComClass(portName)) {
+              if (IsComClass(portNameOld)) {
                 DevProperties devProperties;
                 if (!devProperties.DevId(C0C_PORT_DEVICE_ID))
                   return FALSE;
@@ -760,8 +722,8 @@ static bool ChangeDevice(
               if (!devProperties.PhObjName(phDevName))
                 return FALSE;
 
-              if (portParameters.ClassChanged()) {
-                Trace("Changed port class for %s (%s -> %s)\n", phPortName, portNameOld, portName);
+              if (IsComClass(portName) != IsComClass(portNameOld)) {
+                Trace("Changed port class for %s (renamed %s to %s)\n", phPortName, portNameOld, portName);
                 DisableDevices(EnumFilter, &devProperties, pRebootRequired, NULL);  // show msg if in use
                 RemoveDevices(EnumFilter, &devProperties, pRebootRequired);
                 ReenumerateDeviceNode(pDevInfoData);
@@ -1255,8 +1217,7 @@ bool Install(const char *pInfFilePath, const char *pParametersA, const char *pPa
     Trace("       %s %s\n", phPortName, buf);
   }
 
-  if (lstrcmpi(portName[0], portName[1]) == 0 &&
-      lstrcmpi(portName[0], C0C_PORT_NAME_COMCLASS) != 0 &&
+  if (lstrcmpi(portName[0], portName[1]) == 0 && !IsComClass(portName[0]) &&
       ShowMsg(MB_OKCANCEL|MB_ICONWARNING,
               "The same port name %s is used for both ports.\n",
               portName[0]) != IDOK)
@@ -1268,25 +1229,6 @@ bool Install(const char *pInfFilePath, const char *pParametersA, const char *pPa
     goto err;
 
   ComDbSync(EnumFilter);
-
-  /*
-  if (timeout > 0 && !no_update) {
-    if (WaitNoPendingInstallEvents(timeout)) {
-      timeout = 0;
-    } else {
-      for (int j = 0 ; j < 2 ; j++) {
-        int timeElapsed = SleepTillPortNotFound(portName[j], timeout);
-
-        if (timeElapsed < 0 || timeout < timeElapsed) {
-          timeout = 0;
-          break;
-        }
-
-        timeout -= timeElapsed;
-      }
-    }
-  }
-  */
 
   return TRUE;
 
@@ -1832,6 +1774,15 @@ void Help(const char *pProgName)
 
   ConsoleWrite(
     "\n"
+    "If parameter 'PortName=" C0C_PORT_NAME_COMCLASS "' is used then the Ports class installer will be\n"
+    "invoked to set the real port name. The Ports class installer selects the COM\n"
+    "port number and sets the real port name to COM<n>, where <n> is the selected\n"
+    "port number. Use parameter 'PortName=?' to invoke the system-supplied advanced\n"
+    "settings dialog box to change the real port name.\n"
+    );
+
+  ConsoleWrite(
+    "\n"
     "Examples:\n"
     );
   ConsoleWrite(
@@ -1851,6 +1802,12 @@ void Help(const char *pProgName)
     , pProgName, (pProgName && *pProgName) ? " " : "");
   ConsoleWrite(
     "  %s%schange " C0C_PREF_PORT_NAME_A "0 EmuBR=yes,EmuOverrun=yes\n"
+    , pProgName, (pProgName && *pProgName) ? " " : "");
+  ConsoleWrite(
+    "  %s%schange " C0C_PREF_PORT_NAME_A "0 PortName=-\n"
+    , pProgName, (pProgName && *pProgName) ? " " : "");
+  ConsoleWrite(
+    "  %s%schange " C0C_PREF_PORT_NAME_A "0 PortName=?\n"
     , pProgName, (pProgName && *pProgName) ? " " : "");
   ConsoleWrite(
     "  %s%slist\n"

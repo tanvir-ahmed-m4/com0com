@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.21  2011/12/27 11:38:13  vfrolov
+ * Superseded incorrect PortParameters::ClassChanged()
+ *
  * Revision 1.20  2011/12/15 15:51:48  vfrolov
  * Fixed types
  *
@@ -163,7 +166,6 @@ void PortParameters::Init()
   addRTTO = 0;
   addRITO = 0;
 
-  classChanged = FALSE;
   dialogRequested = FALSE;
   maskChanged = 0;
   maskExplicit = 0;
@@ -176,8 +178,6 @@ bool PortParameters::SetPortName(const char *pNewPortName)
   }
   else
   if (lstrcmpi(portName, pNewPortName) != 0) {
-    classChanged = ((lstrcmpi(C0C_PORT_NAME_COMCLASS, portName) == 0) !=
-                    (lstrcmpi(C0C_PORT_NAME_COMCLASS, pNewPortName) == 0));
     maskChanged |= m_portName;
     SNPRINTF(portName, sizeof(portName)/sizeof(portName[0]), "%s", pNewPortName);
     CharUpper(portName);
@@ -916,12 +916,6 @@ const char *PortParameters::GetHelp()
     "rout2, lout2 (remote/local RTS/DTR/OUT1/OUT2), ropen, lopen (logical ON if\n"
     "remote/local port is open) or on (logical ON). The exclamation sign (!) can be\n"
     "used to invert the value.\n"
-    "\n"
-    "If <portname> above is '" C0C_PORT_NAME_COMCLASS "' then the Ports class installer will be used to\n"
-    "manage port name. The Ports class installer selects the COM port number and\n"
-    "sets the port name to COM<n>, where <n> is the selected port number.\n"
-    "Use 'PortName=?' to invoke the system-supplied advanced settings dialog box to\n"
-    "change the port number.\n"
     "\n"
     "Special values:\n"
     "  -                       - use driver's default value\n"
