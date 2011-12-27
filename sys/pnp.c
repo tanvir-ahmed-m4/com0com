@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2004-2010 Vyacheslav Frolov
+ * Copyright (c) 2004-2011 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.14  2011/12/27 11:23:11  vfrolov
+ * Changed DeviceTextDescription
+ *
  * Revision 1.13  2010/07/29 12:10:04  vfrolov
  * Added handling of IRPs that must be handled
  *
@@ -273,8 +276,7 @@ NTSTATUS PdoPortQueryDevText(
       UNICODE_STRING portText;
 
       RtlInitUnicodeString(&portText, NULL);
-      StrAppendStr0(&status, &portText, L"Port ");
-      StrAppendStr0(&status, &portText, pDevExt->portName);
+      StrAppendStr0(&status, &portText, L"com0com - serial port emulator");
 
       if (NT_SUCCESS(status))
         pIrp->IoStatus.Information = (ULONG_PTR)portText.Buffer;
