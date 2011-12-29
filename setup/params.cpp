@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.22  2011/12/29 14:34:23  vfrolov
+ * Implemented RealPortName=COM<n> for PortName=COM#
+ *
  * Revision 1.21  2011/12/27 11:38:13  vfrolov
  * Superseded incorrect PortParameters::ClassChanged()
  *
@@ -109,6 +112,7 @@ enum {
   m_emuNoise       = 0x00010000,
   m_addRTTO        = 0x00020000,
   m_addRITO        = 0x00040000,
+  m_realPortName   = 0x01000000,
 };
 ///////////////////////////////////////////////////////////////
 static struct Bit
@@ -124,6 +128,7 @@ static struct Bit
   } type;
 } bits[] = {
   {m_portName,       Bit::OTHER},
+  {m_realPortName,   Bit::OTHER},
   {m_emuBR,          Bit::FLAG},
   {m_emuOverrun,     Bit::FLAG},
   {m_plugInMode,     Bit::FLAG},
@@ -150,6 +155,7 @@ PortParameters::PortParameters(const char *pService, const char *pPhPortName)
 void PortParameters::Init()
 {
   portName[0] = 0;
+  realPortName[0] = 0;
   emuBR = 0;
   emuOverrun = 0;
   plugInMode = 0;
@@ -178,10 +184,51 @@ bool PortParameters::SetPortName(const char *pNewPortName)
   }
   else
   if (lstrcmpi(portName, pNewPortName) != 0) {
-    maskChanged |= m_portName;
-    SNPRINTF(portName, sizeof(portName)/sizeof(portName[0]), "%s", pNewPortName);
+    if (SNPRINTF(portName, sizeof(portName)/sizeof(portName[0]), "%s", pNewPortName) <= 0) {
+      Trace("Invalid port name '%s'\n", pNewPortName);
+      return FALSE;
+    }
+
     CharUpper(portName);
+    maskChanged |= m_portName;
   }
+
+  return TRUE;
+}
+///////////////////////////////////////////////////////////////
+bool PortParameters::SetRealPortName(const char *pNewRealPortName)
+{
+  if (lstrcmpi(realPortName, pNewRealPortName) != 0) {
+    if (SNPRINTF(realPortName, sizeof(realPortName)/sizeof(realPortName[0]), "%s", pNewRealPortName) <= 0) {
+      Trace("Invalid real port name '%s'\n", pNewRealPortName);
+      return FALSE;
+    }
+
+    CharUpper(realPortName);
+    maskChanged |= m_realPortName;
+  }
+
+  return TRUE;
+}
+///////////////////////////////////////////////////////////////
+bool PortParameters::InitRealPortName(const char *pRealPortName)
+{
+  if (!lstrcmpi("", pRealPortName)) {
+    maskExplicit &= ~m_realPortName;
+    maskChanged &= ~m_realPortName;
+
+    return TRUE;
+  }
+
+  if (SNPRINTF(realPortName, sizeof(realPortName)/sizeof(realPortName[0]), "%s", pRealPortName) <= 0) {
+    Trace("Invalid real port name '%s'\n", pRealPortName);
+    return FALSE;
+  }
+
+  CharUpper(realPortName);
+
+  maskChanged &= ~m_realPortName;
+  maskExplicit |= m_realPortName;
 
   return TRUE;
 }
@@ -246,6 +293,7 @@ static const char *GetBitName(DWORD bit)
 {
   switch (bit) {
     case m_portName:       return "PortName";
+    case m_realPortName:   return "RealPortName";
     case m_emuBR:          return "EmuBR";
     case m_emuOverrun:     return "EmuOverrun";
     case m_plugInMode:     return "PlugInMode";
@@ -476,6 +524,11 @@ bool PortParameters::SetBit(const char *pVal, const Bit &bit)
   if (bit.type == Bit::OTHER) {
     if (bit.bit == m_portName) {
       if (!SetPortName(pVal))
+        return FALSE;
+    }
+    else
+    if (bit.bit == m_realPortName) {
+      if (!SetRealPortName(pVal))
         return FALSE;
     }
     else {
@@ -760,9 +813,17 @@ bool PortParameters::FillParametersStr(char *pParameters, int size, bool detail)
   pParameters += len;
   size -= len;
 
-  int i;
+  if (maskExplicit & m_realPortName) {
+    len = SNPRINTF(pParameters, size, ",RealPortName=%s", realPortName);
 
-  for (i = 0 ; i < sizeof(bits)/sizeof(bits[0]) ; i++) {
+    if (len < 0)
+      return FALSE;
+
+    pParameters += len;
+    size -= len;
+  }
+
+  for (int i = 0 ; i < sizeof(bits)/sizeof(bits[0]) ; i++) {
     DWORD bit = bits[i].bit;
 
     if (!GetDwPtr(bit))
@@ -871,6 +932,16 @@ bool PortParameters::FillPortName(char *pPortName, int size)
 
   len = SNPRINTF(pPortName, size, "%s",
                  (maskExplicit & m_portName) ? portName : phPortName);
+
+  return len >= 0;
+}
+///////////////////////////////////////////////////////////////
+bool PortParameters::FillRealPortName(char *pRealPortName, int size)
+{
+  int len;
+
+  len = SNPRINTF(pRealPortName, size, "%s",
+                 (maskExplicit & m_realPortName) ? realPortName : "");
 
   return len >= 0;
 }

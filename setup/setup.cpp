@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.53  2011/12/29 14:34:23  vfrolov
+ * Implemented RealPortName=COM<n> for PortName=COM#
+ *
  * Revision 1.52  2011/12/28 06:23:50  vfrolov
  * Added setting friendly names for ports after changing port class
  *
@@ -312,6 +315,22 @@ static bool EnumFilter(const char *pHardwareId)
   return FALSE;
 }
 ///////////////////////////////////////////////////////////////
+static bool FillPortDevProperties(DevProperties &devProperties, int iBus, bool isA)
+{
+  char phDevName[40];
+
+  SNPRINTF(phDevName, sizeof(phDevName)/sizeof(phDevName[0]), "%s%d",
+    isA ? C0C_PREF_DEVICE_NAME_A : C0C_PREF_DEVICE_NAME_B, iBus);
+
+  if (!devProperties.DevId(C0C_PORT_DEVICE_ID))
+    return FALSE;
+
+  if (!devProperties.PhObjName(phDevName))
+    return FALSE;
+
+  return TRUE;
+}
+///////////////////////////////////////////////////////////////
 static bool IsValidPortNum(int num)
 {
   if (num < 0)
@@ -336,8 +355,14 @@ static bool IsValidPortName(
     const char *pPortName)
 {
   int res;
+  int len = lstrlen(pPortName);
 
-  if (lstrlen(pPortName) > C0C_PORT_NAME_LEN) {
+  if (len <= 0) {
+    ShowMsg(MB_OK|MB_ICONSTOP, "The port name is empty.\n");
+    return FALSE;
+  }
+  else
+  if (len > C0C_PORT_NAME_LEN) {
     res = ShowMsg(MB_OKCANCEL|MB_ICONWARNING,
                   "The length of port name %s\n"
                   "is too big (greater then %d).\n",
@@ -458,6 +483,9 @@ static VOID SetFriendlyNamePort(
 {
   //Trace("SetFriendlyNamePort pPhObjName=%s\n", pPhObjName);
 
+  if (!pPhObjName)
+    return;
+
   char phPortName[20];
 
   for (int j = 0 ;; j++) {
@@ -507,8 +535,21 @@ static VOID SetFriendlyNamePort(
   if (show_fnames)
     Trace("       %s FriendlyName=\"%s\"\n", phPortName, friendlyNameOld);
 
-  if (IsComClass(portName))
-    return;
+  if (IsComClass(portName)) {
+    HKEY hKey = SetupDiOpenDevRegKey(hDevInfo, pDevInfoData, DICS_FLAG_GLOBAL, 0, DIREG_DEV, KEY_READ);
+
+    if (hKey == INVALID_HANDLE_VALUE)
+      return;
+
+    DWORD len = sizeof(portName);
+
+    LONG err = RegQueryValueEx(hKey, "PortName", NULL, NULL, (PBYTE)portName, &len);
+
+    RegCloseKey(hKey);
+
+    if (err != ERROR_SUCCESS)
+      return;
+  }
 
   if (!no_update_fnames) {
     char deviceDesc[80];
@@ -569,15 +610,9 @@ static bool UpdateFriendlyNamesBus(
       UpdateFriendlyNameBus(hDevInfo, pDevInfoData, num);
 
       for (int j = 0 ; j < 2 ; j++) {
-        char phDevName[40];
-
-        SNPRINTF(phDevName, sizeof(phDevName)/sizeof(phDevName[0]), "%s%d",
-                 j ? C0C_PREF_DEVICE_NAME_B : C0C_PREF_DEVICE_NAME_A, num);
-
         DevProperties devProperties;
-        if (!devProperties.DevId(C0C_PORT_DEVICE_ID))
-          return FALSE;
-        if (!devProperties.PhObjName(phDevName))
+
+        if (!FillPortDevProperties(devProperties, num, j == 0))
           return FALSE;
 
         EnumDevices(EnumFilter, &devProperties, pRebootRequired, UpdateFriendlyNamePort, NULL);
@@ -615,6 +650,79 @@ static VOID CleanDevPropertiesStack(
   }
 }
 ///////////////////////////////////////////////////////////////
+static CNC_DEV_CALLBACK LoadRealPortName;
+static bool LoadRealPortName(
+    HDEVINFO hDevInfo,
+    PSP_DEVINFO_DATA pDevInfoData,
+    PCDevProperties pDevProperties,
+    BOOL * /*pRebootRequired*/,
+    void *pParam)
+{
+  if (!lstrcmp(pDevProperties->DevId(), C0C_PORT_DEVICE_ID)) {
+    HKEY hKey = SetupDiOpenDevRegKey(hDevInfo, pDevInfoData, DICS_FLAG_GLOBAL, 0, DIREG_DEV, KEY_READ);
+
+    if (hKey != INVALID_HANDLE_VALUE) {
+      char portNameOld[20];
+      DWORD len = sizeof(portNameOld);
+
+      LONG err = RegQueryValueEx(hKey, "PortName", NULL, NULL, (PBYTE)portNameOld, &len);
+
+      if (err == ERROR_SUCCESS)
+        ((PortParameters *)pParam)->InitRealPortName(portNameOld);
+
+      RegCloseKey(hKey);
+    }
+
+    return TRUE;
+  }
+
+  // we never should be here
+  return FALSE;
+}
+
+static CNC_DEV_CALLBACK UpdateRealPortName;
+static bool UpdateRealPortName(
+    HDEVINFO hDevInfo,
+    PSP_DEVINFO_DATA pDevInfoData,
+    PCDevProperties pDevProperties,
+    BOOL * /*pRebootRequired*/,
+    void *pParam)
+{
+  if (!lstrcmp(pDevProperties->DevId(), C0C_PORT_DEVICE_ID)) {
+    HKEY hKey = SetupDiOpenDevRegKey(hDevInfo, pDevInfoData, DICS_FLAG_GLOBAL, 0, DIREG_DEV, KEY_READ|KEY_WRITE);
+
+    if (hKey != INVALID_HANDLE_VALUE) {
+      char portNameOld[20];
+      DWORD len = sizeof(portNameOld);
+
+      LONG err = RegQueryValueEx(hKey, "PortName", NULL, NULL, (PBYTE)portNameOld, &len);
+
+      if (err == ERROR_SUCCESS) {
+        const char*pPortNameNew = (const char*)pParam;
+
+        if (ComDbClaim(pPortNameNew)) {
+          err = RegSetValueEx(hKey, "PortName", 0, REG_SZ,
+                              (PBYTE)pPortNameNew, (lstrlen(pPortNameNew) + 1) * sizeof(pPortNameNew[0]));
+
+          if (err == ERROR_SUCCESS) {
+            ComDbRelease((const char*)portNameOld);
+            SetFriendlyNamePort(hDevInfo, pDevInfoData, pDevProperties->PhObjName());
+          } else {
+            ComDbRelease(pPortNameNew);
+          }
+        }
+      }
+
+      RegCloseKey(hKey);
+    }
+
+    return TRUE;
+  }
+
+  // we never should be here
+  return FALSE;
+}
+
 struct ChangeDeviceParams {
   ChangeDeviceParams(
     const char *_pPhPortName,
@@ -655,95 +763,121 @@ static bool ChangeDevice(
     const char *pParameters = ((ChangeDeviceParams *)pParam)->pParameters;
 
     for (int j = 0 ; j < 2 ; j++) {
+      char buf[200];
       char phPortName[20];
 
       SNPRINTF(phPortName, sizeof(phPortName)/sizeof(phPortName[0]), "%s%d",
                j ? C0C_PREF_PORT_NAME_B : C0C_PREF_PORT_NAME_A, i);
 
       PortParameters portParameters(C0C_SERVICE, phPortName);
-
       LONG err = portParameters.Load();
 
-      char buf[200];
+      if (err != ERROR_SUCCESS) {
+        portParameters.FillParametersStr(buf, sizeof(buf)/sizeof(buf[0]), detailPrms);
+        Trace("       %s %s\n", phPortName, buf);
+        ShowError(MB_OK|MB_ICONWARNING, err, "portParameters.Load(%s)", phPortName);
+        continue;
+      }
+
+      char portNameOld[20];
+
+      if (!portParameters.FillPortName(portNameOld, sizeof(portNameOld)/sizeof(portNameOld[0])))
+        continue;
+
+      bool isComClassOld = IsComClass(portNameOld);
+
+      DevProperties devProperties;
+
+      if (!FillPortDevProperties(devProperties, i, j == 0))
+        continue;
+
+      if (isComClassOld)
+        EnumDevices(EnumFilter, &devProperties, pRebootRequired, LoadRealPortName, &portParameters);
 
       portParameters.FillParametersStr(buf, sizeof(buf)/sizeof(buf[0]), detailPrms);
+
       Trace("       %s %s\n", phPortName, buf);
 
-      if (err == ERROR_SUCCESS) {
-        if (pPhPortName && lstrcmpi(pPhPortName, phPortName) == 0 && pParameters) {
-          char portNameOld[20];
+      if (!pPhPortName || lstrcmpi(pPhPortName, phPortName) != 0 || !pParameters)
+        continue;
 
-          portParameters.FillPortName(portNameOld, sizeof(portNameOld)/sizeof(portNameOld[0]));
+      char realPortNameOld[20];
 
-          if (!portParameters.ParseParametersStr(pParameters))
-            return FALSE;
+      if (!portParameters.FillRealPortName(realPortNameOld, sizeof(realPortNameOld)/sizeof(realPortNameOld[0])))
+        continue;
 
-          char phDevName[40];
+      if (!portParameters.ParseParametersStr(pParameters))
+        continue;
 
-          SNPRINTF(phDevName, sizeof(phDevName)/sizeof(phDevName[0]), "%s%d",
-                   j ? C0C_PREF_DEVICE_NAME_B : C0C_PREF_DEVICE_NAME_A, i);
+      char portNameNew[20];
 
-          char portName[20];
+      if (!portParameters.FillPortName(portNameNew, sizeof(portNameNew)/sizeof(portNameNew[0])))
+        continue;
 
-          portParameters.FillPortName(portName, sizeof(portName)/sizeof(portName[0]));
+      if (lstrcmpi(portNameNew, portNameOld) != 0 && !IsValidPortName(portNameNew))
+        continue;
 
-          if (!Silent() && portParameters.DialogRequested()) {
-            if (IsComClass(portName)) {
-              if (IsComClass(portNameOld)) {
-                DevProperties devProperties;
-                if (!devProperties.DevId(C0C_PORT_DEVICE_ID))
-                  return FALSE;
-                if (!devProperties.PhObjName(phDevName))
-                  return FALSE;
+      bool isComClassNew = IsComClass(portNameNew);
 
-                EnumDevices(EnumFilter, &devProperties, pRebootRequired, ShowDialog, NULL);
-              } else {
-                ShowMsg(MB_OK|MB_ICONWARNING, "Can't display the dialog while changing the class of port.\n");
-              }
-            } else {
-              ShowMsg(MB_OK|MB_ICONWARNING, "Can't display the dialog for non Ports class port.\n");
-            }
+      if (!Silent() && portParameters.DialogRequested()) {
+        if (isComClassNew) {
+          if (isComClassOld) {
+            EnumDevices(EnumFilter, &devProperties, pRebootRequired, ShowDialog, NULL);
+          } else {
+            ShowMsg(MB_OK|MB_ICONWARNING, "Can't display the dialog while changing the class of port.\n");
           }
-
-          if (portParameters.Changed() &&
-              (!lstrcmpi(portName, portNameOld) || IsValidPortName(portName)))
-          {
-            err = portParameters.Save();
-
-            if (err == ERROR_SUCCESS) {
-              ((ChangeDeviceParams *)pParam)->changed = TRUE;
-
-              portParameters.FillParametersStr(buf, sizeof(buf)/sizeof(buf[0]), detailPrms);
-              Trace("change %s %s\n", phPortName, buf);
-
-              if (lstrcmpi(portName, portNameOld) != 0)
-                UpdateFriendlyNameBus(hDevInfo, pDevInfoData, i);
-
-              DevProperties devProperties;
-              if (!devProperties.DevId(C0C_PORT_DEVICE_ID))
-                return FALSE;
-              if (!devProperties.PhObjName(phDevName))
-                return FALSE;
-
-              if (IsComClass(portName) != IsComClass(portNameOld)) {
-                Trace("Changed port class for %s (renamed %s to %s)\n", phPortName, portNameOld, portName);
-                DisableDevices(EnumFilter, &devProperties, pRebootRequired, NULL);  // show msg if in use
-                RemoveDevices(EnumFilter, &devProperties, pRebootRequired);
-                ReenumerateDeviceNode(pDevInfoData);
-                EnumDevices(EnumFilter, &devProperties, pRebootRequired, UpdateFriendlyNamePort, NULL);
-              } else {
-                if (lstrcmpi(portName, portNameOld) != 0)
-                  EnumDevices(EnumFilter, &devProperties, pRebootRequired, UpdateFriendlyNamePort, NULL);
-
-                RestartDevices(EnumFilter, &devProperties, pRebootRequired);
-              }
-            } else {
-              ShowError(MB_OK|MB_ICONWARNING, err, "portParameters.Save(%s)", phPortName);
-            }
-          }
+        } else {
+          ShowMsg(MB_OK|MB_ICONWARNING, "Can't display the dialog for non Ports class port.\n");
         }
+      }
+
+      if (!isComClassNew || !isComClassOld) {
+        realPortNameOld[0] = 0;
+        portParameters.InitRealPortName();   // ignore RealPortName param
+      }
+
+      if (!portParameters.Changed())
+        continue;
+
+      char realPortNameNew[20];
+
+      if (!portParameters.FillRealPortName(realPortNameNew, sizeof(realPortNameNew)/sizeof(realPortNameNew[0])))
+        continue;
+
+      if (lstrcmpi(realPortNameNew, realPortNameOld) != 0) {
+        if (!IsValidPortName(realPortNameNew) || !ComDbIsValidName(realPortNameNew))
+          continue;
+      }
+
+      err = portParameters.Save();
+
+      if (err != ERROR_SUCCESS) {
+        ShowError(MB_OK|MB_ICONWARNING, err, "portParameters.Save(%s)", phPortName);
+        continue;
+      }
+
+      ((ChangeDeviceParams *)pParam)->changed = TRUE;
+
+      portParameters.FillParametersStr(buf, sizeof(buf)/sizeof(buf[0]), detailPrms);
+      Trace("change %s %s\n", phPortName, buf);
+
+      if (lstrcmpi(portNameNew, portNameOld) != 0)
+        UpdateFriendlyNameBus(hDevInfo, pDevInfoData, i);
+
+      if (isComClassNew != isComClassOld) {
+        Trace("Changed port class for %s (renamed %s to %s)\n", phPortName, portNameOld, portNameNew);
+        DisableDevices(EnumFilter, &devProperties, pRebootRequired, NULL);  // show msg if in use
+        RemoveDevices(EnumFilter, &devProperties, pRebootRequired);
+        ReenumerateDeviceNode(pDevInfoData);
+        EnumDevices(EnumFilter, &devProperties, pRebootRequired, UpdateFriendlyNamePort, NULL);
       } else {
-        ShowError(MB_OK|MB_ICONWARNING, err, "portParameters.Load(%s)", phPortName);
+        if (lstrcmpi(portNameNew, portNameOld) != 0)
+          EnumDevices(EnumFilter, &devProperties, pRebootRequired, UpdateFriendlyNamePort, NULL);
+
+        if (lstrcmpi(realPortNameNew, realPortNameOld) != 0)
+          EnumDevices(EnumFilter, &devProperties, pRebootRequired, UpdateRealPortName, realPortNameNew);
+
+        RestartDevices(EnumFilter, &devProperties, pRebootRequired);
       }
     }
   } else {
@@ -1199,6 +1333,8 @@ bool Install(const char *pInfFilePath, const char *pParametersA, const char *pPa
 
       if (!IsValidPortName(portName[j]))
         goto err;
+
+      portParameters.InitRealPortName();   // ignore RealPortName param
 
       if (!Silent() && portParameters.DialogRequested())
         ShowMsg(MB_OK|MB_ICONWARNING, "Can't display the dialog while installing a pair of linked ports.\n");
@@ -1781,8 +1917,8 @@ void Help(const char *pProgName)
     "If parameter 'PortName=" C0C_PORT_NAME_COMCLASS "' is used then the Ports class installer will be\n"
     "invoked to set the real port name. The Ports class installer selects the COM\n"
     "port number and sets the real port name to COM<n>, where <n> is the selected\n"
-    "port number. Use parameter 'PortName=?' to invoke the system-supplied advanced\n"
-    "settings dialog box to change the real port name.\n"
+    "port number. Thereafter use parameter RealPortName=COM<n> to change the real\n"
+    "port name.\n"
     );
 
   ConsoleWrite(

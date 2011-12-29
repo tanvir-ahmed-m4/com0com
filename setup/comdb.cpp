@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.5  2011/12/29 14:34:23  vfrolov
+ * Implemented RealPortName=COM<n> for PortName=COM#
+ *
  * Revision 1.4  2011/12/15 15:51:48  vfrolov
  * Fixed types
  *
@@ -133,6 +136,11 @@ static bool LoadComDb(BusyMask &comDb)
 ///////////////////////////////////////////////////////////////
 static bool ClaimReleasePort(DWORD num, bool claim)
 {
+  if (num == 0) {
+    SetLastError(ERROR_INVALID_PARAMETER);
+    return FALSE;
+  }
+
   int res;
 
   do {
@@ -160,6 +168,8 @@ static bool ClaimReleasePort(DWORD num, bool claim)
           res = ShowError(MB_RETRYCANCEL, err, "ComDBClaimPort(COM%u)", (unsigned)num);
 
         continue;
+      } else {
+        Trace("ComDB: COM%u - logged as \"in use\"\n", unsigned(num));
       }
     } else {
       err = ComDBReleasePort(hComDB, num);
@@ -169,6 +179,8 @@ static bool ClaimReleasePort(DWORD num, bool claim)
 
         res = ShowError(MB_RETRYCANCEL, err, "ComDBReleasePort(COM%u)", (unsigned)num);
         continue;
+      } else {
+        Trace("ComDB: COM%u - released\n", unsigned(num));
       }
     }
 
@@ -440,7 +452,6 @@ void ComDbSync(PCNC_ENUM_FILTER pFilter)
     if (comNames.IsFreeNum(num)) {
       if (!comDbLocal.IsFreeNum(num)) {
         if (ClaimReleasePort(num + 1, FALSE)) {
-          Trace("ComDB: COM%u - released\n", unsigned(num + 1));
           comDbLocal.DelNum(num);
           SaveComDbLocal(comDbLocal);
         }
@@ -448,7 +459,6 @@ void ComDbSync(PCNC_ENUM_FILTER pFilter)
     } else {
       if (comDbLocal.IsFreeNum(num)) {
         if (ClaimReleasePort(num + 1, TRUE)) {
-          Trace("ComDB: COM%u - logged as \"in use\"\n", unsigned(num + 1));
           comDbLocal.AddNum(num);
           SaveComDbLocal(comDbLocal);
         }
@@ -494,5 +504,27 @@ DWORD ComDbQueryNames(char *pBuf, DWORD maxChars)
   *pB++ = 0;
 
   return (DWORD)(pB - pBuf);
+}
+///////////////////////////////////////////////////////////////
+bool ComDbClaim(const char *pPortName)
+{
+  return ClaimReleasePort(name2num(pPortName), TRUE);
+}
+///////////////////////////////////////////////////////////////
+bool ComDbRelease(const char *pPortName)
+{
+  return ClaimReleasePort(name2num(pPortName), FALSE);
+}
+///////////////////////////////////////////////////////////////
+bool ComDbIsValidName(const char *pPortName)
+{
+  if (name2num(pPortName) == 0) {
+    ShowMsg(MB_OK|MB_ICONSTOP, "The port name %s is not in COM<1-%u> format.\n",
+            pPortName, (unsigned)COMDB_MAX_PORTS_ARBITRATED);
+
+    return FALSE;
+  }
+
+  return name2num(pPortName) != 0;
 }
 ///////////////////////////////////////////////////////////////

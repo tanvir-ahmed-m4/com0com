@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.5  2011/12/29 14:34:23  vfrolov
+ * Implemented RealPortName=COM<n> for PortName=COM#
+ *
  * Revision 1.4  2011/12/15 15:51:48  vfrolov
  * Fixed types
  *
@@ -40,6 +43,9 @@
 bool ComDbGetInUse(const char *pPortName, bool &inUse);
 void ComDbSync(PCNC_ENUM_FILTER pFilter);
 DWORD ComDbQueryNames(char *pBuf, DWORD maxChars);
+bool ComDbClaim(const char *pPortName);
+bool ComDbRelease(const char *pPortName);
+bool ComDbIsValidName(const char *pPortName);
 ///////////////////////////////////////////////////////////////
 
 #endif /* _C0C_COMDB_H_ */
