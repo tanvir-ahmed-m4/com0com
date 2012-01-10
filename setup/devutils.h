@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2006-2011 Vyacheslav Frolov
+ * Copyright (c) 2006-2012 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,10 @@
  *
  *
  * $Log$
+ * Revision 1.14  2012/01/10 11:24:27  vfrolov
+ * Added ability to repeate waiting for no pending device
+ * installation activities
+ *
  * Revision 1.13  2011/12/15 15:51:48  vfrolov
  * Fixed types
  *
@@ -170,7 +174,8 @@ bool InstallDevice(
     BOOL *pRebootRequired);
 
 bool WaitNoPendingInstallEvents(
-    int timeLimit);
+    int timeLimit,
+    bool repeate = FALSE);
 ///////////////////////////////////////////////////////////////
 
 #endif /* _C0C_DEVUTILS_H_ */

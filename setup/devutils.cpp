@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2006-2011 Vyacheslav Frolov
+ * Copyright (c) 2006-2012 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,10 @@
  *
  *
  * $Log$
+ * Revision 1.21  2012/01/10 11:24:27  vfrolov
+ * Added ability to repeate waiting for no pending device
+ * installation activities
+ *
  * Revision 1.20  2011/12/15 15:51:48  vfrolov
  * Fixed types
  *
@@ -945,7 +949,7 @@ bool InstallDevice(
   return res == IDCONTINUE;
 }
 ///////////////////////////////////////////////////////////////
-bool WaitNoPendingInstallEvents(int timeLimit)
+bool WaitNoPendingInstallEvents(int timeLimit, bool repeate)
 {
   typedef DWORD  (WINAPI *PWAITNOPENDINGINSTALLEVENTS)(IN DWORD);
   static PWAITNOPENDINGINSTALLEVENTS pWaitNoPendingInstallEvents = NULL;
@@ -980,6 +984,7 @@ bool WaitNoPendingInstallEvents(int timeLimit)
 
       if (inTrace)
         Trace(" OK\n");
+
       SetLastError(ERROR_SUCCESS);
       break;
     }
@@ -996,17 +1001,33 @@ bool WaitNoPendingInstallEvents(int timeLimit)
     DWORD timeElapsed = GetTickCount() - startTime;
 
     if (timeLimit != -1 && timeElapsed >= DWORD(timeLimit * 1000)) {
-      if (inTrace)
+      if (inTrace) {
         Trace(" timeout\n");
+        inTrace = FALSE;
+      }
+
+      if (!Silent() && repeate) {
+        if (ShowMsg(MB_YESNO,
+            "The device installation activities are still pending.\n"
+            "Continue to wait?\n") == IDYES)
+        {
+          startTime = GetTickCount();
+        } else {
+          repeate = FALSE;
+        }
+
+        continue;
+      }
+
       SetLastError(ERROR_TIMEOUT);
       break;
     }
 
     if (!inTrace) {
       if (timeLimit != -1)
-        Trace("Wating for no pending device installation activities (%u secs) ", (unsigned)timeLimit);
+        Trace("Waiting for no pending device installation activities (%u secs) ", (unsigned)timeLimit);
       else
-        Trace("Wating for no pending device installation activities (perpetually) ");
+        Trace("Waiting for no pending device installation activities (perpetually) ");
 
       inTrace = TRUE;
     }

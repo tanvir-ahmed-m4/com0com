@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2006-2011 Vyacheslav Frolov
+ * Copyright (c) 2006-2012 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,10 @@
  *
  *
  * $Log$
+ * Revision 1.54  2012/01/10 11:24:27  vfrolov
+ * Added ability to repeate waiting for no pending device
+ * installation activities
+ *
  * Revision 1.53  2011/12/29 14:34:23  vfrolov
  * Implemented RealPortName=COM<n> for PortName=COM#
  *
@@ -289,6 +293,7 @@ static const InfFile::InfFileUninstall infFileUnnstallList[] = {
 };
 ///////////////////////////////////////////////////////////////
 static int timeout = 0;
+static bool repeate_timeout = FALSE;
 static bool detailPrms = FALSE;
 static bool no_update = FALSE;
 static bool no_update_fnames = FALSE;
@@ -1852,7 +1857,9 @@ void Help(const char *pProgName)
     "\n"
     "Options:\n"
     "  --output <file>              - file for output, default is console\n"
-    "  --wait <to>                  - wait <to> seconds for install completion\n"
+    "  --wait [+]<to>               - wait <to> seconds for install completion. If\n"
+    "                                 <to> has '+' prefix then ask user to continue\n"
+    "                                 waiting after <to> seconds elapsing\n"
     "                                 (by default <to> is 0 - no wait)\n"
     "  --detail-prms                - show detailed parameters\n"
     "  --silent                     - suppress dialogs if possible\n"
@@ -1966,7 +1973,7 @@ static int Complete(bool ok)
 {
   if (ok) {
     if (timeout > 0)
-      WaitNoPendingInstallEvents(timeout);
+      WaitNoPendingInstallEvents(timeout, repeate_timeout);
 
     return 0;
   }
@@ -1981,6 +1988,7 @@ int Main(int argc, const char* argv[])
 
   Silent(FALSE);
   timeout = 0;
+  repeate_timeout = FALSE;
   detailPrms = FALSE;
   no_update = FALSE;
   no_update_fnames = FALSE;
@@ -2001,8 +2009,15 @@ int Main(int argc, const char* argv[])
     if (!strcmp(argv[1], "--wait") && argc > 2) {
       int num;
 
-      if (StrToInt(argv[2], &num) && num >= 0)
-        timeout = num;
+      if (!StrToInt(argv[2], &num) || num < 0) {
+        ConsoleWrite("Invalid option %s %s\n", argv[1], argv[2]);
+        return 1;
+      }
+
+      timeout = num;
+
+      if (argv[2][0] == '+')
+        repeate_timeout = TRUE;
 
       argv[2] = argv[0];
       argv += 2;
