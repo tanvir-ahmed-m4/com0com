@@ -2,7 +2,7 @@
 <VisualStudioProject
 	ProjectType="Visual C++"
 	Version="8,00"
-	Name="setup"
+	Name="setupg"
 	ProjectGUID="{6ACC2F57-86A2-41D4-8744-5982985E99DA}"
 	RootNamespace="SetupApp"
 	Keyword="ManagedCProj"
