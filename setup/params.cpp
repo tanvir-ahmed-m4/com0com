@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2006-2011 Vyacheslav Frolov
+ * Copyright (c) 2006-2012 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.23  2012/01/31 05:48:32  vfrolov
+ * Deprecated invoking of system-supplied advanced settings dialog box
+ *
  * Revision 1.22  2011/12/29 14:34:23  vfrolov
  * Implemented RealPortName=COM<n> for PortName=COM#
  *
@@ -172,17 +175,12 @@ void PortParameters::Init()
   addRTTO = 0;
   addRITO = 0;
 
-  dialogRequested = FALSE;
   maskChanged = 0;
   maskExplicit = 0;
 }
 ///////////////////////////////////////////////////////////////
 bool PortParameters::SetPortName(const char *pNewPortName)
 {
-  if (lstrcmpi(pNewPortName, "?") == 0) {
-    dialogRequested = TRUE;
-  }
-  else
   if (lstrcmpi(portName, pNewPortName) != 0) {
     if (SNPRINTF(portName, sizeof(portName)/sizeof(portName[0]), "%s", pNewPortName) <= 0) {
       Trace("Invalid port name '%s'\n", pNewPortName);

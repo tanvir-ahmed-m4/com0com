@@ -4,7 +4,7 @@
 ;
 ; Installation file for the Null-modem emulator driver.
 ;
-; Copyright (c) 2010 Vyacheslav Frolov
+; Copyright (c) 2010-2012 Vyacheslav Frolov
 ;
 ;******************************************************************************
 
@@ -15,7 +15,7 @@ Class = Ports
 ClassGUID = {4D36E978-E325-11CE-BFC1-08002BE10318}
 CatalogFile = com0com.cat
 ;           MM/DD/YYYY
-DriverVer = 06/07/2010,3.0.0.0
+DriverVer = 01/31/2012,3.0.0.0
 UninstallInfTag = {df799e12-3c56-421b-b298-b6d3642bc878}
 
 ;******************************************************************************
@@ -62,8 +62,8 @@ Needs = SerialEnumerator.NT.Services
 AddReg = com0com_HW_AddReg
 
 [com0com_AddReg]
-HKR,,PortSubClass,1,01
-HKR,,EnumPropPages32,,"MsPorts.dll,SerialPortPropPageProvider"
+;HKR,,PortSubClass,1,01
+;HKR,,EnumPropPages32,,"MsPorts.dll,SerialPortPropPageProvider"
 
 [com0com_HW_AddReg]
 HKR,,"UpperFilters",0x00010000,"serenum"

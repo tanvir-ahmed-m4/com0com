@@ -138,28 +138,35 @@ A. The command line options of setup.exe and uninstall.exe listed in
 
      CNC_UNINSTALL_SKIP_SETUP_UNINSTALL={YES|NO} - skip uninstalling devices and driver
 
-Q. Is it possible to change the names CNCA0 and CNCB0 to COM2 and COM3?
+Q. Is it possible to change the names CNCA0 and CNCB0 to COM8 and COM9?
 A. Yes, it's possible. To change the names:
 
    1. Launch the Setup Command Prompt shortcut.
    2. Enter the change commands, for example:
 
-      command> change CNCA0 PortName=COM2
-      command> change CNCB0 PortName=COM3
+      command> change CNCA0 PortName=COM8
+      command> change CNCB0 PortName=COM9
 
    Alternatively you can set names to 'COM#', for example:
 
       command> change CNCA0 PortName=COM#
       command> change CNCB0 PortName=COM#
 
-   In the last case the Ports class installer will be used to manage port names.
-   The Ports class installer selects the COM port number and sets the port
-   name to COM<n>, where <n> is the selected port number.
-   After installing the Ports class ports you can invoke the system-supplied advanced
-   settings dialog box to change the port number by this way:
+   If parameter 'PortName=COM#' is used then the Ports class installer will be
+   invoked to set the real port name. The Ports class installer selects the COM
+   port number and sets the real port name to COM<n>, where <n> is the selected
+   port number. After installing the Ports class port you can use the list
+   command to get the real port name and the parameter RealPortName=COM<n> to
+   change the real port name, for example:
 
-      command> change CNCA0 PortName=?
-      command> change CNCB0 PortName=?
+      command> list
+             CNCA0 PortName=COM#,RealPortName=COM3
+             CNCB0 PortName=COM#,RealPortName=COM4
+      command> change CNCA0 RealPortName=COM8
+      command> change CNCB0 RealPortName=COM9
+      command> list
+             CNCA0 PortName=COM#,RealPortName=COM8
+             CNCB0 PortName=COM#,RealPortName=COM9
 
 Q. The baud rate setting does not seem to make a difference: data is always
    transferred at the same speed. How to enable the baud rate emulation?
@@ -328,10 +335,12 @@ A. Yes, it is. The simplest way is to put the port to the Ports class, for examp
 
       command> install 0 PortName=COM# -
 
-   After installing the Ports class port you can invoke the system-supplied advanced
-   settings dialog box to change the port name to COM3 by this way:
+   After installing the Ports class port you can use the list command to get
+   the real port name, for example:
 
-      command> change CNCA0 PortName=?
+      command> list
+             CNCA0 PortName=COM#,RealPortName=COM3
+             CNCB0 PortName=-
 
 Q. Is it possible to configure the com0com to randomly corrupt the data? It
    would be nice to have this feature so that we can test our application
