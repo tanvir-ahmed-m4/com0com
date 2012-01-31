@@ -19,6 +19,10 @@
  *
  *
  * $Log$
+ * Revision 1.55  2012/01/31 05:47:22  vfrolov
+ * Deprecated invoking of system-supplied advanced settings dialog box
+ * Allowed re-use port name while migration from Ports class to CNCPorts class
+ *
  * Revision 1.54  2012/01/10 11:24:27  vfrolov
  * Added ability to repeate waiting for no pending device
  * installation activities
@@ -204,7 +208,6 @@
 #include "utils.h"
 #include "portnum.h"
 #include "comdb.h"
-#define SERIAL_ADVANCED_SETTINGS 1
 #include <msports.h>
 
 #define TEXT_PREF
@@ -739,20 +742,6 @@ struct ChangeDeviceParams {
   bool changed;
 };
 
-static CNC_DEV_CALLBACK ShowDialog;
-static bool ShowDialog(
-    HDEVINFO hDevInfo,
-    PSP_DEVINFO_DATA pDevInfoData,
-    PCDevProperties /*pDevProperties*/,
-    BOOL * /*pRebootRequired*/,
-    void * /*pParam*/)
-{
-  if (SerialDisplayAdvancedSettings(NULL, hDevInfo, pDevInfoData) != ERROR_SUCCESS)
-    return FALSE;
-
-  return TRUE;
-}
-
 static CNC_DEV_CALLBACK ChangeDevice;
 static bool ChangeDevice(
     HDEVINFO hDevInfo,
@@ -819,22 +808,14 @@ static bool ChangeDevice(
       if (!portParameters.FillPortName(portNameNew, sizeof(portNameNew)/sizeof(portNameNew[0])))
         continue;
 
-      if (lstrcmpi(portNameNew, portNameOld) != 0 && !IsValidPortName(portNameNew))
-        continue;
-
-      bool isComClassNew = IsComClass(portNameNew);
-
-      if (!Silent() && portParameters.DialogRequested()) {
-        if (isComClassNew) {
-          if (isComClassOld) {
-            EnumDevices(EnumFilter, &devProperties, pRebootRequired, ShowDialog, NULL);
-          } else {
-            ShowMsg(MB_OK|MB_ICONWARNING, "Can't display the dialog while changing the class of port.\n");
-          }
-        } else {
-          ShowMsg(MB_OK|MB_ICONWARNING, "Can't display the dialog for non Ports class port.\n");
+      if (lstrcmpi(portNameNew, portNameOld) != 0) {
+        if (!isComClassOld || lstrcmpi("", realPortNameOld) == 0 || lstrcmpi(portNameNew, realPortNameOld) != 0) {
+          if (!IsValidPortName(portNameNew))
+            continue;
         }
       }
+
+      bool isComClassNew = IsComClass(portNameNew);
 
       if (!isComClassNew || !isComClassOld) {
         realPortNameOld[0] = 0;
@@ -1340,9 +1321,6 @@ bool Install(const char *pInfFilePath, const char *pParametersA, const char *pPa
         goto err;
 
       portParameters.InitRealPortName();   // ignore RealPortName param
-
-      if (!Silent() && portParameters.DialogRequested())
-        ShowMsg(MB_OK|MB_ICONWARNING, "Can't display the dialog while installing a pair of linked ports.\n");
 
       if (portParameters.Changed()) {
         err = portParameters.Save();
@@ -1952,9 +1930,6 @@ void Help(const char *pProgName)
     , pProgName, (pProgName && *pProgName) ? " " : "");
   ConsoleWrite(
     "  %s%schange " C0C_PREF_PORT_NAME_A "0 PortName=-\n"
-    , pProgName, (pProgName && *pProgName) ? " " : "");
-  ConsoleWrite(
-    "  %s%schange " C0C_PREF_PORT_NAME_A "0 PortName=?\n"
     , pProgName, (pProgName && *pProgName) ? " " : "");
   ConsoleWrite(
     "  %s%slist\n"
