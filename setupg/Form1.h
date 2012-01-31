@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2007-2009 Vyacheslav Frolov
+ * Copyright (c) 2007-2012 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,10 @@
  *
  *
  * $Log$
+ * Revision 1.7  2012/01/31 05:34:34  vfrolov
+ * Added "use Ports class" option
+ * Added waiting install completion
+ *
  * Revision 1.6  2010/05/27 11:16:46  vfrolov
  * Added ability to put the port to the Ports class
  *
@@ -125,6 +129,8 @@ namespace SetupApp {
     private: System::Windows::Forms::Label^  pinNameB_TX;
     private: System::Windows::Forms::Label^  pinNameB_DTR;
     private: System::Windows::Forms::Label^  pinNameB_RX;
+    private: System::Windows::Forms::CheckBox^  UsePortsClassB;
+    private: System::Windows::Forms::CheckBox^  UsePortsClassA;
     private: System::Windows::Forms::TreeView^  pairList;
 
 	private:
@@ -144,6 +150,8 @@ namespace SetupApp {
           System::ComponentModel::ComponentResourceManager^  resources = (gcnew System::ComponentModel::ComponentResourceManager(Form1::typeid));
           this->PortNameB = (gcnew System::Windows::Forms::TextBox());
           this->PortNameA = (gcnew System::Windows::Forms::TextBox());
+          this->UsePortsClassB = (gcnew System::Windows::Forms::CheckBox());
+          this->UsePortsClassA = (gcnew System::Windows::Forms::CheckBox());
           this->pinNameON = (gcnew System::Windows::Forms::Label());
           this->picturePinMap = (gcnew System::Windows::Forms::PictureBox());
           this->toolTip1 = (gcnew System::Windows::Forms::ToolTip(this->components));
@@ -200,6 +208,22 @@ namespace SetupApp {
           this->PortNameA->Name = L"PortNameA";
           this->toolTip1->SetToolTip(this->PortNameA, resources->GetString(L"PortNameA.ToolTip"));
           this->PortNameA->TextChanged += gcnew System::EventHandler(this, &Form1::PortNameA_Changed);
+          // 
+          // UsePortsClassB
+          // 
+          resources->ApplyResources(this->UsePortsClassB, L"UsePortsClassB");
+          this->UsePortsClassB->Name = L"UsePortsClassB";
+          this->toolTip1->SetToolTip(this->UsePortsClassB, resources->GetString(L"UsePortsClassB.ToolTip"));
+          this->UsePortsClassB->UseVisualStyleBackColor = true;
+          this->UsePortsClassB->CheckedChanged += gcnew System::EventHandler(this, &Form1::UsePortsClassB_Changed);
+          // 
+          // UsePortsClassA
+          // 
+          resources->ApplyResources(this->UsePortsClassA, L"UsePortsClassA");
+          this->UsePortsClassA->Name = L"UsePortsClassA";
+          this->toolTip1->SetToolTip(this->UsePortsClassA, resources->GetString(L"UsePortsClassA.ToolTip"));
+          this->UsePortsClassA->UseVisualStyleBackColor = true;
+          this->UsePortsClassA->CheckedChanged += gcnew System::EventHandler(this, &Form1::UsePortsClassA_Changed);
           // 
           // pinNameON
           // 
@@ -280,7 +304,6 @@ namespace SetupApp {
           // 
           // EmuBrA
           // 
-          this->EmuBrA->ForeColor = System::Drawing::SystemColors::ControlText;
           resources->ApplyResources(this->EmuBrA, L"EmuBrA");
           this->EmuBrA->Name = L"EmuBrA";
           this->toolTip1->SetToolTip(this->EmuBrA, resources->GetString(L"EmuBrA.ToolTip"));
@@ -440,6 +463,7 @@ namespace SetupApp {
           this->pairList->HideSelection = false;
           resources->ApplyResources(this->pairList, L"pairList");
           this->pairList->Name = L"pairList";
+          this->toolTip1->SetToolTip(this->pairList, resources->GetString(L"pairList.ToolTip"));
           this->pairList->AfterSelect += gcnew System::Windows::Forms::TreeViewEventHandler(this, &Form1::pairsList_AfterSelect);
           this->pairList->BeforeSelect += gcnew System::Windows::Forms::TreeViewCancelEventHandler(this, &Form1::pairsList_BeforeSelect);
           // 
@@ -447,6 +471,7 @@ namespace SetupApp {
           // 
           resources->ApplyResources(this->buttonRemovePair, L"buttonRemovePair");
           this->buttonRemovePair->Name = L"buttonRemovePair";
+          this->toolTip1->SetToolTip(this->buttonRemovePair, resources->GetString(L"buttonRemovePair.ToolTip"));
           this->buttonRemovePair->UseVisualStyleBackColor = true;
           this->buttonRemovePair->Click += gcnew System::EventHandler(this, &Form1::buttonRemovePair_Click);
           // 
@@ -454,6 +479,7 @@ namespace SetupApp {
           // 
           resources->ApplyResources(this->buttonAddPair, L"buttonAddPair");
           this->buttonAddPair->Name = L"buttonAddPair";
+          this->toolTip1->SetToolTip(this->buttonAddPair, resources->GetString(L"buttonAddPair.ToolTip"));
           this->buttonAddPair->UseVisualStyleBackColor = true;
           this->buttonAddPair->Click += gcnew System::EventHandler(this, &Form1::buttonAddPair_Click);
           // 
@@ -461,6 +487,7 @@ namespace SetupApp {
           // 
           resources->ApplyResources(this->buttonApply, L"buttonApply");
           this->buttonApply->Name = L"buttonApply";
+          this->toolTip1->SetToolTip(this->buttonApply, resources->GetString(L"buttonApply.ToolTip"));
           this->buttonApply->UseVisualStyleBackColor = true;
           this->buttonApply->Click += gcnew System::EventHandler(this, &Form1::buttonApply_Click);
           // 
@@ -468,6 +495,7 @@ namespace SetupApp {
           // 
           resources->ApplyResources(this->buttonReset, L"buttonReset");
           this->buttonReset->Name = L"buttonReset";
+          this->toolTip1->SetToolTip(this->buttonReset, resources->GetString(L"buttonReset.ToolTip"));
           this->buttonReset->UseVisualStyleBackColor = true;
           this->buttonReset->Click += gcnew System::EventHandler(this, &Form1::buttonReset_Click);
           // 
@@ -475,6 +503,8 @@ namespace SetupApp {
           // 
           resources->ApplyResources(this, L"$this");
           this->AutoScaleMode = System::Windows::Forms::AutoScaleMode::Font;
+          this->Controls->Add(this->UsePortsClassA);
+          this->Controls->Add(this->UsePortsClassB);
           this->Controls->Add(this->HiddenModeA);
           this->Controls->Add(this->HiddenModeB);
           this->Controls->Add(this->pinNameB_OPEN);
@@ -533,32 +563,15 @@ namespace SetupApp {
           return control->Checked ? "YES" : "NO";
         }
 
-        String ^GetControlValue(TextBox ^control) {
-          return control->Text;
-        }
-
         Void SetControlValue(CheckBox ^control, String ^value) {
           control->Checked = (value->ToUpper() == "YES") ? true : false;
         }
 
-        Void SetControlValue(TextBox ^control, String ^value) {
-          control->Text = value;
-        }
-
-        bool IsValidValue(String ^key, String ^value) {
-          if (key == "portname") {
-            if (!pairs->IsValidName(value))
-              return false;
-          }
-
-          return true;
-        }
-
         /////////////////////////////////////////////////////////////////////
         #define DeclareControlPair(controlClass, control) \
-          array<controlClass ^> ^control##s; \
+          array<controlClass ^> ^control##_pair; \
           Void control##_Init() { \
-            control##s = gcnew array<controlClass ^>{control##A, control##B}; \
+            control##_pair = gcnew array<controlClass ^>{control##A, control##B}; \
           } \
           Void control##A_Changed(Object ^/*sender*/, EventArgs ^/*e*/) { \
             control##_Changed(0); \
@@ -566,23 +579,26 @@ namespace SetupApp {
           Void control##B_Changed(Object ^/*sender*/, EventArgs ^/*e*/) { \
             control##_Changed(1); \
           } \
+
+        #define DeclareControlPairCheckBox(control) \
+          DeclareControlPair(CheckBox, control) \
           Void control##_Changed(int i) { \
             try { \
               String ^key = (gcnew String(#control))->ToLower(); \
-              String ^value = GetControlValue(control##s[i])->ToUpper(); \
+              String ^value = GetControlValue(control##_pair[i])->ToUpper(); \
               if (pairs[pairList->SelectedNode->Name][i][key] != value) { \
-                control##s[i]->ForeColor = (IsValidValue(key, value) ? Color::Blue : Color::Red); \
+                control##_pair[i]->ForeColor = Color::Blue; \
                 return; \
               } \
             } \
             catch (Exception^ /*e*/) { \
             } \
-            control##s[i]->ForeColor = System::Drawing::SystemColors::ControlText; \
+            control##_pair[i]->ForeColor = System::Drawing::SystemColors::ControlText; \
           } \
           Void control##_GetChanges(int i, PortPair ^portChanges) { \
             try { \
               String ^key = (gcnew String(#control))->ToLower(); \
-              String ^value = GetControlValue(control##s[i])->ToUpper(); \
+              String ^value = GetControlValue(control##_pair[i])->ToUpper(); \
               if (pairs[pairList->SelectedNode->Name][i][key] != value) \
                 portChanges[i][key] = value; \
             } \
@@ -592,10 +608,10 @@ namespace SetupApp {
           Void control##_Reset(int i) { \
             try { \
               String ^key = (gcnew String(#control))->ToLower(); \
-              SetControlValue(control##s[i], pairs[pairList->SelectedNode->Name][i][key]); \
+              SetControlValue(control##_pair[i], pairs[pairList->SelectedNode->Name][i][key]); \
             } \
             catch (Exception^ /*e*/) { \
-              SetControlValue(control##s[i], ""); \
+              SetControlValue(control##_pair[i], ""); \
             } \
             control##_Changed(i); \
           } \
@@ -604,14 +620,136 @@ namespace SetupApp {
     private:
 
         DeclareControlPair(TextBox, PortName)
-        DeclareControlPair(CheckBox, EmuBr)
-        DeclareControlPair(CheckBox, EmuOverrun)
-        DeclareControlPair(CheckBox, PlugInMode)
-        DeclareControlPair(CheckBox, ExclusiveMode)
-        DeclareControlPair(CheckBox, HiddenMode)
+        DeclareControlPair(CheckBox, UsePortsClass)
+
+        Void PortName_GetCurrent(int i, String ^&name, bool &enabled, bool &checked) {
+          try {
+            name = pairs[pairList->SelectedNode->Name][i][(gcnew String("PortName"))->ToLower()];
+
+            if (name->ToUpper() == "COM#") {
+              checked = true;
+
+              try {
+                name = pairs[pairList->SelectedNode->Name][i][(gcnew String("RealPortName"))->ToLower()];
+                enabled = true;
+              }
+              catch (Exception^ /*e*/) {
+                name = "";
+                enabled = false;
+              }
+            } else {
+              checked = false;
+              enabled = true;
+            }
+          }
+          catch (Exception^ /*e*/) {
+            checked = false;
+            name = "";
+            enabled = true;
+          }
+        }
+
+        Void PortName_Changed(int i) {
+          String ^name = gcnew String("");
+          bool enabled;
+          bool checked;
+
+          PortName_GetCurrent(i, name, enabled, checked);
+
+          String ^value = PortName_pair[i]->Text->ToUpper();
+
+          if (name != value) {
+            PortName_pair[i]->ForeColor = (pairs->IsValidName(value) ? Color::Blue : Color::Red);
+          } else {
+            PortName_pair[i]->ForeColor = System::Drawing::SystemColors::ControlText;
+          }
+
+          if (!checked != !UsePortsClass_pair[i]->Checked) {
+            UsePortsClass_pair[i]->ForeColor = Color::Blue;
+          } else {
+            UsePortsClass_pair[i]->ForeColor = System::Drawing::SystemColors::ControlText;
+          }
+
+          PortName_pair[i]->Enabled = (!UsePortsClass_pair[i]->Checked || (checked && enabled));
+        }
+
+        Void PortName_GetChanges(int i, PortPair ^portChanges) {
+          String ^name = gcnew String("");
+          bool enabled;
+          bool checked;
+
+          PortName_GetCurrent(i, name, enabled, checked);
+
+          String ^value = PortName_pair[i]->Text->ToUpper();
+
+          if (UsePortsClass_pair[i]->Checked) {
+            if (checked) {
+              if (name != value) {
+                portChanges[i][(gcnew String("RealPortName"))->ToLower()] = value;
+              }
+            } else {
+              portChanges[i][(gcnew String("PortName"))->ToLower()] = "COM#";
+            }
+          } else {
+            if (checked) {
+              portChanges[i][(gcnew String("PortName"))->ToLower()] = value;
+            } else {
+              if (name != value) {
+                portChanges[i][(gcnew String("PortName"))->ToLower()] = value;
+              }
+            }
+          }
+        }
+
+        Void PortName_Reset(int i) {
+          String ^name = gcnew String("");
+          bool enabled;
+          bool checked;
+
+          PortName_GetCurrent(i, name, enabled, checked);
+
+          PortName_pair[i]->Text = name;
+          PortName_pair[i]->Enabled = enabled;
+          UsePortsClass_pair[i]->Checked = checked;
+
+          PortName_Changed(i);
+        }
+
+        Void UsePortsClass_Changed(int i) {
+          String ^name = gcnew String("");
+          bool enabled;
+          bool checked;
+
+          PortName_GetCurrent(i, name, enabled, checked);
+
+          if (checked || !UsePortsClass_pair[i]->Checked) {
+            if (!UsePortsClass_pair[i]->Checked && name == "") {
+              PortName_pair[i]->Text = "-";
+            } else {
+              PortName_pair[i]->Text = name;
+            }
+          } else {
+            PortName_pair[i]->Text = "";
+          }
+
+          PortName_Changed(i);
+        }
+
+        Void UsePortsClass_GetChanges(int /*i*/, PortPair ^/*portChanges*/) {
+        }
+
+        Void UsePortsClass_Reset(int /*i*/) {
+        }
+
+        DeclareControlPairCheckBox(EmuBr)
+        DeclareControlPairCheckBox(EmuOverrun)
+        DeclareControlPairCheckBox(PlugInMode)
+        DeclareControlPairCheckBox(ExclusiveMode)
+        DeclareControlPairCheckBox(HiddenMode)
 
         #define ForEachControlPair(func) \
           PortName_##func; \
+          UsePortsClass_##func; \
           EmuBr_##func; \
           EmuOverrun_##func; \
           PlugInMode_##func; \
