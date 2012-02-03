@@ -83,6 +83,17 @@ BUILDING
 
     For example execute in the DDK build environment window:
 
-      "C:\Program Files\NSIS\makensis.exe" /V2 C:\com0com\NSIS\install.nsi
+      "C:\Program Files\NSIS\makensis.exe" /V2 "C:\com0com\NSIS\install.nsi"
 
     It will create the installer in the C:\com0com\<CPU>\setup.exe file.
+
+
+FAQs & HOWTOs
+=============
+
+Q. Is it possible to build a single installer suitable for both 32-bit and 64-bit systems?
+A. Yes, it is possible. Use /DADD_TARGET_CPU_<CPU> and /DOUTPUT_FILE=<path> options, for example:
+
+      "C:\Program Files\NSIS\makensis.exe" /V2 /DADD_TARGET_CPU_i386 /DADD_TARGET_CPU_amd64 /DOUTPUT_FILE="C:\com0com\setup.exe" "C:\com0com\NSIS\install.nsi"
+
+    It will create the installer in the C:\com0com\setup.exe file suitable for both 32-bit and 64-bit systems.
