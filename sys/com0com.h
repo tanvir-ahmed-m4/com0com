@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2004-2011 Vyacheslav Frolov
+ * Copyright (c) 2004-2012 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.53  2012/02/03 17:14:24  vfrolov
+ * Optimized GetIrpState()
+ *
  * Revision 1.52  2011/12/06 16:03:22  vfrolov
  * Added cleaning high data bits for less then 8 bit data
  * Added AllDataBits option to force 8 bit data
@@ -516,7 +519,8 @@ typedef struct _C0C_IRP_STATE {
   UCHAR                   iQueue;
 } C0C_IRP_STATE, *PC0C_IRP_STATE;
 
-PC0C_IRP_STATE GetIrpState(IN PIRP pIrp);
+#define GetIrpState(pIrp)                ((PC0C_IRP_STATE)&(pIrp)->Tail.Overlay.DriverContext[0])
+
 ULONG GetWriteLength(IN PIRP pIrp);
 
 #define C0C_IO_TYPE_CLOSE_COMPLETE     2

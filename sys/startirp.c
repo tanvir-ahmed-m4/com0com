@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2004-2010 Vyacheslav Frolov
+ * Copyright (c) 2004-2012 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.21  2012/02/03 17:14:24  vfrolov
+ * Optimized GetIrpState()
+ *
  * Revision 1.20  2010/08/04 10:38:56  vfrolov
  * Minimized PREfast noise
  *
@@ -93,31 +96,6 @@
  * FILE_ID used by HALT_UNLESS to put it on BSOD
  */
 #define FILE_ID 2
-
-PC0C_IRP_STATE GetIrpState(IN PIRP pIrp)
-{
-  PIO_STACK_LOCATION pIrpStack = IoGetCurrentIrpStackLocation(pIrp);
-
-  switch (pIrpStack->MajorFunction) {
-  case IRP_MJ_WRITE:
-    return (PC0C_IRP_STATE)&pIrpStack->Parameters.Write.Key;
-  case IRP_MJ_READ:
-    return (PC0C_IRP_STATE)&pIrpStack->Parameters.Read.Key;
-  case IRP_MJ_DEVICE_CONTROL:
-    switch (pIrpStack->Parameters.DeviceIoControl.IoControlCode) {
-    case IOCTL_SERIAL_WAIT_ON_MASK:
-    case IOCTL_SERIAL_IMMEDIATE_CHAR:
-    case IOCTL_SERIAL_XOFF_COUNTER:
-      return (PC0C_IRP_STATE)&pIrpStack->Parameters.DeviceIoControl.Type3InputBuffer;
-    }
-    break;
-  case IRP_MJ_FLUSH_BUFFERS:
-  case IRP_MJ_CLOSE:
-    return (PC0C_IRP_STATE)&pIrpStack->Parameters.Others.Argument1;
-  }
-
-  return NULL;
-}
 
 VOID ShiftQueue(PC0C_IRP_QUEUE pQueue)
 {
