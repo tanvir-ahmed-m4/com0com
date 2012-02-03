@@ -1,0 +1,101 @@
+v2.2.2.0 (2009-12-17)
+
+* Added --wait option to the Setup Command Prompt.
+* Fixed some bugs.
+
+v2.2.1.0 (2009-05-29)
+
+* Added logging COMx names in the COM port database.
+* Added ability to get list of names that already in use (busynames command).
+* Added ability to speed up installing of multiple com port pairs (--no-update option).
+* Improved silent install and uninstall.
+* Fixed some bugs and made some improvements.
+
+v2.2.0.0 (2008-12-09)
+
+* Implemented noise emulation.
+* Added ability to monitor BREAK state.
+* Added ability to fix timeouts for read operations to compensate the network delays.
+* Added ability to do silent uninstalls (uninstall /S).
+* Fixed some bugs and made some improvements.
+
+v2.1.0.0 (2008-06-06)
+
+* Implemented ability to monitor and get the paired port settings (baud rate, byte size, parity, stop bits).
+* Implemented ability to change state of individual pins (OUT1 and OUT2 for example).
+* Added command to Setup Command Prompt for reloading driver.
+* Added ability to wire OUT2 pin.
+* Added ability to permanently hide port for port enumerators.
+* Fixed some bugs and made some improvements.
+
+v2.0.0.0 (2007-12-04)
+
+* Implemented graphics setup utility.
+* Added support for 64-bit systems.
+* Implemented pinout customization.
+* Implemented transmit FIFO buffer.
+* Implemented IOCTL_SERIAL_SET_MODEM_CONTROL device control request.
+* Fixed some bugs and made some improvements.
+
+v1.8.0.0 (2007-06-15)
+
+* Implemented IOCTL_SERIAL_XOFF_COUNTER.
+* Added ability to hide port interfaces (plug-in and exclusive modes).
+* Improved baudrate emulation.
+* Fixed some bugs.
+
+v1.7.0.0 (2006-12-14)
+
+* Implemented installer.
+* Implemented WMI functionality.
+* Added the device interface registration.
+* Fixed incompatibility with VMware.
+* Fixed some bugs.
+
+v1.6.0.0 (2006-06-29)
+
+* Implemented flow control, replacement and handshaking functionality.
+* Implemented IOCTL_SERIAL_SET_XON and IOCTL_SERIAL_SET_XOFF.
+* Implemented IOCTL_SERIAL_SET_BREAK_ON and IOCTL_SERIAL_SET_BREAK_OFF.
+* Implemented IOCTL_SERIAL_GET_MODEM_CONTROL.
+
+v1.5.0.0 (2005-12-29)
+
+* Implemented SERIAL_EV_RXFLAG and SERIAL_EV_RX80FULL.
+* Implemented IOCTL_SERIAL_GET_STATS and IOCTL_SERIAL_CLEAR_STATS.
+* Implemented IOCTL_SERIAL_IMMEDIATE_CHAR.
+* Implemented IOCTL_SERIAL_GET_DTRRTS.
+* Added stub for IOCTL_SERIAL_SET_XON.
+
+v1.4.0.0 (2005-10-17)
+
+* Implemented overrun emulation (configurable).
+* Implemented SERIAL_EV_TXEMPTY.
+* Implemented IRP_MJ_FLUSH_BUFFERS.
+* Implemented IRP_MJ_QUERY_INFORMATION and IRP_MJ_SET_INFORMATION.
+* Fixed DeviceType typo (fopen problem).
+
+v1.3.0.0 (2005-09-02)
+
+* Implemented baudrate emulation.
+* Fixed overlapped operations processing order.
+
+v1.2.0.0 (2005-07-15)
+
+* Fixed BSOD problem (#1237666).
+* Made some improvements.
+
+v1.1.1.0 (2005-06-23)
+
+* Improved port numbering.
+
+v1.1.0.0 (2005-05-18)
+
+* Implemented IOCTL_SERIAL_LSRMST_INSERT.
+* Implemented SERIAL_EV_RXCHAR
+* Added ability to change the port names
+* Fixed some bugs and made some improvements.
+
+2005-02-21 - released v1.0.0.0.
+2005-01-24 - project moved to http://com0com.sourceforge.net/.
+2004       - project started.
