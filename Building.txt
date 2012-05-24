@@ -48,7 +48,7 @@ BUILDING
     and depends from choosen DDK build environment.
 
 2.  If you build driver for x64-based versions of
-    Windows Vista/Windows Server 2008/Windows 7 then create
+    Windows Vista/Windows Server 2008/Windows 7/8 then create
     a test certificate and sign com0com.sys file.
 
     For example execute in the WDK build environment window:
@@ -69,7 +69,7 @@ BUILDING
 
     It will create the C:\com0com\setupg\Release\setupg.exe file.
 
-4.  If you build driver for Windows Vista/Windows Server 2008/Windows 7 then
+4.  If you build driver for Windows Vista/Windows Server 2008/Windows 7/8 then
     embed requireAdministrator.manifest to the executables.
 
     For example execute in the MSVC build environment window:
