@@ -34,7 +34,7 @@ The homepage for com0com project is http://com0com.sourceforge.net/.
 INSTALLING
 ==========
 
-NOTE (x64-based Windows Vista/Windows Server 2008/Windows 7):
+NOTE (x64-based Windows Vista/Windows Server 2008/Windows 7/8):
   The com0com.sys is a test-signed kernel-mode driver that will not load by
   default. To enable test signing, enter command:
 
@@ -98,11 +98,6 @@ FAQs & HOWTOs
 
 Q. Is it possible to run com0com on Windows 9x platform?
 A. No, it is not possible. You need Windows 2000 platform or newer.
-
-Q. I get an error message when I run the installer:
-   "The 32-bit driver cannot run under 64-bit System". What to do?
-A. For 64-bit system download x64 package
-   (for example com0com-2.2.2.0-x64-fre-signed.zip).
 
 Q. Is it possible to install or uninstall com0com silently (with no user
    intervention and no user interface)?
