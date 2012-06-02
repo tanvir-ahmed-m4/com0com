@@ -1,3 +1,19 @@
+v3.0.0.0 (2012-06-02)
+
+* Added ability to put the port to the Ports class.
+* Added ability to set selections for setup.exe by setting environment variables.
+* Installers setupc.exe and setupg.exe marked as "require administrative access"
+  so Turning off UAC is not required now.
+* Added tracing of dialogs while setup.
+* Improved silent install and uninstall.
+* Added cleaning high data bits for less then 8 bit data. For forcing backward
+  compatibility added AllDataBits option.
+* Added ability to uninstall package w/o uninstalling devices and driver.
+* Added ability to build installer with com0com.cat file.
+* Added ability to build installer suitable for both 32-bit and 64-bit systems.
+* Implemented setting friendly names.
+* Fixed some bugs and made some improvements.
+
 v2.2.2.0 (2009-12-17)
 
 * Added --wait option to the Setup Command Prompt.
