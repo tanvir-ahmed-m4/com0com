@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright (c) 2006-2011 Vyacheslav Frolov
+ * Copyright (c) 2006-2012 Vyacheslav Frolov
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,9 @@
  *
  *
  * $Log$
+ * Revision 1.14  2012/06/04 06:02:14  vfrolov
+ * Added commented code /* ... SetupSetNonInteractiveMode ...*/
+ *
  * Revision 1.13  2011/12/15 15:51:48  vfrolov
  * Fixed types
  *
@@ -355,6 +358,23 @@ bool Silent()
 void Silent(bool val)
 {
   silent = val;
+
+  /*
+  typedef BOOL (WINAPI *PSETUPSETNONINTERACTIVEMODE)(IN BOOL);
+  static PSETUPSETNONINTERACTIVEMODE pSetupSetNonInteractiveMode = NULL;
+
+  if(!pSetupSetNonInteractiveMode) {
+    HMODULE hModule = GetModuleHandle("setupapi.dll");
+
+    if (hModule) {
+      pSetupSetNonInteractiveMode =
+          (PSETUPSETNONINTERACTIVEMODE)GetProcAddress(hModule, "SetupSetNonInteractiveMode");
+    }
+  }
+
+  if (pSetupSetNonInteractiveMode)
+    pSetupSetNonInteractiveMode(silent);
+  */
 }
 ///////////////////////////////////////////////////////////////
 void PromptReboot()
