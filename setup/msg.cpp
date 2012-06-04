@@ -19,8 +19,11 @@
  *
  *
  * $Log$
+ * Revision 1.15  2012/06/04 06:15:37  vfrolov
+ * Fixed previous commit
+ *
  * Revision 1.14  2012/06/04 06:02:14  vfrolov
- * Added commented code /* ... SetupSetNonInteractiveMode ...*/
+ * Added commented code with SetupSetNonInteractiveMode
  *
  * Revision 1.13  2011/12/15 15:51:48  vfrolov
  * Fixed types
