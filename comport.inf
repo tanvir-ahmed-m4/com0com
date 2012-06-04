@@ -15,7 +15,7 @@ Class = Ports
 ClassGUID = {4D36E978-E325-11CE-BFC1-08002BE10318}
 CatalogFile = com0com.cat
 ;           MM/DD/YYYY
-DriverVer = 01/31/2012,3.0.0.0
+DriverVer = 06/04/2012,3.0.0.0
 UninstallInfTag = {df799e12-3c56-421b-b298-b6d3642bc878}
 
 ;******************************************************************************

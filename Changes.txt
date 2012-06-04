@@ -1,4 +1,4 @@
-v3.0.0.0 (2012-06-02)
+v3.0.0.0 (2012-06-04)
 
 * Added ability to put the port to the Ports class.
 * Added ability to set selections for setup.exe by setting environment variables.
